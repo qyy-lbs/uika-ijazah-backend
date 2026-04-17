@@ -17,3 +17,6 @@ npm-debug.log*
 yarn-error.log*
 *.log
 .DS_Store
+
+# Prisma Custom Output
+src/prisma-client/
