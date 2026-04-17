@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model akademik {
+  id_akademik    Int       @id @default(autoincrement())
+  uuid           String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_unit        Int?
+  tahun_akademik String?   @db.VarChar(20)
+  kode_matkul    String?   @db.VarChar(20)
+  nama_matkul    String?   @db.VarChar(100)
+  sks            Int?
+  total_sks      Int?
+  bobot          Decimal?  @db.Decimal(3, 2)
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+  unit           unit?     @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
+  nilai          nilai[]
+}
+
+model batch_upload {
+  id_batch        Int       @id @default(autoincrement())
+  uuid            String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nomor_batch     String?   @db.VarChar(50)
+  nama_file       String?   @db.VarChar(100)
+  total_record    Int?
+  record_berhasil Int?
+  record_gagal    Int?
+  uploaded_by     Int?
+  status          String?   @db.VarChar(20)
+  log_error       String?
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  users           users?    @relation(fields: [uploaded_by], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model blockchain {
+  id_blockchain Int       @id @default(autoincrement())
+  uuid          String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_dokumen    Int?
+  hash_dokumen  String?
+  index_block   Int?
+  hash_block    String?
+  previous_hash String?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  dokumen       dokumen?  @relation(fields: [id_dokumen], references: [id_dokumen], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model dokumen {
+  id_dokumen     Int          @id @default(autoincrement())
+  uuid           String?      @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_mahasiswa   Int?
+  jenis_dokumen  String?      @db.VarChar(20)
+  nomor_dokumen  String?      @db.VarChar(50)
+  tanggal_terbit DateTime?    @db.Date
+  current_level  Int?         @default(1)
+  is_verified    Boolean?     @default(false)
+  file_pdf       String?
+  file_pdf_ttd   String?
+  kode_qr        String?
+  url_akses      String?
+  download_count Int?         @default(0)
+  max_download   Int?         @default(1)
+  created_at     DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?    @default(now()) @db.Timestamp(6)
+  id_unit        Int?
+  blockchain     blockchain[]
+  mahasiswa      mahasiswa?   @relation(fields: [id_mahasiswa], references: [id_mahasiswa], onDelete: Cascade, onUpdate: NoAction)
+  unit           unit?        @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
+  validasi       validasi[]
+}
+
+model log_aktivitas {
+  id_log     Int       @id @default(autoincrement())
+  uuid       String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_user    Int?
+  aktivitas  String?   @db.VarChar(50)
+  deskripsi  String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users?    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model mahasiswa {
+  id_mahasiswa      Int        @id @default(autoincrement())
+  uuid              String?    @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nim               String?    @unique @db.VarChar(20)
+  nomor_seri_ijazah String?    @db.VarChar(50)
+  pisn              String?    @db.VarChar(50)
+  nik               String?    @db.VarChar(50)
+  nama_mahasiswa    String?    @db.VarChar(100)
+  tempat_lahir      String?    @db.VarChar(50)
+  tanggal_lahir     DateTime?  @db.Date
+  jenis_kelamin     String?    @db.VarChar(20)
+  telepon           String?    @db.VarChar(20)
+  email             String?    @db.VarChar(100)
+  foto              String?
+  id_unit           Int?
+  ipk               Decimal?   @db.Decimal(3, 2)
+  predikat          String?    @db.VarChar(50)
+  judul_skripsi     String?
+  tahun_masuk       Int?
+  tahun_lulus       Int?
+  created_at        DateTime?  @default(now()) @db.Timestamp(6)
+  status            String?    @db.VarChar(25)
+  program           String?    @db.VarChar(20)
+  tanggal_kelulusan DateTime?  @db.Date
+  program_en        String?    @db.VarChar(255)
+  id_prodi          Int?
+  dokumen           dokumen[]
+  prodi             prodi?     @relation(fields: [id_prodi], references: [id_prodi], onDelete: NoAction, onUpdate: NoAction)
+  unit              unit?      @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
+  nilai             nilai[]
+  validasi          validasi[]
+}
+
+model nilai {
+  id_nilai     Int        @id @default(autoincrement())
+  uuid         String?    @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_mahasiswa Int?
+  id_akademik  Int?
+  nilai_huruf  String?    @db.VarChar(5)
+  nilai_angka  Decimal?   @db.Decimal(3, 2)
+  created_at   DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?  @default(now()) @db.Timestamp(6)
+  akademik     akademik?  @relation(fields: [id_akademik], references: [id_akademik], onDelete: Cascade, onUpdate: NoAction)
+  mahasiswa    mahasiswa? @relation(fields: [id_mahasiswa], references: [id_mahasiswa], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model template {
+  id_template        Int       @id @default(autoincrement())
+  uuid               String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  jenis_dokumen      String?   @db.VarChar(20)
+  file_template      String?
+  konfigurasi_layout Json?
+  created_by         Int?
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+  users              users?    @relation(fields: [created_by], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model unit {
+  id_unit       Int         @id @default(autoincrement())
+  uuid          String?     @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nama_unit     String      @db.VarChar(100)
+  jenis_unit    String      @db.VarChar(20)
+  parent_id     Int?
+  level_jabatan Int?
+  file_ttd      String?
+  file_stempel  String?
+  is_active     Boolean?    @default(true)
+  created_at    DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?   @default(now()) @db.Timestamp(6)
+  is_institusi  Boolean?
+  nidn          String?     @db.VarChar(50)
+  rektor        String?     @db.VarChar(225)
+  wakil_rektor  String?     @db.VarChar(225)
+  tu_rektorat   String?     @db.VarChar(225)
+  dekan         String?     @db.VarChar(225)
+  wakil_dekan   String?     @db.VarChar(225)
+  tu_fakultas   String?     @db.VarChar(225)
+  unit_en       String?     @db.VarChar(255)
+  akademik      akademik[]
+  dokumen       dokumen[]
+  mahasiswa     mahasiswa[]
+  prodi         prodi[]
+  unit          unit?       @relation("unitTounit", fields: [parent_id], references: [id_unit], onDelete: Cascade, onUpdate: NoAction)
+  other_unit    unit[]      @relation("unitTounit")
+  users         users[]
+
+  @@index([jenis_unit], map: "idx_unit_jenis")
+  @@index([level_jabatan], map: "idx_unit_level_jabatan")
+  @@index([parent_id], map: "idx_unit_parent")
+}
+
+model users {
+  id_user       Int             @id @default(autoincrement())
+  uuid          String?         @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  username      String?         @unique @db.VarChar(50)
+  nama          String?         @db.VarChar(100)
+  email         String?         @db.VarChar(100)
+  password      String?
+  role          String?         @db.VarChar(20)
+  id_unit       Int?
+  is_active     Boolean?        @default(true)
+  last_login    DateTime?       @db.Timestamp(6)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamp(6)
+  batch_upload  batch_upload[]
+  log_aktivitas log_aktivitas[]
+  template      template[]
+  unit          unit?           @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
+  validasi      validasi[]
+}
+
+model validasi {
+  id_validasi    Int        @id @default(autoincrement())
+  uuid           String?    @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_mahasiswa   Int?
+  id_dokumen     Int?
+  id_user        Int?
+  level_validasi Int?
+  status         String?    @db.VarChar(20)
+  catatan        String?
+  created_at     DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?  @default(now()) @db.Timestamp(6)
+  dokumen        dokumen?   @relation(fields: [id_dokumen], references: [id_dokumen], onDelete: NoAction, onUpdate: NoAction)
+  mahasiswa      mahasiswa? @relation(fields: [id_mahasiswa], references: [id_mahasiswa], onDelete: NoAction, onUpdate: NoAction)
+  users          users?     @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model prodi {
+  id_prodi   Int         @id @default(autoincrement())
+  uuid       String?     @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nama_prodi String?     @db.VarChar(100)
+  id_unit    Int?
+  gelar      String?     @db.VarChar(100)
+  gelar_en   String?     @db.VarChar(100)
+  no_sk      String?     @db.VarChar(50)
+  created_at DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at DateTime?   @default(now()) @db.Timestamp(6)
+  mahasiswa  mahasiswa[]
+  unit       unit?       @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
+}

@@ -1,0 +1,19 @@
+# 1. Folder Dependency (Sangat Besar)
+node_modules/
+
+# 2. File Rahasia Server & Database
+.env
+.env*.local
+
+# 3. Hasil Build TypeScript
+dist/
+build/
+
+# 4. Prisma Generated Client
+/generated/prisma
+
+# 5. File Log Error & Sampah OS
+npm-debug.log*
+yarn-error.log*
+*.log
+.DS_Store
