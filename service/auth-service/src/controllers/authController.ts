@@ -1,50 +1,80 @@
-import {getPrisma} from '../prisma.js'
 import type { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../prisma.js'; 
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+export const login = async (req: Request, res: Response): Promise<void> => {
+  const prisma = getPrisma();
 
-
-
-export const login = async (req: Request, res: Response) => {
-  
-  const prisma = new PrismaClient();
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    // 1. Cari user di database berdasarkan username
-    const user = await prisma.users.findUnique({ where: { username } });
+    // 1. Validasi Input Kosong
+    if (!email || !password) {
+      res.status(400).json({ 
+        status: 'error', 
+        message: 'Username dan password wajib diisi!' 
+      });
+      return;
+    }
+
+    // 2. Cari User di Database
+    const user = await prisma.users.findUnique({ 
+      where: { email } 
+    });
+
+
+
+
+
     if (!user) {
-      // Ingat: dalam Express+TypeScript ESM, jangan return res.status(...)
-      // Cukup panggil res.status(...) lalu biarkan fungsi selesai
-      res.status(401).json({ message: 'Username atau Password salah' });
-      return; 
+      res.status(401).json({ status: 'error', message: 'Kredensial tidak valid!' });
+      return;
     }
 
-    // 2. Cek Password (Sementara kita pakai !== karena data di DB belum di-hash)
-    if (password !== user.password) {
-       res.status(401).json({ message: 'Username atau Password salah' });
-       return;
+    // 3. Verifikasi Password Menggunakan Bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password as string);
+    if (!isPasswordValid) {
+      res.status(401).json({ status: 'error', message: 'Kredensial tidak valid!' });
+      return;
     }
 
-    // 3. Buat Karcis (JWT)
+    // (Pengecekan is_active sudah dihapus sepenuhnya)
+
+    // 4. Generate JWT Token (Karcis)
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET belum dikonfigurasi di file .env');
+    }
+
     const token = jwt.sign(
-      { id: user.id_user, role: user.role },
-      process.env.JWT_SECRET!,
-      { expiresIn: '1d' } // Karcis berlaku 1 hari
+      { 
+        id_user: user.id_user, 
+        role: user.role, 
+        id_unit: user.id_unit // Tetap ada jika Anda butuh filter per fakultas nanti
+      }, 
+      jwtSecret, 
+      { expiresIn: '8h' } 
     );
 
-    // 4. Kirim balasan sukses
+    // (Update last_login sudah dihapus agar tidak error jika kolomnya tidak ada)
+
+    // 5. Kirim Balasan Sukses
     res.status(200).json({
       status: 'success',
       message: 'Login berhasil',
       token,
-      user: { nama: user.nama, role: user.role }
+      data: {
+        id_user: user.id_user,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+        id_unit: user.id_unit
+      }
     });
 
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ message: 'Terjadi kesalahan pada server' });
+    console.error('[AUTH ERROR]:', error);
+    res.status(500).json({ status: 'error', message: 'Terjadi kesalahan internal server.' });
   }
 };
