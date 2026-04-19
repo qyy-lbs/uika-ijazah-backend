@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getPrisma } from '../prisma.js'; 
+import { getPrisma } from '../lib/prisma.js'; 
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -39,7 +39,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // (Pengecekan is_active sudah dihapus sepenuhnya)
+    // last login
+    await prisma.users.update({
+      where: { id_user: user.id_user },
+      data: { last_login: new Date() } // Mencatat jam & tanggal detik ini
+    });
+
 
     // 4. Generate JWT Token (Karcis)
     const jwtSecret = process.env.JWT_SECRET;
@@ -51,13 +56,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       { 
         id_user: user.id_user, 
         role: user.role, 
-        id_unit: user.id_unit // Tetap ada jika Anda butuh filter per fakultas nanti
+        id_unit: user.id_unit // untuk filter per fakultas 
       }, 
       jwtSecret, 
       { expiresIn: '8h' } 
     );
 
-    // (Update last_login sudah dihapus agar tidak error jika kolomnya tidak ada)
 
     // 5. Kirim Balasan Sukses
     res.status(200).json({

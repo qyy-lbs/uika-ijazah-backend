@@ -1,44 +1,59 @@
 import { Router } from 'express';
-import { login } from '../controllers/authController.js';
-// 1. Import authorizeRoles yang baru kita buat
-import { verifyToken, authorizeRoles } from '../middlewares/authMiddleware.js';
-import type { AuthRequest } from '../middlewares/authMiddleware.js';
 import rateLimit from 'express-rate-limit';
+
+// Controllers
+import { login } from '../controllers/authController.js';
+import { 
+  getProfile, 
+  getRektoratDashboard, 
+  getFakultasDashboard, 
+  getOperasionalDashboard 
+} from '../controllers/profileController.js';
+
+// Middlewares
+import { verifyToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
+
+// 1. RATE LIMITERS (Anti-Spam)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, 
   max: 5,
-  message: { status: 'error', message: 'Terlalu banyak percobaan login.' }
+  message: { status: 'error', message: 'Terlalu banyak percobaan login. Silakan coba lagi nanti.' }
 });
 
-// PINTU DEPAN (Publik)
+
+// 2. Public routes (Tanpa Autentikasi)
 router.post('/login', loginLimiter, login);
 
-// PINTU DALAM 1: Area Rahasia (Hanya cek Token, semua role boleh masuk)
-router.get('/profile', verifyToken, (req: AuthRequest, res) => {
-  res.status(200).json({ status: 'success', message: 'Anda berhasil masuk ke profil.', data: req.user });
-});
 
-// ---------------------------------------------------------
-// PINTU DALAM 2: Area Khusus Admin (Cek Token + Cek Jabatan)
-// ---------------------------------------------------------
-router.get('/dashboard-admin', verifyToken, authorizeRoles('admin'), (req: AuthRequest, res) => {
-  res.status(200).json({ 
-    status: 'success', 
-    message: 'Selamat datang, Bos! Ini ruangan khusus Admin.' 
-  });
-});
+// 3. PROTECTED ROUTES (Wajib Autentikasi JWT)
+// verifikaai jwt
+router.use(verifyToken);
 
-// ---------------------------------------------------------
-// PINTU DALAM 3: Area Khusus Mahasiswa (Cek Token + Cek Jabatan)
-// ---------------------------------------------------------
-router.get('/dashboard-mahasiswa', verifyToken, authorizeRoles('mahasiswa'), (req: AuthRequest, res) => {
-  res.status(200).json({ 
-    status: 'success', 
-    message: 'Halo Mahasiswa, ini nilai-nilai Anda.' 
-  });
-});
+// Rute Umum: Siapapun yang punya JWT bisa lihat profilnya sendiri
+router.get('/profile', getProfile);
+
+
+// --- PINTU BERLAPIS BERDASARKAN JABATAN ---
+
+// A. Level Universitas (Hanya Pimpinan Pusat & Admin)
+router.get('/dashboard-rektorat', 
+  authorizeRoles('rektor', 'wakil_rektor', 'tu_rektorat', 'admin'), 
+  getRektoratDashboard
+);
+
+// B. Level Fakultas (Hanya Pimpinan Fakultas & Admin)
+router.get('/dashboard-fakultas', 
+  authorizeRoles('dekan', 'wakil_dekan', 'tu_fakultas', 'admin'), 
+  getFakultasDashboard
+);
+
+// C. Level Operasional (Hanya Tim Input Data & Admin)
+router.get('/dashboard-operasional', 
+  authorizeRoles('operator_data', 'admin'), 
+  getOperasionalDashboard
+);
 
 export default router;

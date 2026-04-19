@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// 1. Kita buat "cetakan" khusus agar TypeScript tahu bahwa Request sekarang membawa data User
+// 1. cetakan khusus agar TypeScript tahu bahwa Request sekarang membawa data User
 export interface AuthRequest extends Request {
   user?: any;
 }
@@ -9,8 +9,7 @@ export interface AuthRequest extends Request {
 export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
   // 2. Tangkap token dari header "Authorization"
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Formatnya: "Bearer <token_panjang_anda>"
-
+  const token = authHeader && authHeader.split(' ')[1]; 
   // 3. Jika token sama sekali tidak ada
   if (!token) {
     res.status(401).json({ status: 'error', message: 'Akses ditolak. Token tidak ditemukan!' });
