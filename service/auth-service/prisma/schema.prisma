@@ -8,7 +8,7 @@ datasource db {
 
 model akademik {
   id_akademik Int       @id @default(autoincrement())
-  uuid        String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid        String?   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_prodi    Int?
   kode_matkul String?   @db.VarChar(20)
   nama_matkul String?   @db.VarChar(100)
@@ -22,7 +22,7 @@ model akademik {
 
 model batch_upload {
   id_batch_upload    Int           @id @default(autoincrement())
-  uuid               String?       @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid               String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_template        Int?
   nomor_batch_upload String?       @db.VarChar(50)
   nama_file          String?       @db.VarChar(100)
@@ -41,7 +41,7 @@ model batch_upload {
 
 model blockchain {
   id_blockchain Int       @id @default(autoincrement())
-  uuid          String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid          String?   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_dokumen    Int?      @unique
   hash_dokumen  String?
   index_block   Int?
@@ -53,7 +53,7 @@ model blockchain {
 
 model dokumen {
   id_dokumen     Int                @id @default(autoincrement())
-  uuid           String?            @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid           String?            @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_mahasiswa   Int?
   id_template    Int?
   jenis_dokumen  jenis_dokumen_enum
@@ -75,7 +75,7 @@ model dokumen {
 
 model log_aktivitas {
   id_log     Int       @id @default(autoincrement())
-  uuid       String?   @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid       String?   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_user    Int?
   aktivitas  String?   @db.VarChar(50)
   deskripsi  String?
@@ -85,7 +85,7 @@ model log_aktivitas {
 
 model mahasiswa {
   id_mahasiswa      Int           @id @default(autoincrement())
-  uuid              String?       @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid              String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_prodi          Int?
   id_batch_upload   Int?
   nim               String        @unique(map: "uq_mahasiswa_nim") @db.VarChar(20)
@@ -120,7 +120,7 @@ model mahasiswa {
 
 model nilai {
   id_nilai     Int        @id @default(autoincrement())
-  uuid         String?    @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid         String?    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_mahasiswa Int?
   id_akademik  Int?
   nilai_huruf  String?    @db.VarChar(5)
@@ -135,7 +135,7 @@ model nilai {
 
 model template {
   id_template        Int                 @id @default(autoincrement())
-  uuid               String?             @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid               String?             @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   jenis_template     jenis_template_enum
   file_template      String?
   konfigurasi_layout Json?
@@ -150,7 +150,7 @@ model template {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model unit {
   id_unit                  Int             @id @default(autoincrement())
-  uuid                     String?         @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid                     String?         @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   parent_id                Int?
   jenis_unit               jenis_unit_enum
   nama_unit                String          @db.VarChar(100)
@@ -184,7 +184,7 @@ model unit {
 
 model users {
   id_user       Int             @id @default(autoincrement())
-  uuid          String?         @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid          String?         @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_unit       Int?
   email         String          @unique @db.VarChar(100)
   password      String
@@ -202,7 +202,7 @@ model users {
 
 model validasi {
   id_validasi     Int        @id @default(autoincrement())
-  uuid            String?    @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid            String?    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_mahasiswa    Int?
   validated_by    Int?
   status_validasi String?    @db.VarChar(20)
@@ -219,7 +219,7 @@ model validasi {
 
 model prodi {
   id_prodi           Int         @id @default(autoincrement())
-  uuid               String?     @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  uuid               String?     @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_unit            Int?
   nama_prodi         String      @db.VarChar(100)
   nama_prodi_en      String?     @db.VarChar(100)
