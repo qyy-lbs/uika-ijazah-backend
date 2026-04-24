@@ -1,9 +1,9 @@
 import type { Response } from 'express';
-import type { AuthRequest } from '../middlewares/authMiddleware.js';
+// 1. Ubah nama impor menjadi CustomRequest
+import type { CustomRequest } from '../middlewares/authMiddleware.js';
 
-
-//Controller: Profil Umum
-export const getProfile = (req: AuthRequest, res: Response): void => {
+// Controller: Profil Umum
+export const getProfile = (req: CustomRequest, res: Response): void => {
   res.status(200).json({ 
     status: 'success', 
     message: 'Data profil berhasil diambil.', 
@@ -11,9 +11,8 @@ export const getProfile = (req: AuthRequest, res: Response): void => {
   });
 };
 
-
-//Controller: Dashboard Level Universitas (Rektorat)
-export const getRektoratDashboard = (req: AuthRequest, res: Response): void => {
+// Controller: Dashboard Level Universitas (Rektorat)
+export const getRektoratDashboard = (req: CustomRequest, res: Response): void => {
   res.status(200).json({ 
     status: 'success', 
     message: 'Selamat datang di Dashboard Rektorat.',
@@ -22,9 +21,8 @@ export const getRektoratDashboard = (req: AuthRequest, res: Response): void => {
   });
 };
 
-
-//Controller: Dashboard Level Fakultas
-export const getFakultasDashboard = (req: AuthRequest, res: Response): void => {
+// Controller: Dashboard Level Fakultas
+export const getFakultasDashboard = (req: CustomRequest, res: Response): void => {
   res.status(200).json({ 
     status: 'success', 
     message: 'Selamat datang di Dashboard Fakultas.',
@@ -33,9 +31,8 @@ export const getFakultasDashboard = (req: AuthRequest, res: Response): void => {
   });
 };
 
-
-//Controller: Dashboard Operasional (Operator Data)
-export const getOperasionalDashboard = (req: AuthRequest, res: Response): void => {
+// Controller: Dashboard Operasional (Operator Data)
+export const getOperasionalDashboard = (req: CustomRequest, res: Response): void => {
   res.status(200).json({ 
     status: 'success', 
     message: 'Selamat datang di Ruang Kerja Operator.',

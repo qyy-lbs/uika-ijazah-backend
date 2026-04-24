@@ -1,61 +1,59 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// 1. cetakan khusus agar TypeScript tahu bahwa Request sekarang membawa data User
-export interface AuthRequest extends Request {
-  user?: any;
+// 1. KITA BUAT TIPE REQUEST SENDIRI (Mewarisi Express Request)
+// Alih-alih memaksa Express mengubah Request bawaannya, kita bikin versi kita sendiri.
+export interface CustomRequest extends Request {
+  user?: {
+    id_user: number;
+    email: string;
+    role: string;
+    id_unit: number | null;
+  };
 }
 
-export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  // 2. Tangkap token dari header "Authorization"
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; 
-  // 3. Jika token sama sekali tidak ada
+// 2. GUNAKAN CustomRequest DI SINI (Bukan Request biasa)
+export const verifyToken = (req: CustomRequest, res: Response, next: NextFunction): void => {
+  const token = req.header('Authorization')?.split(' ')[1];
+
   if (!token) {
-    res.status(401).json({ status: 'error', message: 'Akses ditolak. Token tidak ditemukan!' });
+    res.status(403).json({ status: 'error', message: 'Akses ditolak. Token tidak disediakan.' });
     return;
   }
 
-  // 4. Verifikasi keaslian token
   try {
     const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) throw new Error('JWT_SECRET belum diatur');
+    if (!jwtSecret) throw new Error('JWT_SECRET hilang');
 
-    // Jika token asli dan belum expired, kita buka isinya
-    const decoded = jwt.verify(token, jwtSecret);
+    // Dekode token dan pastikan formatnya sesuai
+    const decoded = jwt.verify(token, jwtSecret) as NonNullable<CustomRequest['user']>;
     
-    // 5. Simpan isi token (id_user, role, dll) ke dalam request untuk dipakai di fungsi selanjutnya
-    req.user = decoded;
+    // TIDAK AKAN ERROR KARENA req ADALAH CustomRequest
+    req.user = decoded; 
     
-    // 6. Persilakan masuk!
     next();
   } catch (error) {
-    res.status(403).json({ status: 'error', message: 'Token tidak valid atau sudah kadaluarsa!' });
+    res.status(401).json({ status: 'error', message: 'Sesi tidak valid atau telah kedaluwarsa. Silakan login kembali.' });
   }
 };
 
+// 3. GUNAKAN CustomRequest DI SINI JUGA
+export const authorizeRoles = (...allowedRoles: string[]) => {
+  return (req: CustomRequest, res: Response, next: NextFunction): void => {
+    
+    if (!req.user || !req.user.role) {
+      res.status(403).json({ status: 'error', message: 'Akses ditolak. Identitas tidak lengkap.' });
+      return;
+    }
 
-//fitur RBAC
-export const authorizeRoles = (...allowedRoles: string[])=> {
-    return (req: AuthRequest, res:Response, next: NextFunction): void => {
-        //1. pastikan data user ada
-        if (!req.user || !req.user.role){
-            res.status(403).json({
-                status : 'error',
-                message : 'Akses Ditolak. Identitas jabatan tidak ditemukan!'
-            });
-            return;
-        }
+    if (!allowedRoles.includes(req.user.role)) {
+      res.status(403).json({ 
+        status: 'error', 
+        message: `Akses ditolak. Jabatan '${req.user.role}' tidak memiliki wewenang untuk area ini.` 
+      });
+      return;
+    }
 
-        //2. cocokkan jabatan userr dengan daftar jabatan yang diizinkan masuk ke rute ini
-        if(!allowedRoles.includes(req.user.role)){
-            res.status(403).json({
-                status: 'error',
-                message: `Akses ditolak. Area ini hanya untuk: ${allowedRoles.join(' atau ')}`
-            });
-        }
-
-        //3. jika jabatannya cocok maka perislahkan masuk
-        next();
-    };
+    next();
+  };
 };

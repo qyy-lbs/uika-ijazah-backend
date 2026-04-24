@@ -38,19 +38,19 @@ router.get('/profile', getProfile);
 
 // --- PINTU BERLAPIS BERDASARKAN JABATAN ---
 
-// A. Level Universitas (Hanya Pimpinan Pusat & Admin)
+// A. Level Universitas (Hanya Pimpinan Pusat)
 router.get('/dashboard-rektorat', 
-  authorizeRoles('rektor', 'wakil_rektor', 'tu_rektorat', 'admin'), 
+  authorizeRoles('rektor', 'wakil_rektor', 'tu_rektorat'), 
   getRektoratDashboard
 );
 
-// B. Level Fakultas (Hanya Pimpinan Fakultas & Admin)
+// B. Level Fakultas (Hanya Pimpinan Fakultas)
 router.get('/dashboard-fakultas', 
-  authorizeRoles('dekan', 'wakil_dekan', 'tu_fakultas', 'admin'), 
+  authorizeRoles('dekan', 'wakil_dekan', 'tu_fakultas'), 
   getFakultasDashboard
 );
 
-// C. Level Operasional (Hanya Tim Input Data & Admin)
+// C. Level Operasional (Hanya Tim Input Data)
 router.get('/dashboard-operasional', 
   authorizeRoles('operator_data', 'admin'), 
   getOperasionalDashboard
