@@ -1,0 +1,15 @@
+node_modules/
+dist/
+logs/
+.env
+.env.local
+.env.production
+*.log
+.DS_Store
+coverage/
+.prisma/
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
