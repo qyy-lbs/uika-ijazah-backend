@@ -74,3 +74,36 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     });
   }
 };
+
+/**
+ * Controller: Menampilkan Semua User (Untuk Tabel Dashboard)
+ */
+export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const users = await prisma.users.findMany({
+      include: { unit: true }, // Menampilkan relasi ke Unit/Fakultas [cite: 27]
+      orderBy: { created_at: 'desc' }
+    });
+
+    res.status(200).json({ status: 'success', data: users });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Gagal mengambil data.' });
+  }
+};
+
+/**
+ * Controller: Menghapus User (Akses: Hanya Admin)
+ */
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; // Menggunakan id_user atau uuid
+
+    await prisma.users.delete({
+      where: { id_user: Number(id) }
+    });
+
+    res.status(200).json({ status: 'success', message: 'Akun berhasil dihapus!' });
+  } catch (error) {
+    res.status(404).json({ status: 'error', message: 'User tidak ditemukan.' });
+  }
+};

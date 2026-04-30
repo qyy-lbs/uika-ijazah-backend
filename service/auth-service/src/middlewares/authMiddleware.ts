@@ -1,8 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// 1. KITA BUAT TIPE REQUEST SENDIRI (Mewarisi Express Request)
-// Alih-alih memaksa Express mengubah Request bawaannya, kita bikin versi kita sendiri.
 export interface CustomRequest extends Request {
   user?: {
     id_user: number;
