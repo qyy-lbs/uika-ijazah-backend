@@ -1,0 +1,195 @@
+import { Response } from 'express';
+import path from 'path';
+import fs from 'fs';
+import { AuthRequest } from '../types';
+import { sendSuccess, sendError } from '../utils/response';
+import {
+  processUpload,
+  getStatusUpload,
+  getRiwayatUpload,
+  generateTemplateExcel,
+  validateExcelFormat,
+} from '../services/inbound.service';
+
+// ─────────────────────────────────────────────
+// POST /api/inbound/upload
+// Upload file Excel + proses data mahasiswa
+// ─────────────────────────────────────────────
+export async function uploadFile(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.file) {
+      sendError(res, 'File Excel tidak ditemukan dalam request.', undefined, 400);
+      return;
+    }
+
+    const { periode, tahun_lulus, id_template } = req.body;
+
+    if (!periode || !['semester ganjil', 'semester genap'].includes(periode)) {
+      sendError(res, "Field 'periode' wajib diisi dengan nilai 'semester ganjil' atau 'semester genap'.", undefined, 422);
+      return;
+    }
+
+    const tahunLulusNum = parseInt(tahun_lulus, 10);
+    if (!tahun_lulus || isNaN(tahunLulusNum) || tahunLulusNum < 2000 || tahunLulusNum > 2100) {
+      sendError(res, "Field 'tahun_lulus' wajib diisi dengan tahun yang valid (2000-2100).", undefined, 422);
+      return;
+    }
+
+    const filePath = req.file.path;
+    const namaFile = req.file.originalname;
+    const uploadedBy = req.user!.id_user;
+
+    // Validasi format kolom
+    const formatCheck = validateExcelFormat(filePath);
+    if (!formatCheck.valid) {
+      fs.unlinkSync(filePath);
+      sendError(res, 'Format file Excel tidak sesuai.', {
+        kolom_tidak_ada: formatCheck.missingColumns,
+        kolom_tidak_dikenal: formatCheck.unknownColumns,
+      }, 422);
+      return;
+    }
+
+    const result = await processUpload({
+      filePath,
+      namaFile,
+      uploadedBy,
+      periode: periode as 'semester ganjil' | 'semester genap',
+      tahunLulus: tahunLulusNum,
+      idTemplate: id_template ? parseInt(id_template, 10) : undefined,
+    });
+
+    // File ditolak karena kolom tidak dikenal (double check dari service)
+    if (result.ditolak) {
+      sendError(res, result.alasan as string, {
+        kolom_tidak_dikenal: result.unknown_columns,
+      }, 422);
+      return;
+    }
+
+    const statusCode = (result.total_gagal ?? 0) > 0 ? 207 : 201;
+    const message = result.total_batch === 1
+      ? `Upload berhasil. ${result.total_valid} mahasiswa diimport dalam 1 batch.`
+      : `Upload berhasil. ${result.total_valid} mahasiswa diimport dalam ${result.total_batch} batch.`;
+
+    sendSuccess(res, message, result, statusCode);
+  } catch (err) {
+    console.error('[uploadFile]', err);
+    sendError(res, 'Gagal memproses file upload.', undefined, 500);
+  }
+}
+
+// ─────────────────────────────────────────────
+// POST /api/inbound/validasi-format
+// Hanya validasi format file tanpa menyimpan ke DB
+// ─────────────────────────────────────────────
+export async function validasiFormat(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    if (!req.file) {
+      sendError(res, 'File Excel tidak ditemukan dalam request.', undefined, 400);
+      return;
+    }
+
+    const filePath = req.file.path;
+    const result = validateExcelFormat(filePath);
+
+    // Hapus file sementara setelah validasi
+    fs.unlinkSync(filePath);
+
+    if (!result.valid) {
+      sendError(
+        res,
+        'Format file tidak valid.',
+        {
+          kolom_tidak_ada: result.missingColumns,
+          total_baris: result.totalRows,
+        },
+        422
+      );
+      return;
+    }
+
+    sendSuccess(res, 'Format file valid.', {
+      valid: true,
+      total_baris: result.totalRows,
+    });
+  } catch (err) {
+    console.error('[validasiFormat]', err);
+    sendError(res, 'Gagal memvalidasi format file.', undefined, 500);
+  }
+}
+
+// ─────────────────────────────────────────────
+// GET /api/inbound/status/:id
+// Status detail satu batch upload
+// ─────────────────────────────────────────────
+export async function statusUpload(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = parseInt(String(req.params["id"]), 10);
+    if (isNaN(id)) {
+      sendError(res, 'ID batch tidak valid.', undefined, 400);
+      return;
+    }
+
+    const data = await getStatusUpload(id);
+    if (!data) {
+      sendError(res, 'Batch upload tidak ditemukan.', undefined, 404);
+      return;
+    }
+
+    sendSuccess(res, 'Detail status batch upload.', data);
+  } catch (err) {
+    console.error('[statusUpload]', err);
+    sendError(res, 'Gagal mengambil status batch upload.', undefined, 500);
+  }
+}
+
+// ─────────────────────────────────────────────
+// GET /api/inbound/riwayat
+// Riwayat semua batch upload (paginated)
+// ─────────────────────────────────────────────
+export async function riwayatUpload(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const tahunLulus = req.query.tahun_lulus ? parseInt(req.query.tahun_lulus as string) : undefined;
+    const periodeRaw = req.query.periode;
+    const periode = Array.isArray(periodeRaw) ? periodeRaw[0] as string : periodeRaw as string | undefined;
+
+    // Operator biasa hanya bisa lihat miliknya sendiri, admin bisa lihat semua
+    const role = req.user!.role;
+    const uploadedBy = role === 'admin' ? undefined : req.user!.id_user;
+
+    const result = await getRiwayatUpload({
+      page,
+      limit,
+      uploadedBy,
+      tahunLulus,
+      periode,
+    });
+
+    sendSuccess(res, 'Riwayat upload berhasil diambil.', result);
+  } catch (err) {
+    console.error('[riwayatUpload]', err);
+    sendError(res, 'Gagal mengambil riwayat upload.', undefined, 500);
+  }
+}
+
+// ─────────────────────────────────────────────
+// GET /api/inbound/template
+// Download template Excel kosong
+// ─────────────────────────────────────────────
+export function downloadTemplate(_req: AuthRequest, res: Response): void {
+  try {
+    const buffer = generateTemplateExcel();
+    const filename = `template_import_mahasiswa.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (err) {
+    console.error('[downloadTemplate]', err);
+    sendError(res, 'Gagal generate template Excel.', undefined, 500);
+  }
+}
