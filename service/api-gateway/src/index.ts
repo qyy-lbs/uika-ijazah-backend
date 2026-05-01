@@ -2,8 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
-
-// 1. IMPORT SATPAM KITA DI SINI
 import { verifyGatewayToken } from './middlewares/auth.middleware';
 
 dotenv.config();
@@ -97,6 +95,26 @@ app.use(createProxyMiddleware({
     }
   }
 }));
+
+
+// --- PROXY USERS (PINTU TERKUNCI - PAKAI SATPAM) ---
+
+// 1. Satpam mencegat di sini DULU
+app.use('/api/users', verifyGatewayToken);
+
+// 2. Baru Proxy meneruskan ke Auth Service (pakai pathFilter agar URL utuh)
+app.use(createProxyMiddleware({
+  pathFilter: '/api/users', 
+  target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002', // Arahkan ke Auth Service
+  changeOrigin: true,
+  on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Users-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+}));
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Gateway UIKA Berhasil di Port ${PORT}`);
