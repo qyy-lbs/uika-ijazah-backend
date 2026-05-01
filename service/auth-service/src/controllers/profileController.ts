@@ -1,5 +1,4 @@
 import type { Response } from 'express';
-// 1. Ubah nama impor menjadi CustomRequest
 import type { CustomRequest } from '../middlewares/authMiddleware.js';
 
 // Controller: Profil Umum
