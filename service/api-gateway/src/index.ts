@@ -116,6 +116,9 @@ app.use(createProxyMiddleware({
 }));
 
 
+
+
+
 app.listen(PORT, () => {
   console.log(`🚀 Gateway UIKA Berhasil di Port ${PORT}`);
   console.log(`🛡️  Middleware Keamanan: AKTIF`);
