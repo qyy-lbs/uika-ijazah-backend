@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
-import { verifyGatewayToken } from './middlewares/auth.middleware';
+import { verifyGatewayToken } from './middlewares/auth.middleware.js';
 
 dotenv.config();
 const app = express();
