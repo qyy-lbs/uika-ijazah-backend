@@ -34,7 +34,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // 4. Verifikasi Password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ status: 'error', message: 'Kredensial tidak valid!' });
+      res.status(401).json({ status: 'error', message: 'Email atau Password Salah!' });
       return;
     }
 
