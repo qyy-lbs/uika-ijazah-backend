@@ -19,7 +19,7 @@ const router = Router();
 // 1. RATE LIMITERS (Anti-Spam)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
-  max: 5,
+  max: 50, //diganti ke lebih kecil supaya aman 😊
   message: { status: 'error', message: 'Terlalu banyak percobaan login. Silakan coba lagi nanti.' }
 });
 
