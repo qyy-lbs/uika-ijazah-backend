@@ -1,12 +1,10 @@
-import path from 'path';
-import fs from 'fs';
 import prisma from '../config/prisma';
 import { parseExcelFile } from './excel.service';
 import { generateNomorBatch, parseDate } from '../utils/helpers';
 import { MahasiswaRow } from '../types';
 import * as XLSX from 'xlsx';
 
-const BATCH_SIZE = 10; // maksimal mahasiswa per batch
+const BATCH_SIZE = 10;
 
 // ─────────────────────────────────────────────
 // 1. UPLOAD FILE EXCEL & PROSES DATA
@@ -23,7 +21,6 @@ export async function processUpload(params: {
 
   const { valid, errors, unknown_columns } = parseExcelFile(filePath);
 
-  // Jika ada kolom tidak dikenal, tolak seluruh file
   if (unknown_columns.length > 0) {
     return {
       ditolak: true,
@@ -38,43 +35,46 @@ export async function processUpload(params: {
       ? ('semester_ganjil' as const)
       : ('semester_genap' as const);
 
-  // Validasi nama_prodi per baris — baris yang prodinya tidak ditemukan → pindah ke errors
+  // Validasi nama_prodi
   const { validatedRows, prodiErrors } = await validateProdi(valid);
-  const allErrors = [...errors, ...prodiErrors];
 
-  // Pecah validatedRows menjadi chunks per BATCH_SIZE
-  const chunks = chunkArray(validatedRows, BATCH_SIZE);
+  // Validasi NIM duplikat di database
+  const { uniqueRows, nimErrors } = await validateNimDuplikat(validatedRows);
+
+  // Gabung semua errors
+  const allErrors = [...errors, ...prodiErrors, ...nimErrors];
+
+  // Pecah ke chunks
+  const chunks = chunkArray(uniqueRows, BATCH_SIZE);
   const batchResults = [];
 
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    const nomorBatch = generateNomorBatch();
-
-    // Ambil errors yang relevan untuk chunk ini (berdasarkan NIM)
-    const nimDiChunk = new Set(chunk.map((r) => String(r.nim).trim()));
-    const logErrorChunk = allErrors.filter((e) => e.nim && nimDiChunk.has(e.nim));
 
     const batch = await prisma.batch_upload.create({
       data: {
-        nomor_batch_upload: nomorBatch,
-        nama_file: `${namaFile} (batch ${i + 1}/${chunks.length})`,
+        nomor_batch_upload: generateNomorBatch(),
+        nama_file: chunks.length > 1
+          ? `${namaFile} (batch ${i + 1}/${chunks.length})`
+          : namaFile,
         total_record: chunk.length,
         record_berhasil: chunk.length,
         record_gagal: 0,
         uploaded_by: uploadedBy,
         periode: periodeEnum,
         tahun_lulus: tahunLulus,
-        log_error: logErrorChunk.length > 0 ? JSON.stringify(logErrorChunk) : null,
+        log_error: null,
         ...(idTemplate ? { id_template: idTemplate } : {}),
       },
     });
 
+    // Insert mahasiswa di chunk ini dengan id_batch dari batch yang baru dibuat
     await insertMahasiswaBatch(chunk, batch.id_batch_upload);
 
     batchResults.push({
       batch_ke: i + 1,
       id_batch_upload: batch.id_batch_upload,
-      nomor_batch_upload: nomorBatch,
+      nomor_batch_upload: batch.nomor_batch_upload,
       record_berhasil: chunk.length,
     });
   }
@@ -82,7 +82,7 @@ export async function processUpload(params: {
   return {
     ditolak: false,
     total_data_excel: valid.length + errors.length,
-    total_valid: validatedRows.length,
+    total_valid: uniqueRows.length,
     total_gagal: allErrors.length,
     total_batch: chunks.length,
     errors: allErrors,
@@ -91,8 +91,60 @@ export async function processUpload(params: {
 }
 
 // ─────────────────────────────────────────────
+// HELPER — Cek NIM duplikat di database
+// Baris yang NIM-nya sudah ada → pindah ke errors
+// ─────────────────────────────────────────────
+async function validateNimDuplikat(rows: MahasiswaRow[]): Promise<{
+  uniqueRows: MahasiswaRow[];
+  nimErrors: { row: number; nim: string; field: string; message: string }[];
+}> {
+  const uniqueRows: MahasiswaRow[] = [];
+  const nimErrors: { row: number; nim: string; field: string; message: string }[] = [];
+
+  // Cek duplikat antar baris dalam file Excel itu sendiri
+  const nimDalamFile = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const nim = String(row.nim).trim();
+    const rowNum = i + 2;
+
+    // Duplikat di dalam file Excel
+    if (nimDalamFile.has(nim)) {
+      nimErrors.push({
+        row: rowNum,
+        nim,
+        field: 'nim',
+        message: `NIM '${nim}' muncul lebih dari satu kali dalam file Excel.`,
+      });
+      continue;
+    }
+
+    // Duplikat dengan data yang sudah ada di database
+    const existing = await prisma.mahasiswa.findUnique({
+      where: { nim },
+      select: { nim: true },
+    });
+
+    if (existing) {
+      nimErrors.push({
+        row: rowNum,
+        nim,
+        field: 'nim',
+        message: `NIM '${nim}' sudah terdaftar di database dan tidak dapat diimport ulang.`,
+      });
+      continue;
+    }
+
+    nimDalamFile.add(nim);
+    uniqueRows.push(row);
+  }
+
+  return { uniqueRows, nimErrors };
+}
+
+// ─────────────────────────────────────────────
 // HELPER — Validasi nama_prodi ke DB
-// Baris yang prodinya tidak ditemukan → dipindah ke errors
 // ─────────────────────────────────────────────
 async function validateProdi(rows: MahasiswaRow[]): Promise<{
   validatedRows: MahasiswaRow[];
@@ -104,10 +156,9 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rowNum = i + 2; // estimasi nomor baris Excel
+    const rowNum = i + 2;
 
     if (!row.nama_prodi) {
-      // Tidak isi nama_prodi → tetap valid, id_prodi null
       validatedRows.push(row);
       continue;
     }
@@ -125,7 +176,6 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
     const idProdi = prodiCache[namaProdi];
 
     if (idProdi === null) {
-      // Prodi tidak ditemukan → tolak baris ini
       prodiErrors.push({
         row: rowNum,
         nim: String(row.nim),
@@ -133,7 +183,6 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
         message: `Prodi '${namaProdi}' tidak ditemukan di database. Periksa penulisan nama prodi.`,
       });
     } else {
-      // Simpan id_prodi hasil lookup ke row (tambah field sementara)
       (row as MahasiswaRow & { _resolved_id_prodi?: number })._resolved_id_prodi = idProdi;
       validatedRows.push(row);
     }
@@ -154,7 +203,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 // ─────────────────────────────────────────────
-// 2. INSERT MAHASISWA DARI CHUNK
+// 2. INSERT MAHASISWA — hanya create, tidak update
 // ─────────────────────────────────────────────
 async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number) {
   for (const row of rows) {
@@ -162,40 +211,33 @@ async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number)
       const resolvedIdProdi =
         (row as MahasiswaRow & { _resolved_id_prodi?: number })._resolved_id_prodi ?? null;
 
-      const existing = await prisma.mahasiswa.findUnique({
-        where: { nim: String(row.nim).trim() },
+      await prisma.mahasiswa.create({
+        data: {
+          nim: String(row.nim).trim(),
+          id_batch_upload: idBatchUpload,
+          nik: row.nik ? String(row.nik).trim() : null,
+          nomor_seri_ijazah: row.nomor_seri_ijazah ? String(row.nomor_seri_ijazah).trim() : null,
+          pisn: row.pisn ? String(row.pisn).trim() : null,
+          nama_mahasiswa: String(row.nama_mahasiswa).trim(),
+          tempat_lahir: row.tempat_lahir ? String(row.tempat_lahir).trim() : null,
+          tanggal_lahir: row.tanggal_lahir ? parseDate(row.tanggal_lahir) : null,
+          program: row.program ? String(row.program).trim() : null,
+          program_en: row.program_en ? String(row.program_en).trim() : null,
+          gelar: row.gelar ? String(row.gelar).trim() : null,
+          gelar_en: row.gelar_en ? String(row.gelar_en).trim() : null,
+          jenis_kelamin: row.jenis_kelamin ? String(row.jenis_kelamin).trim() : null,
+          telepon: row.telepon ? String(row.telepon).trim() : null,
+          email: row.email ? String(row.email).trim() : null,
+          ipk: row.ipk != null ? Number(row.ipk) : null,
+          predikat: row.predikat ? String(row.predikat).trim() : null,
+          judul_skripsi: row.judul_skripsi ? String(row.judul_skripsi).trim() : null,
+          tahun_masuk: row.tahun_masuk ? Number(row.tahun_masuk) : null,
+          tahun_lulus: row.tahun_lulus ? Number(row.tahun_lulus) : null,
+          status_kelulusan: row.status_kelulusan ? String(row.status_kelulusan).trim() : null,
+          tanggal_kelulusan: row.tanggal_kelulusan ? parseDate(row.tanggal_kelulusan) : null,
+          ...(resolvedIdProdi ? { id_prodi: resolvedIdProdi } : {}),
+        },
       });
-
-      const data = {
-        id_batch_upload: idBatchUpload,
-        nik: row.nik ? String(row.nik).trim() : null,
-        nomor_seri_ijazah: row.nomor_seri_ijazah ? String(row.nomor_seri_ijazah).trim() : null,
-        pisn: row.pisn ? String(row.pisn).trim() : null,
-        nama_mahasiswa: String(row.nama_mahasiswa).trim(),
-        tempat_lahir: row.tempat_lahir ? String(row.tempat_lahir).trim() : null,
-        tanggal_lahir: row.tanggal_lahir ? parseDate(row.tanggal_lahir) : null,
-        program: row.program ? String(row.program).trim() : null,
-        program_en: row.program_en ? String(row.program_en).trim() : null,
-        gelar: row.gelar ? String(row.gelar).trim() : null,
-        gelar_en: row.gelar_en ? String(row.gelar_en).trim() : null,
-        jenis_kelamin: row.jenis_kelamin ? String(row.jenis_kelamin).trim() : null,
-        telepon: row.telepon ? String(row.telepon).trim() : null,
-        email: row.email ? String(row.email).trim() : null,
-        ipk: row.ipk != null ? Number(row.ipk) : null,
-        predikat: row.predikat ? String(row.predikat).trim() : null,
-        judul_skripsi: row.judul_skripsi ? String(row.judul_skripsi).trim() : null,
-        tahun_masuk: row.tahun_masuk ? Number(row.tahun_masuk) : null,
-        tahun_lulus: row.tahun_lulus ? Number(row.tahun_lulus) : null,
-        status_kelulusan: row.status_kelulusan ? String(row.status_kelulusan).trim() : null,
-        tanggal_kelulusan: row.tanggal_kelulusan ? parseDate(row.tanggal_kelulusan) : null,
-        ...(resolvedIdProdi ? { id_prodi: resolvedIdProdi } : {}),
-      };
-
-      if (existing) {
-        await prisma.mahasiswa.update({ where: { nim: String(row.nim).trim() }, data });
-      } else {
-        await prisma.mahasiswa.create({ data: { nim: String(row.nim).trim(), ...data } });
-      }
     } catch (err) {
       console.error(`[INBOUND] Gagal insert NIM ${row.nim}:`, err);
     }
@@ -264,12 +306,7 @@ export async function getRiwayatUpload(params: {
 
   return {
     data,
-    pagination: {
-      page,
-      limit,
-      total,
-      total_pages: Math.ceil(total / limit),
-    },
+    pagination: { page, limit, total, total_pages: Math.ceil(total / limit) },
   };
 }
 
@@ -308,6 +345,7 @@ export function generateTemplateExcel(): Buffer {
     ['5. Jenis kelamin: Laki-laki / Perempuan'],
     ['6. Jangan tambah atau ubah nama kolom di baris pertama.'],
     ['7. Kolom yang tidak ada di template akan menyebabkan upload ditolak.'],
+    ['8. NIM yang sudah terdaftar di database tidak akan diimport ulang.'],
   ];
   const wsPetunjuk = XLSX.utils.aoa_to_sheet(petunjukData);
   wsPetunjuk['!cols'] = [{ wch: 70 }];
