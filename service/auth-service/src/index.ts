@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js'; 
 import unitRoutes from './routes/unitRoutes.js'; 
@@ -8,6 +9,14 @@ import unitRoutes from './routes/unitRoutes.js';
 
 const app = express();
 app.set('trust proxy', 1)
+
+// 1. RATE LIMITERS (Anti-Spam)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 50, //nanti diganti ke lebih kecil supaya aman 😊
+  message: { status: 'error', message: 'Terlalu banyak percobaan login. Silakan coba lagi nanti.' }
+});
+
 
 const PORT = process.env.PORT || 3002;
 

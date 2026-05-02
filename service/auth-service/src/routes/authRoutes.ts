@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 
 // Controllers
 import { login } from '../controllers/authController.js';
@@ -16,16 +15,10 @@ import { verifyToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 const router = Router();
 
 
-// 1. RATE LIMITERS (Anti-Spam)
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 50, //diganti ke lebih kecil supaya aman 😊
-  message: { status: 'error', message: 'Terlalu banyak percobaan login. Silakan coba lagi nanti.' }
-});
 
 
 // 2. Public routes (Tanpa Autentikasi)
-router.post('/login', loginLimiter, login);
+router.post('/login', login);
 
 
 // 3. PROTECTED ROUTES (Wajib Autentikasi JWT)
