@@ -115,10 +115,8 @@ app.use(createProxyMiddleware({
 }));
 
 
-
-
-
 app.listen(Number(PORT),'0.0.0.0', () => {
   console.log(`🚀 Gateway UIKA ijazah Berhasil di Port ${PORT}`);
   console.log(`🛡️  Middleware Keamanan: AKTIF`);
+  console.log("AUTH SERVICE URL:", process.env.AUTH_SERVICE_URL);
 });
