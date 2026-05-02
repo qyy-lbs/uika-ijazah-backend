@@ -20,6 +20,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/units', unitRoutes)
 
 // Jalankan Server
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0',() => {
   console.log(`Auth Service berjalan di http://localhost:${PORT}`);
 });
