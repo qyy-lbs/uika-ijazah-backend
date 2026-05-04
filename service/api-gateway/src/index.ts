@@ -94,17 +94,14 @@ app.use(
 // --- PROXY UNIT (PINTU TERKUNCI - PAKAI SATPAM) ---
 
 // 1. Satpam mencegat di sini DULU
-app.use('/api/unit', verifyGatewayToken);
+app.use('/api/units', verifyGatewayToken);
 
 // 2. Baru Proxy meneruskan (pakai pathFilter agar URL tidak dipotong!)
 app.use(createProxyMiddleware({
-  pathFilter: '/api/unit', 
+  pathFilter: '/api/units', 
   target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002',
   changeOrigin: true,
-  pathRewrite: {
-    '/api/unit': '',
-
-  },
+ 
   on: { 
     proxyReq: fixRequestBody,
     proxyRes: (proxyRes, req) => {
@@ -124,10 +121,6 @@ app.use(createProxyMiddleware({
   pathFilter: '/api/users', 
   target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002', // Arahkan ke Auth Service
   changeOrigin: true,
-  pathRewrite: {
-    '/api/users': '',
-
-  },
   on: { 
     proxyReq: fixRequestBody,
     proxyRes: (proxyRes, req) => {
