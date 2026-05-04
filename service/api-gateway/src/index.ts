@@ -53,6 +53,10 @@ app.use(
   createProxyMiddleware({
     target: process.env.DOKUMEN_SERVICE_URL || 'http://localhost:3005',
     changeOrigin: true,
+    pathRewrite: {
+    '/api/dokumen': '',
+
+  },
     on: { proxyReq: fixRequestBody }
   })
 );
@@ -64,6 +68,10 @@ app.use(
   createProxyMiddleware({
     target: process.env.TEMPLATE_SERVICE_URL || 'http://localhost:3006',
     changeOrigin: true,
+    pathRewrite: {
+    '/api/template': '',
+
+  },
     on: { proxyReq: fixRequestBody }
   })
 );
@@ -75,6 +83,10 @@ app.use(
   createProxyMiddleware({
     target: process.env.BLOCKCHAIN_SERVICE_URL || 'http://localhost:3007',
     changeOrigin: true,
+    pathRewrite: {
+    '/api/blockchain': '',
+
+  },
     on: { proxyReq: fixRequestBody }
   })
 );
@@ -89,6 +101,10 @@ app.use(createProxyMiddleware({
   pathFilter: '/api/unit', 
   target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002',
   changeOrigin: true,
+  pathRewrite: {
+    '/api/unit': '',
+
+  },
   on: { 
     proxyReq: fixRequestBody,
     proxyRes: (proxyRes, req) => {
@@ -108,6 +124,10 @@ app.use(createProxyMiddleware({
   pathFilter: '/api/users', 
   target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002', // Arahkan ke Auth Service
   changeOrigin: true,
+  pathRewrite: {
+    '/api/users': '',
+
+  },
   on: { 
     proxyReq: fixRequestBody,
     proxyRes: (proxyRes, req) => {
