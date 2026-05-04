@@ -33,9 +33,12 @@ app.use('/api/inbound', verifyGatewayToken);
 
 // 2. Baru Proxy meneruskan (pakai pathFilter agar Express TIDAK MEMOTONG URL!)
 app.use(createProxyMiddleware({
-  pathFilter: '/api/inbound', 
   target: process.env.INBOUND_SERVICE_URL || 'http://localhost:3003',
   changeOrigin: true,
+  pathRewrite: {
+    '/api/inbound': '',
+
+  },
   on: { 
     proxyRes: (proxyRes, req) => {
       console.log(`[Inbound-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
