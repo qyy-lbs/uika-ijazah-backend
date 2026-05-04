@@ -27,7 +27,7 @@ app.use(express.json()); // Mengizinkan server membaca data JSON dari Frontend
 
 // Menyambungkan Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes); 
+app.use('/', userRoutes); 
 app.use('/api/units', unitRoutes)
 
 // Jalankan Server
