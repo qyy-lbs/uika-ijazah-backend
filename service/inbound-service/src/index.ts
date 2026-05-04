@@ -10,6 +10,8 @@ import inboundRoutes from './routes/inbound.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
+app.set('trust proxy', 1)
+const PORT = process.env.PORT || 3003;
 
 // ── Security & CORS
 app.use(helmet());
@@ -43,7 +45,7 @@ app.use((_req, res) => {
 app.use(errorHandler);
 
 // ── Start server
-app.listen(config.port, () => {
+app.listen(Number(PORT),'0.0.0.0', () => {
   console.log(`✅ Inbound Service berjalan di port ${config.port}`);
   console.log(`   Health check: http://localhost:${config.port}/health`);
 });
