@@ -55,7 +55,7 @@ router.post(
 router.get(
   "/riwayat",
   authenticate,
-  authorize("admin", "operator", "sistem"),
+  authorize("admin", "operator"),
   riwayatUpload,
 );
 

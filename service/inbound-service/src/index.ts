@@ -10,10 +10,6 @@ import inboundRoutes from './routes/inbound.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
 const app = express();
-app.use((req, res, next) => {
-  console.log("ROUTE MASUK:", req.method, req.originalUrl);
-  next();
-});
 app.set('trust proxy', 1)
 const PORT = process.env.PORT || 3003;
 
@@ -38,7 +34,7 @@ app.get('/health', (_req, res) => {
 });
 
 // ── Routes
-app.use('/api/inbound', inboundRoutes);
+app.use('/', inboundRoutes);
 
 // ── 404 handler
 app.use((_req, res) => {
