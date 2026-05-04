@@ -15,7 +15,7 @@ app.use(cors({
 
 // --- PROXY AUTH SERVICE (PINTU PUBLIK - TANPA SATPAM) ---
 app.use(createProxyMiddleware({
-  pathFilter: '/api/auth', // Menangkap semua yang berawal /api/auth
+  pathFilter: '/api/auth', 
   target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002',
   changeOrigin: true,
   on: {
@@ -26,23 +26,25 @@ app.use(createProxyMiddleware({
   }
 }));
 
-// --- PROXY INBOUND SERVICE (PINTU TERKUNCI - PAKAI SATPAM) ---
-// 2. KITA PASANG SATPAM DI RUTE INI
-app.use(
-  '/api/inbound', 
-  verifyGatewayToken, // <--- Satpam mencegat di sini sebelum diteruskan ke Inbound
-  createProxyMiddleware({
-    // pathFilter tidak perlu lagi karena sudah ditangkap oleh app.use('/api/inbound')
-    target: process.env.INBOUND_SERVICE_URL || 'http://localhost:3003',
-    changeOrigin: true,
-    on: {
-      proxyReq: fixRequestBody,
-      proxyRes: (proxyRes, req) => {
-        console.log(`[Inbound-Service] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
-      }
+// --- PROXY INBOUND SERVICE ---
+
+// 1. Satpam mencegat di sini DULU
+app.use('/api/inbound', verifyGatewayToken);
+
+// 2. Baru Proxy meneruskan (pakai pathFilter agar Express TIDAK MEMOTONG URL!)
+app.use(createProxyMiddleware({
+  pathFilter: '/api/inbound', 
+  target: process.env.INBOUND_SERVICE_URL || 'http://localhost:3003',
+  changeOrigin: true,
+   pathRewrite:{
+    '^/api/inbound': '',
+  },
+  on: { 
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Inbound-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
     }
-  })
-);
+  }
+}));
 
 // --- PROXY DOKUMEN SERVICE (Port 3005) ---
 app.use(
@@ -116,6 +118,7 @@ app.use(createProxyMiddleware({
 
 
 app.listen(Number(PORT),'0.0.0.0', () => {
+  
   console.log(`🚀 Gateway UIKA ijazah Berhasil di Port ${PORT}`);
   console.log(`🛡️  Middleware Keamanan: AKTIF`);
   console.log("AUTH SERVICE URL:", process.env.AUTH_SERVICE_URL);

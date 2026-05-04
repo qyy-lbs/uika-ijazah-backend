@@ -1,10 +1,13 @@
 import type{ Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+
+
 export const verifyGatewayToken = (req: Request, res: Response, next: NextFunction) => {
+   
   // 1. Ambil header Authorization
   const authHeader = req.headers['authorization'];
-
+  
   // 2. Ekstrak token (membuang kata "Bearer")
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -25,7 +28,12 @@ export const verifyGatewayToken = (req: Request, res: Response, next: NextFuncti
       });
     }
 
+
+    
+
     // Lolos sensor satpam, silakan lanjut ke service tujuan
     next();
   });
+
+  
 };
