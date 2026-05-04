@@ -8,7 +8,13 @@ import unitRoutes from './routes/unitRoutes.js';
 
 
 const app = express();
+
 app.set('trust proxy', 1)
+// 🔥 DEBUG SEMUA REQUEST MASUK KE AUTH SERVICE
+app.use((req, res, next) => {
+  console.log("AUTH HIT:", req.method, req.originalUrl);
+  next();
+});
 
 // 1. RATE LIMITERS (Anti-Spam)
 const loginLimiter = rateLimit({

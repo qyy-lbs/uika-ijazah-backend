@@ -8,7 +8,7 @@ const router = Router();
 router.use(verifyToken);
 
 // Hanya Admin yang bisa menambah unit
-router.post('/', authorizeRoles('admin'), createUnit);
+router.post('/createUnit', authorizeRoles('admin'), createUnit);
 
 // Semua role (Rektor/Dekan) bisa melihat daftar unit
 router.get('/getAllUnit', getAllUnits);
