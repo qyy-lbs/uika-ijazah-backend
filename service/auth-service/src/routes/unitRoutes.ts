@@ -11,6 +11,6 @@ router.use(verifyToken);
 router.post('/', authorizeRoles('admin'), createUnit);
 
 // Semua role (Rektor/Dekan) bisa melihat daftar unit
-router.get('/', getAllUnits);
+router.get('/getAllUnit', getAllUnits);
 
 export default router;
