@@ -6,10 +6,14 @@ import morgan from 'morgan';
 import path from 'path';
 
 import { config } from './config/app';
-import inboundRoutes from './routes/inbound.routes.js';
-import { errorHandler } from './middlewares/error.middleware.js';
+import inboundRoutes from './routes/inbound.routes';
+import { errorHandler } from './middlewares/error.middleware';
 
 const app = express();
+app.use((req, res, next) => {
+  console.log("ROUTE MASUK:", req.method, req.originalUrl);
+  next();
+});
 app.set('trust proxy', 1)
 const PORT = process.env.PORT || 3003;
 
@@ -48,6 +52,7 @@ app.use(errorHandler);
 app.listen(Number(PORT),'0.0.0.0', () => {
   console.log(`✅ Inbound Service berjalan di port ${config.port}`);
   console.log(`   Health check: http://localhost:${config.port}/health`);
+  
 });
 
 export default app;

@@ -1,13 +1,13 @@
-import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
-import { uploadExcel } from '../middlewares/upload.middleware';
+import { Router } from "express";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
+import { uploadExcel } from "../middlewares/upload.middleware";
 import {
   uploadFile,
   validasiFormat,
   statusUpload,
   riwayatUpload,
   downloadTemplate,
-} from '../controllers/inbound.controller';
+} from "../controllers/inbound.controller";
 
 const router = Router();
 
@@ -16,7 +16,7 @@ const router = Router();
  * @desc    Download template Excel kosong untuk diisi data mahasiswa
  * @access  Private (semua role)
  */
-router.get('/template', authenticate, downloadTemplate);
+router.get("/template", authenticate, downloadTemplate);
 
 /**
  * @route   POST /api/inbound/validasi-format
@@ -25,11 +25,11 @@ router.get('/template', authenticate, downloadTemplate);
  * @body    form-data: file (Excel)
  */
 router.post(
-  '/validasi-format',
+  "/validasi-format",
   authenticate,
-  authorize('admin', 'operator'),
-  uploadExcel.single('file'),
-  validasiFormat
+  authorize("admin", "operator"),
+  uploadExcel.single("file"),
+  validasiFormat,
 );
 
 /**
@@ -39,11 +39,11 @@ router.post(
  * @body    form-data: file (Excel), periode, tahun_lulus, id_template (opsional)
  */
 router.post(
-  '/upload',
+  "/upload",
   authenticate,
-  authorize('admin', 'operator'),
-  uploadExcel.single('file'),
-  uploadFile
+  authorize("admin", "operator"),
+  uploadExcel.single("file"),
+  uploadFile,
 );
 
 /**
@@ -52,7 +52,12 @@ router.post(
  * @access  Private (admin: semua, operator: miliknya saja)
  * @query   page, limit, tahun_lulus, periode
  */
-router.get('/riwayat', authenticate, authorize('admin', 'operator'), riwayatUpload);
+router.get(
+  "/riwayat",
+  authenticate,
+  authorize("admin", "operator", "sistem"),
+  riwayatUpload,
+);
 
 /**
  * @route   GET /api/inbound/status/:id
@@ -60,6 +65,11 @@ router.get('/riwayat', authenticate, authorize('admin', 'operator'), riwayatUplo
  * @access  Private (admin, operator)
  * @param   id - id_batch_upload
  */
-router.get('/status/:id', authenticate, authorize('admin', 'operator'), statusUpload);
+router.get(
+  "/status/:id",
+  authenticate,
+  authorize("admin", "operator"),
+  statusUpload,
+);
 
 export default router;

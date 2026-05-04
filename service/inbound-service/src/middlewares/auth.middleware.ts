@@ -41,6 +41,7 @@ export function authorize(...roles: string[]) {
       sendError(res, `Akses ditolak. Role '${req.user.role}' tidak diizinkan.`, undefined, 403);
       return;
     }
+    
     next();
   };
 }
