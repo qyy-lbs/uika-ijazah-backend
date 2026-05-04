@@ -6,8 +6,8 @@ import morgan from 'morgan';
 import path from 'path';
 
 import { config } from './config/app';
-import inboundRoutes from './routes/inbound.routes';
-import { errorHandler } from './middlewares/error.middleware';
+import inboundRoutes from './routes/inbound.routes.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
 
