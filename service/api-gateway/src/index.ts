@@ -8,10 +8,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
- origin: ['http://localhost:5173', 'http://localhost:3000'], 
-  credentials: true
-})); //mengizinkan semua domain untuk binding
+const corsOptions = {
+  origin: ['http://localhost:5173', 'http://localhost:3000'], 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Pastikan OPTIONS diizinkan
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'] 
+};
+
+// 2. Terapkan middleware CORS global
+app.use(cors(corsOptions));
+app.options(/./, cors(corsOptions));
+
 
 // --- PROXY AUTH SERVICE (PINTU PUBLIK - TANPA SATPAM) ---
 app.use(createProxyMiddleware({
