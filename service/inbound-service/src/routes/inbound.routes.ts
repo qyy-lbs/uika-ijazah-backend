@@ -14,7 +14,7 @@ const router = Router();
 /**
  * @route   GET /api/inbound/template
  * @desc    Download template Excel kosong untuk diisi data mahasiswa
- * @access  Private (semua role)
+ * @access  Private 
  */
 router.get("/template", authenticate, downloadTemplate);
 
