@@ -69,8 +69,8 @@ export async function uploadFile(req: AuthRequest, res: Response): Promise<void>
 
     const statusCode = (result.total_gagal ?? 0) > 0 ? 207 : 201;
     const message = result.total_batch === 1
-      ? `Upload berhasil. ${result.total_valid} mahasiswa diimport dalam 1 batch.`
-      : `Upload berhasil. ${result.total_valid} mahasiswa diimport dalam ${result.total_batch} batch.`;
+      ? `${result.total_valid} mahasiswa diimport dalam 1 batch.`
+      : `${result.total_valid} mahasiswa diimport dalam ${result.total_batch} batch.`;
 
     sendSuccess(res, message, result, statusCode);
   } catch (err) {
