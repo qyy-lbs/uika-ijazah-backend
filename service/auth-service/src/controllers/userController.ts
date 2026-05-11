@@ -106,4 +106,52 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   } catch (error) {
     res.status(404).json({ status: 'error', message: 'User tidak ditemukan.' });
   }
+};export const editUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      email,
+      password,
+      role
+    } = req.body;
+
+    // cek apakah user ada
+    const existingUser = await prisma.users.findUnique({
+      where: {
+        id_user: Number(id)
+      }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        message: 'Unit tidak ditemukan'
+      });
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // update user
+    const updatedUser = await prisma.users.update({
+      where: {
+        id_user: Number(id)
+      },
+      data: {
+         email,
+         password: hashedPassword,
+         role
+      }
+    });
+
+    res.status(200).json({
+      message: 'Unit berhasil diupdate',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: 'Gagal mengupdate unit'
+    });
+  }
 };

@@ -198,6 +198,7 @@ model users {
   template      template[]
   unit          unit?           @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
   validasi      validasi[]
+  refresh_token String?         @db.Text // Tambahkan kolom ini
 }
 
 model validasi {
