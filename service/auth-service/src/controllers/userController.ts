@@ -106,7 +106,8 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   } catch (error) {
     res.status(404).json({ status: 'error', message: 'User tidak ditemukan.' });
   }
-};export const editUser = async (req: Request, res: Response) => {
+};
+  export const editUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

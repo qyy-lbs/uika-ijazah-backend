@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUnit, editUnit, deleteUnits, getAllUnits, createProdi, getProdiByUnit } from '../controllers/unitController.js';
+import { createUnit, editUnit, deleteUnits, getAllUnits, createProdi, getProdiByUnit, editProdi } from '../controllers/unitController.js';
 import { verifyToken, authorizeRoles } from '../middlewares/authMiddleware.js';
 import { create } from 'node:domain';
 
@@ -21,4 +21,5 @@ router.put('/editUnit/:id', authorizeRoles('admin'), editUnit);
 
 router.post('/createProdi', authorizeRoles('admin'), createProdi);
 router.get('/:id_unit/prodi', getProdiByUnit);
+router.put('/editProdi/:id', authorizeRoles('admin'), editProdi);
 export default router;

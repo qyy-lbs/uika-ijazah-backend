@@ -226,3 +226,57 @@ export const getProdiByUnit = async (req: Request, res: Response) => {
     });
   }
 };
+export const editProdi = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      nama_prodi,
+        nama_prodi_en,
+        kaprodi,
+        nidn_kaprodi,
+        file_paraf_kaprodi,
+        no_sk_akreditasi
+    } = req.body;
+
+    // cek apakah prodi ada
+    const existingProdi = await prisma.prodi.findUnique({
+      where: {
+        id_prodi: Number(id)
+      }
+    });
+
+    if (!existingProdi) {
+      return res.status(404).json({
+        message: 'Prodi tidak ditemukan'
+      });
+    }
+
+
+    // update prodi
+    const updatedProdi = await prisma.prodi.update({
+      where: {
+        id_prodi: Number(id)
+      },
+      data: {
+         nama_prodi,
+        nama_prodi_en,
+        kaprodi,
+        nidn_kaprodi,
+        file_paraf_kaprodi,
+        no_sk_akreditasi,
+        updated_at: new Date()
+      }
+    });
+
+    res.status(200).json({
+      message: 'Prodi berhasil diupdate',
+      data: updatedProdi
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: 'Gagal mengupdate prodi'
+    });
+  }
+};
