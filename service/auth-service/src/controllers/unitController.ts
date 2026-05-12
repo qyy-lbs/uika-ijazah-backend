@@ -13,7 +13,7 @@ export const createUnit = async (req: Request, res: Response) => {
 
     const unit = await prisma.unit.create({
       data: {
-        nama_unit,
+        nama_unit, //tambahin kolom yang lain 
         jenis_unit,
         rektor,
         dekan
