@@ -8,21 +8,25 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
+
+//cors diubah sementara gara gara zullllllllllll salah url!!!!!!......
+
 const corsOptions = {
   origin: ['http://localhost:5173', 'http://localhost:3000'], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Pastikan OPTIONS diizinkan
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'] 
 };
-
-// 2. Terapkan middleware CORS global
 app.use(cors(corsOptions));
 app.options(/./, cors(corsOptions));
+
+//zulllll salah urll
 
 
 // --- PROXY AUTH SERVICE (PINTU PUBLIK - TANPA SATPAM) ---
 app.use(createProxyMiddleware({
-  pathFilter: '/api/auth', 
+  pathFilter: '/api/auth',    
   target: process.env.AUTH_SERVICE_URL || 'http://localhost:3002',
   changeOrigin: true,
   on: {
