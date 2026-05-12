@@ -43,21 +43,23 @@ app.use(createProxyMiddleware({
 app.use('/api/inbound', verifyGatewayToken);
 
 // 2. Baru Proxy meneruskan (pakai pathFilter agar Express TIDAK MEMOTONG URL!)
+// --- PROXY INBOUND SERVICE ---
 app.use(
-  '/api/inbound/',
+  '/api/inbound', // Gunakan path dasar tanpa slash di akhir
+  verifyGatewayToken, // Satpam jaga di sini
   createProxyMiddleware({
-  target: process.env.INBOUND_SERVICE_URL || 'http://localhost:3003',
-  changeOrigin: true,
-  pathRewrite: {
-    '/api/inbound': '',
-
-  },
-  on: { 
-    proxyRes: (proxyRes, req) => {
-      console.log(`[Inbound-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    target: process.env.INBOUND_SERVICE_URL || 'http://localhost:3003',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/inbound': '', // Gunakan tanda ^ untuk memastikan mencocokkan dari depan
+    },
+    on: { 
+      proxyRes: (proxyRes, req) => {
+        console.log(`[Inbound-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+      }
     }
-  }
-}));
+  })
+);
 
 // --- PROXY DOKUMEN SERVICE (Port 3005) ---
 app.use(

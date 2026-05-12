@@ -36,13 +36,13 @@ export async function processUpload(params: {
       : ('semester_genap' as const);
 
   // Validasi nama_prodi
-  const { validatedRows, prodiErrors } = await validateProdi(valid);
+  const { validatedRows: prodiValidated, prodiErrors } = await validateProdi(valid);
 
-  // Validasi NIM duplikat di database
-  const { uniqueRows, nimErrors } = await validateNimDuplikat(validatedRows);
+  // Validasi duplikat NIM dan NIK (dalam file + database)
+  const { uniqueRows, duplikatErrors } = await validateDuplikat(prodiValidated);
 
   // Gabung semua errors
-  const allErrors = [...errors, ...prodiErrors, ...nimErrors];
+  const allErrors = [...errors, ...prodiErrors, ...duplikatErrors];
 
   // Pecah ke chunks
   const chunks = chunkArray(uniqueRows, BATCH_SIZE);
@@ -51,6 +51,9 @@ export async function processUpload(params: {
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
 
+    // Hitung record_gagal yang relevan untuk batch ini berdasarkan urutan
+    // (errors dari format/prodi/duplikat sudah dipisah sebelum chunking,
+    //  jadi semua yang masuk chunk dipastikan valid)
     const batch = await prisma.batch_upload.create({
       data: {
         nomor_batch_upload: generateNomorBatch(),
@@ -68,21 +71,38 @@ export async function processUpload(params: {
       },
     });
 
-    // Insert mahasiswa di chunk ini dengan id_batch dari batch yang baru dibuat
-    await insertMahasiswaBatch(chunk, batch.id_batch_upload);
+    const insertResults = await insertMahasiswaBatch(chunk, batch.id_batch_upload);
+
+    // Update record_berhasil dan record_gagal sesuai hasil insert aktual
+    await prisma.batch_upload.update({
+      where: { id_batch_upload: batch.id_batch_upload },
+      data: {
+        record_berhasil: insertResults.berhasil,
+        record_gagal: insertResults.gagal,
+        log_error: insertResults.insertErrors.length > 0
+          ? JSON.stringify(insertResults.insertErrors)
+          : null,
+      },
+    });
+
+    // Tambahkan insert errors ke allErrors
+    allErrors.push(...insertResults.insertErrors);
 
     batchResults.push({
       batch_ke: i + 1,
       id_batch_upload: batch.id_batch_upload,
       nomor_batch_upload: batch.nomor_batch_upload,
-      record_berhasil: chunk.length,
+      record_berhasil: insertResults.berhasil,
+      record_gagal: insertResults.gagal,
     });
   }
+
+  const totalBerhasil = batchResults.reduce((sum, b) => sum + b.record_berhasil, 0);
 
   return {
     ditolak: false,
     total_data_excel: valid.length + errors.length,
-    total_valid: uniqueRows.length,
+    total_valid: totalBerhasil,
     total_gagal: allErrors.length,
     total_batch: chunks.length,
     errors: allErrors,
@@ -91,44 +111,109 @@ export async function processUpload(params: {
 }
 
 // ─────────────────────────────────────────────
-// HELPER — Cek NIM duplikat di database
-// Baris yang NIM-nya sudah ada → pindah ke errors
+// HELPER — Validasi duplikat NIM & NIK
+// Cek: (1) duplikat dalam file, (2) duplikat di database
+// Jika NIM/NIK muncul 2x dalam file → SEMUA baris dengan nilai itu ditolak
 // ─────────────────────────────────────────────
-async function validateNimDuplikat(rows: MahasiswaRow[]): Promise<{
+async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   uniqueRows: MahasiswaRow[];
-  nimErrors: { row: number; nim: string; field: string; message: string }[];
+  duplikatErrors: { row: number; nim?: string; field: string; message: string }[];
 }> {
-  const uniqueRows: MahasiswaRow[] = [];
-  const nimErrors: { row: number; nim: string; field: string; message: string }[] = [];
+  const duplikatErrors: { row: number; nim?: string; field: string; message: string }[] = [];
 
-  // Cek duplikat antar baris dalam file Excel itu sendiri
-  const nimDalamFile = new Set<string>();
+  // ── Tahap 1: Deteksi duplikat dalam file Excel
+  const nimCount: Record<string, number[]> = {};  // nim → list nomor baris
+  const nikCount: Record<string, number[]> = {};  // nik → list nomor baris
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const nim = String(row.nim).trim();
+  rows.forEach((row, i) => {
     const rowNum = i + 2;
+    const nim = String(row.nim).trim();
 
-    // Duplikat di dalam file Excel
-    if (nimDalamFile.has(nim)) {
-      nimErrors.push({
-        row: rowNum,
-        nim,
-        field: 'nim',
-        message: `NIM '${nim}' muncul lebih dari satu kali dalam file Excel.`,
-      });
-      continue;
+    if (!nimCount[nim]) nimCount[nim] = [];
+    nimCount[nim].push(rowNum);
+
+    if (row.nik) {
+      const nik = String(row.nik).trim();
+      if (!nikCount[nik]) nikCount[nik] = [];
+      nikCount[nik].push(rowNum);
     }
+  });
+  const barisErrorDalamFile = new Set<number>();
+  // NIM yang muncul lebih dari sekali dalam file → semua barisnya ditolak
+  const nimDuplikatDalamFile = new Set<string>();
+  for (const [nim, baris] of Object.entries(nimCount)) {
+    if (baris.length > 1) {
+      nimDuplikatDalamFile.add(nim);
+      baris.forEach((rowNum) => {
+        if (!barisErrorDalamFile.has(rowNum)) {
+          duplikatErrors.push({
+            row: rowNum,
+            nim,
+            field: 'nim',
+            message: `NIM '${nim}' muncul ${baris.length}x dalam file. Baris ini ditolak.`,
+          });
+          barisErrorDalamFile.add(rowNum); // Tandai baris sudah error
+        }
+      });
+    }
+  }
 
-    // Duplikat dengan data yang sudah ada di database
-    const existing = await prisma.mahasiswa.findUnique({
+  // NIK yang muncul lebih dari sekali dalam file → semua barisnya ditolak
+  const nikDuplikatDalamFile = new Set<string>();
+  for (const [nik, baris] of Object.entries(nikCount)) {
+    if (baris.length > 1) {
+      nikDuplikatDalamFile.add(nik);
+      baris.forEach((rowNum) => {
+        // Hanya tambahkan error jika baris ini belum kena error NIM sebelumnya
+        if (!barisErrorDalamFile.has(rowNum)) {
+          const row = rows[rowNum - 2];
+          duplikatErrors.push({
+            row: rowNum,
+            nim: row ? String(row.nim).trim() : undefined,
+            field: 'nik',
+            message: `NIK '${nik}' muncul ${baris.length}x dalam file. Baris ini ditolak.`,
+          });
+          barisErrorDalamFile.add(rowNum); // Tandai baris sudah error
+        }
+      });
+    }
+  }
+
+  // ── Tahap 2: Filter baris yang lolos dari duplikat dalam file
+  const lolosFile = rows.filter((row, i) => {
+    const rowNum = i + 2;
+    const nim = String(row.nim).trim();
+    const nik = row.nik ? String(row.nik).trim() : null;
+
+    const nimDuplikat = nimDuplikatDalamFile.has(nim);
+    const nikDuplikat = nik ? nikDuplikatDalamFile.has(nik) : false;
+
+    // Jika sudah ada error duplikat untuk baris ini, skip
+    // (hindari double error jika NIM dan NIK keduanya duplikat)
+    if (nimDuplikat || nikDuplikat) return false;
+
+    // Cek apakah baris ini sudah masuk ke duplikatErrors
+    const sudahAdaError = duplikatErrors.some((e) => e.row === rowNum);
+    return !sudahAdaError;
+  });
+
+  // ── Tahap 3: Cek duplikat dengan database (hanya baris yang lolos file)
+  const uniqueRows: MahasiswaRow[] = [];
+
+  for (let i = 0; i < lolosFile.length; i++) {
+    const row = lolosFile[i];
+    const nim = String(row.nim).trim();
+    const nik = row.nik ? String(row.nik).trim() : null;
+
+    // Cek NIM di database
+    const existingNim = await prisma.mahasiswa.findUnique({
       where: { nim },
       select: { nim: true },
     });
 
-    if (existing) {
-      nimErrors.push({
-        row: rowNum,
+    if (existingNim) {
+      duplikatErrors.push({
+        row: i + 2,
         nim,
         field: 'nim',
         message: `NIM '${nim}' sudah terdaftar di database dan tidak dapat diimport ulang.`,
@@ -136,11 +221,28 @@ async function validateNimDuplikat(rows: MahasiswaRow[]): Promise<{
       continue;
     }
 
-    nimDalamFile.add(nim);
+    // Cek NIK di database (hanya jika NIK diisi)
+    if (nik) {
+      const existingNik = await prisma.mahasiswa.findFirst({
+        where: { nik },
+        select: { nim: true, nik: true },
+      });
+
+      if (existingNik) {
+        duplikatErrors.push({
+          row: i + 2,
+          nim,
+          field: 'nik',
+          message: `NIK '${nik}' sudah terdaftar di database (milik NIM '${existingNik.nim}') dan tidak dapat diimport ulang.`,
+        });
+        continue;
+      }
+    }
+
     uniqueRows.push(row);
   }
 
-  return { uniqueRows, nimErrors };
+  return { uniqueRows, duplikatErrors };
 }
 
 // ─────────────────────────────────────────────
@@ -203,17 +305,28 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 // ─────────────────────────────────────────────
-// 2. INSERT MAHASISWA — hanya create, tidak update
+// 2. INSERT MAHASISWA — return hasil aktual
 // ─────────────────────────────────────────────
-async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number) {
-  for (const row of rows) {
+async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number): Promise<{
+  berhasil: number;
+  gagal: number;
+  insertErrors: { row: number; nim: string; field: string; message: string }[];
+}> {
+  let berhasil = 0;
+  let gagal = 0;
+  const insertErrors: { row: number; nim: string; field: string; message: string }[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const nim = String(row.nim).trim();
+
     try {
       const resolvedIdProdi =
         (row as MahasiswaRow & { _resolved_id_prodi?: number })._resolved_id_prodi ?? null;
 
       await prisma.mahasiswa.create({
         data: {
-          nim: String(row.nim).trim(),
+          nim,
           id_batch_upload: idBatchUpload,
           nik: row.nik ? String(row.nik).trim() : null,
           nomor_seri_ijazah: row.nomor_seri_ijazah ? String(row.nomor_seri_ijazah).trim() : null,
@@ -238,10 +351,20 @@ async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number)
           ...(resolvedIdProdi ? { id_prodi: resolvedIdProdi } : {}),
         },
       });
+
+      berhasil++;
     } catch (err) {
-      console.error(`[INBOUND] Gagal insert NIM ${row.nim}:`, err);
+      gagal++;
+      insertErrors.push({
+        row: i + 2,
+        nim,
+        field: 'database',
+        message: `Gagal menyimpan data: ${err instanceof Error ? err.message : 'unknown error'}`,
+      });
     }
   }
+
+  return { berhasil, gagal, insertErrors };
 }
 
 // ─────────────────────────────────────────────
@@ -345,7 +468,7 @@ export function generateTemplateExcel(): Buffer {
     ['5. Jenis kelamin: Laki-laki / Perempuan'],
     ['6. Jangan tambah atau ubah nama kolom di baris pertama.'],
     ['7. Kolom yang tidak ada di template akan menyebabkan upload ditolak.'],
-    ['8. NIM yang sudah terdaftar di database tidak akan diimport ulang.'],
+    ['8. NIM atau NIK yang duplikat dalam file maupun di database tidak akan diimport.'],
   ];
   const wsPetunjuk = XLSX.utils.aoa_to_sheet(petunjukData);
   wsPetunjuk['!cols'] = [{ wch: 70 }];

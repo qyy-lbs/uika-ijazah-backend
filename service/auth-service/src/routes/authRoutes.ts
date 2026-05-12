@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 // Controllers
-import { login } from '../controllers/authController.js';
+import { login, logout, refreshToken } from '../controllers/authController.js';
 import { 
   getProfile, 
   getRektoratDashboard, 
@@ -19,12 +19,14 @@ const router = Router();
 
 // 2. Public routes (Tanpa Autentikasi)
 router.post('/login', login);
+router.post('/refresh', refreshToken); // Bisa diakses tanpa token (public)
 
 
 // 3. PROTECTED ROUTES (Wajib Autentikasi JWT)
 // verifikaai jwt
 router.use(verifyToken);
 
+router.post('/logout', logout);  // Harus login dulu baru bisa logout
 // Rute Umum: Siapapun yang punya JWT bisa lihat profilnya sendiri
 router.get('/profile', getProfile);
 

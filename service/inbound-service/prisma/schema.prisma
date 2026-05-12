@@ -147,6 +147,7 @@ model template {
   users              users?              @relation(fields: [created_by], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model unit {
   id_unit                  Int             @id @default(autoincrement())
   uuid                     String?         @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -197,6 +198,7 @@ model users {
   template      template[]
   unit          unit?           @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
   validasi      validasi[]
+  refresh_token String?         @db.Text // Tambahkan kolom ini
 }
 
 model validasi {
