@@ -9,7 +9,6 @@ import {
   editProdi,
 } from "../controllers/unitController.js";
 import { verifyToken, authorizeRoles } from "../middlewares/masterMiddleware.js";
-import { create } from "node:domain";
 
 const router = Router();
 
