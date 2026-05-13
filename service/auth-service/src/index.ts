@@ -3,8 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes.js';
-import userRoutes from './routes/userRoutes.js'; 
-import unitRoutes from './routes/unitRoutes.js'; 
+
 
 
 const app = express();
@@ -33,8 +32,7 @@ app.use(express.json()); // Mengizinkan server membaca data JSON dari Frontend
 
 // Menyambungkan Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes); 
-app.use('/api/units', unitRoutes)
+
 
 // Jalankan Server
 app.listen(Number(PORT), '0.0.0.0',() => {
