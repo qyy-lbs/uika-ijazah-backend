@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { getPrisma } from "../../../auth-service/src/lib/prisma.js";
+import { getPrisma } from "../lib/prisma.js";
 
 const prisma = getPrisma();
 

@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { CustomRequest } from "../middlewares/masterMiddleware";
+import type { CustomRequest } from "../middlewares/masterMiddleware.js";
 
 // Controller: Profil Umum
 export const getProfile = (req: CustomRequest, res: Response): void => {

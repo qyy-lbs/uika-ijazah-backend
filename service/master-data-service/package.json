@@ -1,6 +1,7 @@
 {
   "name": "master-data-service",
   "version": "1.0.0",
+  "types": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,7 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
@@ -27,6 +28,7 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
