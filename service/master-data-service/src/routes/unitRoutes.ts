@@ -7,9 +7,8 @@ import {
   createProdi,
   getProdiByUnit,
   editProdi,
-} from "../../../master-data-service/src/controllers/unitController.js";
+} from "../controllers/unitController.js";
 import { verifyToken, authorizeRoles } from "../middlewares/masterMiddleware.js";
-import { create } from "node:domain";
 
 const router = Router();
 
