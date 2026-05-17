@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // --- DAFTAR RUTE (Gunakan awalan utuh agar cocok dengan Gateway) ---
-app.use('/api/unit', unitRoutes);
+app.use('/api/units', unitRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/profile', profileRoutes);
 

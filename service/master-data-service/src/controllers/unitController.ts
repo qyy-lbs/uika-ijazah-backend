@@ -1,4 +1,6 @@
 // controllers/unitController.ts
+import dotenv from 'dotenv';
+dotenv.config();
 import type { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -41,9 +43,14 @@ export const getAllUnits = async (req: Request, res: Response) => {
       }
     });
     res.status(200).json(units);
-  } catch (error) {
-    res.status(500).json({ message: 'Gagal mengambil data unit', error });
-  }
+  }  catch (error: any) {
+  console.log(error);
+
+  res.status(500).json({
+    message: 'Gagal mengambil data unit',
+    error: error.message
+  });
+}
 };
 
 export const deleteUnits = async (req: Request, res: Response) => {
