@@ -109,7 +109,7 @@ app.use(
 app.use('/api/units', verifyGatewayToken);
 app.use(createProxyMiddleware({
   pathFilter: '/api/units', 
-  target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3005',
+  target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3004',
   changeOrigin: true,
   on: { 
     proxyReq: fixRequestBody,
@@ -123,7 +123,7 @@ app.use(createProxyMiddleware({
 app.use('/api/users', verifyGatewayToken);
 app.use(createProxyMiddleware({
   pathFilter: '/api/users', 
-  target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3005', 
+  target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3004', 
   changeOrigin: true,
   on: { 
     proxyReq: fixRequestBody,
@@ -137,7 +137,7 @@ app.use(createProxyMiddleware({
 app.use('/api/profile', verifyGatewayToken);
 app.use(createProxyMiddleware({
   pathFilter: '/api/profile', 
-  target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3005', 
+  target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3004', 
   changeOrigin: true,
   on: { 
     proxyReq: fixRequestBody,
@@ -149,12 +149,13 @@ app.use(createProxyMiddleware({
 
 
 app.use(
-  "/api/akademik", // 
+  "/api/akademik", 
+  verifyGatewayToken, // ✅ Memanggil nama satpam yang benar!
   createProxyMiddleware({
-    // URL ini diarahkan ke markas Akademik Service
+    // URL target disesuaikan dengan brankas .env
     target: process.env.AKADEMIK_SERVICE_URL || "http://akademik-service.railway.internal:3005", 
     changeOrigin: true,
-  
+    // Baris logLevel dihapus agar TypeScript tenang
   })
 );
 
