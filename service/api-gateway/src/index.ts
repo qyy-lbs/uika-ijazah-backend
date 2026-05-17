@@ -148,6 +148,17 @@ app.use(createProxyMiddleware({
 }));
 
 
+app.use(
+  "/api/akademik", // 
+  createProxyMiddleware({
+    // URL ini diarahkan ke markas Akademik Service
+    target: process.env.AKADEMIK_SERVICE_URL || "http://akademik-service.railway.internal:3005", 
+    changeOrigin: true,
+  
+  })
+);
+
+
 // ==========================================================
 // --- START SERVER ---
 // ==========================================================
