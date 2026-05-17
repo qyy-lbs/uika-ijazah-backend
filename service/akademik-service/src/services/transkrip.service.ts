@@ -11,7 +11,7 @@ export async function getTranskripByNim(nim: string) {
 
   const nilaiList = await findNilaiByMahasiswaId(mahasiswa.id_mahasiswa);
 
-  const mataKuliah = nilaiList.map((item, index) => {
+  const mataKuliah = nilaiList.map((item: any, index: number) => {
     const am = item.nilai_angka ? Number(item.nilai_angka) : 0;
     const k = item.akademik?.bobot_k || 0;
     const t = item.bobot_t ? Number(item.bobot_t) : am * k;
@@ -27,8 +27,8 @@ export async function getTranskripByNim(nim: string) {
     };
   });
 
-  const totalSks = mataKuliah.reduce((total, item) => total + item.k, 0);
-  const totalBobot = mataKuliah.reduce((total, item) => total + item.t, 0);
+  const totalSks = mataKuliah.reduce((total : number, item : any) => total + item.k, 0);
+  const totalBobot = mataKuliah.reduce((total : number, item : any) => total + item.t, 0);
 
   const ipkHitung =
     totalSks > 0 ? Number((totalBobot / totalSks).toFixed(2)) : 0;
