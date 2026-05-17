@@ -148,14 +148,12 @@ app.use(createProxyMiddleware({
 }));
 
 
-app.use(
-  "/api/akademik", 
-  verifyGatewayToken, // ✅ Memanggil nama satpam yang benar!
-  createProxyMiddleware({
-    // URL target disesuaikan dengan brankas .env
-    target: process.env.AKADEMIK_SERVICE_URL || "http://akademik-service.railway.internal:3005", 
+app.use( "/api/akademik", verifyGatewayToken) 
+app.use(createProxyMiddleware({
+    pathFilter: '/api/akademik', 
+
+    target: process.env.AKADEMIK_SERVICE_URL || 'http://localhost:3005', 
     changeOrigin: true,
-    // Baris logLevel dihapus agar TypeScript tenang
   })
 );
 
