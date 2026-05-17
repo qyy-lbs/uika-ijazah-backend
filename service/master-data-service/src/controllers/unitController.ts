@@ -1,14 +1,8 @@
-// controllers/unitController.ts
-import dotenv from 'dotenv';
-dotenv.config();
+// src/controllers/unitController.ts
 import type { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { getPrisma } from '../lib/prisma.js'; 
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = getPrisma();
 
 // ==================== UNIT ====================
 
@@ -18,7 +12,7 @@ export const createUnit = async (req: Request, res: Response) => {
 
     const unit = await prisma.unit.create({
       data: {
-        nama_unit, //tambahin kolom yang lain 
+        nama_unit,
         jenis_unit,
         rektor,
         dekan
@@ -33,86 +27,61 @@ export const createUnit = async (req: Request, res: Response) => {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-}
+};
 
 export const getAllUnits = async (req: Request, res: Response) => {
   try {
     const units = await prisma.unit.findMany({
       include: {
-        prodi: true // Opsional: ikutkan daftar prodi di setiap unit
+        prodi: true 
       }
     });
     res.status(200).json(units);
-  }  catch (error: any) {
-  console.log(error);
-
-  res.status(500).json({
-    message: 'Gagal mengambil data unit',
-    error: error.message
-  });
-}
+  } catch (error: any) {
+    res.status(500).json({
+      message: 'Gagal mengambil data unit',
+      error: error.message
+    });
+  }
 };
 
 export const deleteUnits = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-     const unit = await prisma.unit.findUnique({
+    const unit = await prisma.unit.findUnique({
       where: { id_unit: Number(id) }
     });
 
     if (!unit) {
-      return res.status(404).json({
-        message: 'Unit tidak ditemukan',
-      });
+      return res.status(404).json({ message: 'Unit tidak ditemukan' });
     }
 
-    // hapus unit
     await prisma.unit.delete({
       where: { id_unit: Number(id) }
     });
 
-    res.status(200).json({
-      message: 'Unit berhasil dihapus',
-    });
+    res.status(200).json({ message: 'Unit berhasil dihapus' });
   } catch (error) {
-    res.status(500).json({
-      message: 'Gagal menghapus unit',
-    });
+    res.status(500).json({ message: 'Gagal menghapus unit' });
   }
 };
 
 export const editUnit = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { jenis_unit, nama_unit, dekan, nidn_dekan, wakil_dekan_1, nidn_wakil_dekan_1 } = req.body;
 
-    const {
-      jenis_unit,
-      nama_unit,
-      dekan,
-      nidn_dekan,
-      wakil_dekan_1,
-      nidn_wakil_dekan_1
-    } = req.body;
-
-    // cek apakah unit ada
     const existingUnit = await prisma.unit.findUnique({
-      where: {
-        id_unit: Number(id)
-      }
+      where: { id_unit: Number(id) }
     });
 
     if (!existingUnit) {
-      return res.status(404).json({
-        message: 'Unit tidak ditemukan'
-      });
+      return res.status(404).json({ message: 'Unit tidak ditemukan' });
     }
 
-    // update unit
     const updatedUnit = await prisma.unit.update({
-      where: {
-        id_unit: Number(id)
-      },
+      where: { id_unit: Number(id) },
       data: {
         jenis_unit,
         nama_unit,
@@ -123,51 +92,30 @@ export const editUnit = async (req: Request, res: Response) => {
       }
     });
 
-    res.status(200).json({
-      message: 'Unit berhasil diupdate',
-      data: updatedUnit
-    });
-
+    res.status(200).json({ message: 'Unit berhasil diupdate', data: updatedUnit });
   } catch (error) {
-    res.status(500).json({
-      message: 'Gagal mengupdate unit'
-    });
+    res.status(500).json({ message: 'Gagal mengupdate unit' });
   }
 };
 
-// ==================== PRODI (dalam Unit) ====================
+// ==================== PRODI ====================
 
 export const createProdi = async (req: Request, res: Response) => {
   try {
-    const {
-      id_unit,
-      nama_prodi,
-      nama_prodi_en,
-      kaprodi,
-      nidn_kaprodi,
-      file_paraf_kaprodi,
-      no_sk_akreditasi
-    } = req.body;
+    const { id_unit, nama_prodi, nama_prodi_en, kaprodi, nidn_kaprodi, file_paraf_kaprodi, no_sk_akreditasi } = req.body;
 
-    // 1️⃣ Validasi input wajib
     if (!id_unit || !nama_prodi) {
-      return res.status(400).json({
-        message: 'id_unit dan nama_prodi wajib diisi'
-      });
+      return res.status(400).json({ message: 'id_unit dan nama_prodi wajib diisi' });
     }
 
-    // 2️⃣ Cek apakah unit tujuan ada
     const unit = await prisma.unit.findUnique({
       where: { id_unit: Number(id_unit) }
     });
 
     if (!unit) {
-      return res.status(404).json({
-        message: 'Unit tidak ditemukan'
-      });
+      return res.status(404).json({ message: 'Unit tidak ditemukan' });
     }
 
-    // 3️⃣ Buat prodi baru dengan relasi ke unit
     const prodi = await prisma.prodi.create({
       data: {
         id_unit: Number(id_unit),
@@ -180,93 +128,50 @@ export const createProdi = async (req: Request, res: Response) => {
       },
       include: {
         unit: {
-          select: {
-            id_unit: true,
-            nama_unit: true,
-            jenis_unit: true
-          }
+          select: { id_unit: true, nama_unit: true, jenis_unit: true }
         }
       }
     });
 
-    res.status(201).json({
-      message: 'Prodi berhasil dibuat',
-      data: prodi
-    });
-
+    res.status(201).json({ message: 'Prodi berhasil dibuat', data: prodi });
   } catch (error: any) {
-    console.error('Error create prodi:', error);
-    
-    // Handle unique constraint error dari Prisma
     if (error.code === 'P2002') {
-      return res.status(409).json({
-        message: 'Prodi dengan nama tersebut sudah terdaftar di unit ini'
-      });
+      return res.status(409).json({ message: 'Prodi dengan nama tersebut sudah terdaftar di unit ini' });
     }
-
-    res.status(500).json({
-      message: 'Gagal membuat prodi',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ message: 'Gagal membuat prodi', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 };
 
-// Opsional: Get semua prodi by unit
 export const getProdiByUnit = async (req: Request, res: Response) => {
   try {
     const { id_unit } = req.params;
-
     const prodiList = await prisma.prodi.findMany({
       where: { id_unit: Number(id_unit) },
       orderBy: { nama_prodi: 'asc' }
     });
-
-    res.status(200).json({
-      message: 'Data prodi berhasil diambil',
-       prodiList
-    });
-
+    res.status(200).json({ message: 'Data prodi berhasil diambil', prodiList });
   } catch (error) {
-    res.status(500).json({
-      message: 'Gagal mengambil data prodi',
-      error
-    });
+    res.status(500).json({ message: 'Gagal mengambil data prodi' });
   }
 };
+
 export const editProdi = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { nama_prodi, nama_prodi_en, kaprodi, nidn_kaprodi, file_paraf_kaprodi, no_sk_akreditasi } = req.body;
 
-    const {
-      nama_prodi,
-        nama_prodi_en,
-        kaprodi,
-        nidn_kaprodi,
-        file_paraf_kaprodi,
-        no_sk_akreditasi
-    } = req.body;
-
-    // cek apakah prodi ada
     const existingProdi = await prisma.prodi.findUnique({
-      where: {
-        id_prodi: Number(id)
-      }
+      where: { id_prodi: Number(id) }
     });
 
     if (!existingProdi) {
-      return res.status(404).json({
-        message: 'Prodi tidak ditemukan'
-      });
+      return res.status(404).json({ message: 'Prodi tidak ditemukan' });
     }
 
-
-    // update prodi
     const updatedProdi = await prisma.prodi.update({
-      where: {
-        id_prodi: Number(id)
-      },
+      where: { id_prodi: Number(id) },
       data: {
-         nama_prodi,
+        nama_prodi,
         nama_prodi_en,
         kaprodi,
         nidn_kaprodi,
@@ -276,14 +181,8 @@ export const editProdi = async (req: Request, res: Response) => {
       }
     });
 
-    res.status(200).json({
-      message: 'Prodi berhasil diupdate',
-      data: updatedProdi
-    });
-
+    res.status(200).json({ message: 'Prodi berhasil diupdate', data: updatedProdi });
   } catch (error) {
-    res.status(500).json({
-      message: 'Gagal mengupdate prodi'
-    });
+    res.status(500).json({ message: 'Gagal mengupdate prodi' });
   }
 };

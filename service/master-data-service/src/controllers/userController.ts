@@ -120,44 +120,54 @@ export const deleteUser = async (
 export const editUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { email, password, role, id_unit } = req.body;
 
-    const { email, password, role } = req.body;
-
-    // cek apakah user ada
+    // 1. Cek apakah user ada
     const existingUser = await prisma.users.findUnique({
-      where: {
-        id_user: Number(id),
-      },
+      where: { id_user: Number(id) },
     });
 
     if (!existingUser) {
       return res.status(404).json({
-        message: "Unit tidak ditemukan",
+        message: "User tidak ditemukan", // ✅ Typo Unit -> User diperbaiki
       });
     }
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // 2. Siapkan data yang akan diupdate
+    const updateData: any = {
+      email,
+      role,
+      id_unit
+    };
 
-    // update user
+    // 3. ✅ LOGIKA PENGAMANAN PASSWORD
+    // Hanya hash dan update password JIKA dikirimkan dari frontend (tidak kosong)
+    if (password && password.trim() !== "") {
+      const saltRounds = 10;
+      updateData.password = await bcrypt.hash(password, saltRounds);
+    }
+
+    // 4. Update user di database
     const updatedUser = await prisma.users.update({
-      where: {
-        id_user: Number(id),
-      },
-      data: {
-        email,
-        password: hashedPassword,
-        role,
-      },
+      where: { id_user: Number(id) },
+      data: updateData,
+      // JANGAN KEMBALIKAN PASSWORD di respon!
+      select: {
+        id_user: true,
+        email: true,
+        role: true,
+        id_unit: true,
+        is_active: true
+      }
     });
 
     res.status(200).json({
-      message: "Unit berhasil diupdate",
+      message: "Akun user berhasil diupdate", 
       data: updatedUser,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Gagal mengupdate unit",
+      message: "Gagal mengupdate user", 
     });
   }
 };
