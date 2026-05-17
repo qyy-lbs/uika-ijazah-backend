@@ -215,25 +215,37 @@ export async function getLaporanApproval(req: Request, res: Response) {
     const status =
       typeof req.query.status === "string" ? req.query.status : undefined;
 
-   const query: {
-  search?: string;
-  status?: string;
-} = {};
+    const page =
+      typeof req.query.page === "string" ? Number(req.query.page) : 1;
 
-if (search) {
-  query.search = search;
-}
+    const limit =
+      typeof req.query.limit === "string" ? Number(req.query.limit) : 10;
 
-if (status) {
-  query.status = status;
-}
+    const query: {
+      search?: string;
+      status?: string;
+      page: number;
+      limit: number;
+    } = {
+      page: Number.isNaN(page) || page < 1 ? 1 : page,
+      limit: Number.isNaN(limit) || limit < 1 ? 10 : limit,
+    };
 
-const data = await getLaporanApprovalForUser(user, query);
+    if (search) {
+      query.search = search;
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    const result = await getLaporanApprovalForUser(user, query);
 
     return res.json({
       success: true,
       message: "Data laporan approval berhasil diambil",
-      data,
+      data: result.data,
+      pagination: result.pagination,
     });
   } catch (error) {
     return res.status(500).json({

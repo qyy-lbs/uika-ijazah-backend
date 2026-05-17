@@ -1,21 +1,16 @@
 import { findBatchByIdWithMahasiswa } from "../repositories/batch.repository.js";
-import {
-  getApprovalLevelByRole,
-  isFacultyValidator,
-} from "../constants/approval-level.constant.js";
+import { getApprovalLevelByRole,isFacultyValidator,} from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
-import {
-  createValidasi,
-  findValidasiByMahasiswaAndLevel,
-  updateValidasi,
-} from "../repositories/validasi.repository.js";
+import {createValidasi,findValidasiByMahasiswaAndLevel,updateValidasi,} from "../repositories/validasi.repository.js";
+import { VALIDATION_STATUS } from "../constants/status.constant.js";
+import { createLogAktivitas } from "../repositories/log.repository.js";
 
 function isAlreadyFinalStatus(
   validasiList: { status_validasi: string | null }[]
 ) {
   return validasiList.some((item) => {
     const status = item.status_validasi?.toLowerCase();
-    return status === "rejected" || status === "revoked";
+    return status === VALIDATION_STATUS.REJECTED || status === VALIDATION_STATUS.REVOKED;
   });
 }
 
@@ -39,7 +34,7 @@ function canRejectAtLevel(
     return false;
   }
 
-  if (hasStatusAtLevel(validasiList, currentLevel, "approved")) {
+  if (hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)) {
     return false;
   }
 
@@ -47,7 +42,7 @@ function canRejectAtLevel(
     return true;
   }
 
-  return hasStatusAtLevel(validasiList, currentLevel - 1, "approved");
+  return hasStatusAtLevel(validasiList, currentLevel - 1, VALIDATION_STATUS.APPROVED);
 }
 
 export async function rejectBatchForUser(
@@ -106,7 +101,7 @@ export async function rejectBatchForUser(
     if (existing) {
       const updated = await updateValidasi(existing.id_validasi, {
         validated_by: user.id_user,
-        status_validasi: "rejected",
+        status_validasi: VALIDATION_STATUS.REJECTED,
         catatan,
       });
 
@@ -116,13 +111,21 @@ export async function rejectBatchForUser(
         id_mahasiswa: mhs.id_mahasiswa,
         validated_by: user.id_user,
         level_validasi: approvalLevel,
-        status_validasi: "rejected",
+        status_validasi: VALIDATION_STATUS.REJECTED,
         catatan,
       });
 
       results.push(created);
     }
   }
+
+  await createLogAktivitas({
+    id_user: user.id_user,
+    aktivitas: "REJECT_BATCH",
+    deskripsi: `${user.role} menolak batch ${
+      batch.nomor_batch_upload ?? batch.id_batch_upload
+    } pada level ${approvalLevel}. Total mahasiswa ditolak: ${results.length}`,
+  });
 
   return {
     batch: {
@@ -135,7 +138,7 @@ export async function rejectBatchForUser(
     approval: {
       role: user.role,
       level: approvalLevel,
-      status: "rejected",
+      status: VALIDATION_STATUS.REJECTED,
       rejected_count: results.length,
       catatan,
     },

@@ -1,9 +1,7 @@
 import { findAllBatchesWithMahasiswa } from "../repositories/batch.repository.js";
-import {
-  getApprovalLevelByRole,
-  isFacultyValidator,
-} from "../constants/approval-level.constant.js";
+import {getApprovalLevelByRole,isFacultyValidator,} from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
+import { VALIDATION_STATUS } from "../constants/status.constant.js";
 
 function hasStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
@@ -22,7 +20,7 @@ function isRevokedOrRejected(
 ) {
   return validasiList.some((item) => {
     const status = item.status_validasi?.toLowerCase();
-    return status === "revoked" || status === "rejected";
+    return status === VALIDATION_STATUS.REVOKED || status === VALIDATION_STATUS.REJECTED;
   });
 }
 
@@ -37,7 +35,7 @@ function isMahasiswaReadyForLevel(
   const alreadyApprovedCurrentLevel = hasStatusAtLevel(
     validasiList,
     currentLevel,
-    "approved"
+    VALIDATION_STATUS.APPROVED
   );
 
   if (alreadyApprovedCurrentLevel) {
@@ -50,7 +48,7 @@ function isMahasiswaReadyForLevel(
 
   const previousLevel = currentLevel - 1;
 
-  return hasStatusAtLevel(validasiList, previousLevel, "approved");
+  return hasStatusAtLevel(validasiList, previousLevel, VALIDATION_STATUS.APPROVED);
 }
 
 export async function getPendingBatchesForUser(user: AuthUser) {

@@ -1,6 +1,7 @@
 import { findMahasiswaByNim } from "../repositories/mahasiswa.repository.js";
 import { findNilaiByMahasiswaId } from "../repositories/transkrip.repository.js";
 import { hitungPredikat } from "../utils/predikat.util.js";
+import { generateNilaiDummyIfNeeded } from "./generate-nilai-dummy.service.js";
 
 export async function getTranskripByNim(nim: string) {
   const mahasiswa = await findMahasiswaByNim(nim);
@@ -8,7 +9,10 @@ export async function getTranskripByNim(nim: string) {
   if (!mahasiswa) {
     throw new Error("Mahasiswa tidak ditemukan");
   }
-
+  await generateNilaiDummyIfNeeded({
+    id_mahasiswa: mahasiswa.id_mahasiswa,
+    id_prodi: mahasiswa.id_prodi,
+  });
   const nilaiList = await findNilaiByMahasiswaId(mahasiswa.id_mahasiswa);
 
   const mataKuliah = nilaiList.map((item: any, index: number) => {
@@ -27,8 +31,14 @@ export async function getTranskripByNim(nim: string) {
     };
   });
 
-  const totalSks = mataKuliah.reduce((total : number, item : any) => total + item.k, 0);
-  const totalBobot = mataKuliah.reduce((total : number, item : any) => total + item.t, 0);
+  const totalSks = mataKuliah.reduce(
+    (total: number, item: any) => total + item.k,
+    0,
+  );
+  const totalBobot = mataKuliah.reduce(
+    (total: number, item: any) => total + item.t,
+    0,
+  );
 
   const ipkHitung =
     totalSks > 0 ? Number((totalBobot / totalSks).toFixed(2)) : 0;

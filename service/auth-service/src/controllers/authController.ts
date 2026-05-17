@@ -44,7 +44,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const accessToken = jwt.sign(
       { id_user: user.id_user, email: user.email, role: user.role, id_unit: user.id_unit },
       jwtSecret,
-      { expiresIn: '15m' }
+      { expiresIn: '8h' }
     );
 
     // Refresh token 1 hari
@@ -167,7 +167,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     const newAccessToken = jwt.sign(
       { id_user: user.id_user, email: user.email, role: user.role, id_unit: user.id_unit },
       jwtSecret,
-      { expiresIn: '15m' }
+      { expiresIn: '8h' }
     );
 
     res.status(200).json({

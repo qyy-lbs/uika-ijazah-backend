@@ -122,8 +122,9 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   const duplikatErrors: { row: number; nim?: string; field: string; message: string }[] = [];
 
   // ── Tahap 1: Deteksi duplikat dalam file Excel
-  const nimCount: Record<string, number[]> = {};  // nim → list nomor baris
-  const nikCount: Record<string, number[]> = {};  // nik → list nomor baris
+  const nimCount: Record<string, number[]> = {};
+  const nikCount: Record<string, number[]> = {};
+  const nomorIjazahCount: Record<string, number[]> = {};  // ← tambah ini
 
   rows.forEach((row, i) => {
     const rowNum = i + 2;
@@ -137,44 +138,61 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
       if (!nikCount[nik]) nikCount[nik] = [];
       nikCount[nik].push(rowNum);
     }
+
+    // ← tambah ini
+    if (row.nomor_seri_ijazah) {
+      const nomorIjazah = String(row.nomor_seri_ijazah).trim();
+      if (!nomorIjazahCount[nomorIjazah]) nomorIjazahCount[nomorIjazah] = [];
+      nomorIjazahCount[nomorIjazah].push(rowNum);
+    }
   });
-  const barisErrorDalamFile = new Set<number>();
-  // NIM yang muncul lebih dari sekali dalam file → semua barisnya ditolak
+
+  // NIM duplikat dalam file
   const nimDuplikatDalamFile = new Set<string>();
   for (const [nim, baris] of Object.entries(nimCount)) {
     if (baris.length > 1) {
       nimDuplikatDalamFile.add(nim);
       baris.forEach((rowNum) => {
-        if (!barisErrorDalamFile.has(rowNum)) {
-          duplikatErrors.push({
-            row: rowNum,
-            nim,
-            field: 'nim',
-            message: `NIM '${nim}' muncul ${baris.length}x dalam file. Baris ini ditolak.`,
-          });
-          barisErrorDalamFile.add(rowNum); // Tandai baris sudah error
-        }
+        duplikatErrors.push({
+          row: rowNum,
+          nim,
+          field: 'nim',
+          message: `NIM '${nim}' muncul ${baris.length}x dalam file (baris ${baris.join(', ')}). Semua baris dengan NIM ini ditolak.`,
+        });
       });
     }
   }
 
-  // NIK yang muncul lebih dari sekali dalam file → semua barisnya ditolak
+  // NIK duplikat dalam file
   const nikDuplikatDalamFile = new Set<string>();
   for (const [nik, baris] of Object.entries(nikCount)) {
     if (baris.length > 1) {
       nikDuplikatDalamFile.add(nik);
       baris.forEach((rowNum) => {
-        // Hanya tambahkan error jika baris ini belum kena error NIM sebelumnya
-        if (!barisErrorDalamFile.has(rowNum)) {
-          const row = rows[rowNum - 2];
-          duplikatErrors.push({
-            row: rowNum,
-            nim: row ? String(row.nim).trim() : undefined,
-            field: 'nik',
-            message: `NIK '${nik}' muncul ${baris.length}x dalam file. Baris ini ditolak.`,
-          });
-          barisErrorDalamFile.add(rowNum); // Tandai baris sudah error
-        }
+        const row = rows[rowNum - 2];
+        duplikatErrors.push({
+          row: rowNum,
+          nim: row ? String(row.nim).trim() : undefined,
+          field: 'nik',
+          message: `NIK '${nik}' muncul ${baris.length}x dalam file (baris ${baris.join(', ')}). Semua baris dengan NIK ini ditolak.`,
+        });
+      });
+    }
+  }
+
+  // ← tambah ini: nomor_seri_ijazah duplikat dalam file
+  const nomorIjazahDuplikatDalamFile = new Set<string>();
+  for (const [nomorIjazah, baris] of Object.entries(nomorIjazahCount)) {
+    if (baris.length > 1) {
+      nomorIjazahDuplikatDalamFile.add(nomorIjazah);
+      baris.forEach((rowNum) => {
+        const row = rows[rowNum - 2];
+        duplikatErrors.push({
+          row: rowNum,
+          nim: row ? String(row.nim).trim() : undefined,
+          field: 'nomor_seri_ijazah',
+          message: `Nomor seri ijazah '${nomorIjazah}' muncul ${baris.length}x dalam file (baris ${baris.join(', ')}). Semua baris dengan nomor ini ditolak.`,
+        });
       });
     }
   }
@@ -184,33 +202,30 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
     const rowNum = i + 2;
     const nim = String(row.nim).trim();
     const nik = row.nik ? String(row.nik).trim() : null;
+    const nomorIjazah = row.nomor_seri_ijazah ? String(row.nomor_seri_ijazah).trim() : null;
 
-    const nimDuplikat = nimDuplikatDalamFile.has(nim);
-    const nikDuplikat = nik ? nikDuplikatDalamFile.has(nik) : false;
+    if (nimDuplikatDalamFile.has(nim)) return false;
+    if (nik && nikDuplikatDalamFile.has(nik)) return false;
+    if (nomorIjazah && nomorIjazahDuplikatDalamFile.has(nomorIjazah)) return false;  // ← tambah ini
 
-    // Jika sudah ada error duplikat untuk baris ini, skip
-    // (hindari double error jika NIM dan NIK keduanya duplikat)
-    if (nimDuplikat || nikDuplikat) return false;
-
-    // Cek apakah baris ini sudah masuk ke duplikatErrors
     const sudahAdaError = duplikatErrors.some((e) => e.row === rowNum);
     return !sudahAdaError;
   });
 
-  // ── Tahap 3: Cek duplikat dengan database (hanya baris yang lolos file)
+  // ── Tahap 3: Cek duplikat dengan database
   const uniqueRows: MahasiswaRow[] = [];
 
   for (let i = 0; i < lolosFile.length; i++) {
     const row = lolosFile[i];
     const nim = String(row.nim).trim();
     const nik = row.nik ? String(row.nik).trim() : null;
+    const nomorIjazah = row.nomor_seri_ijazah ? String(row.nomor_seri_ijazah).trim() : null;
 
     // Cek NIM di database
     const existingNim = await prisma.mahasiswa.findUnique({
       where: { nim },
       select: { nim: true },
     });
-
     if (existingNim) {
       duplikatErrors.push({
         row: i + 2,
@@ -221,19 +236,35 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
       continue;
     }
 
-    // Cek NIK di database (hanya jika NIK diisi)
+    // Cek NIK di database
     if (nik) {
       const existingNik = await prisma.mahasiswa.findFirst({
         where: { nik },
         select: { nim: true, nik: true },
       });
-
       if (existingNik) {
         duplikatErrors.push({
           row: i + 2,
           nim,
           field: 'nik',
           message: `NIK '${nik}' sudah terdaftar di database (milik NIM '${existingNik.nim}') dan tidak dapat diimport ulang.`,
+        });
+        continue;
+      }
+    }
+
+    // ← tambah ini: Cek nomor_seri_ijazah di database
+    if (nomorIjazah) {
+      const existingIjazah = await prisma.mahasiswa.findFirst({
+        where: { nomor_seri_ijazah: nomorIjazah },
+        select: { nim: true, nomor_seri_ijazah: true },
+      });
+      if (existingIjazah) {
+        duplikatErrors.push({
+          row: i + 2,
+          nim,
+          field: 'nomor_seri_ijazah',
+          message: `Nomor seri ijazah '${nomorIjazah}' sudah terdaftar di database (milik NIM '${existingIjazah.nim}') dan tidak dapat diimport ulang.`,
         });
         continue;
       }
@@ -341,6 +372,7 @@ async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number)
           jenis_kelamin: row.jenis_kelamin ? String(row.jenis_kelamin).trim() : null,
           telepon: row.telepon ? String(row.telepon).trim() : null,
           email: row.email ? String(row.email).trim() : null,
+          foto: row.foto ? String(row.foto).trim() : null,
           ipk: row.ipk != null ? Number(row.ipk) : null,
           predikat: row.predikat ? String(row.predikat).trim() : null,
           judul_skripsi: row.judul_skripsi ? String(row.judul_skripsi).trim() : null,
@@ -355,11 +387,26 @@ async function insertMahasiswaBatch(rows: MahasiswaRow[], idBatchUpload: number)
       berhasil++;
     } catch (err) {
       gagal++;
+
+      // ← Tangkap unique constraint secara spesifik
+      const errMsg = err instanceof Error ? err.message : String(err);
+      let pesanError = `Gagal menyimpan data NIM '${nim}'.`;
+
+      if (errMsg.includes('nomor_seri_ijazah')) {
+        pesanError = `Nomor seri ijazah '${row.nomor_seri_ijazah}' sudah terdaftar di database.`;
+      } else if (errMsg.includes('nik')) {
+        pesanError = `NIK '${row.nik}' sudah terdaftar di database.`;
+      } else if (errMsg.includes('nim')) {
+        pesanError = `NIM '${nim}' sudah terdaftar di database.`;
+      }
+
       insertErrors.push({
         row: i + 2,
         nim,
-        field: 'database',
-        message: `Gagal menyimpan data: ${err instanceof Error ? err.message : 'unknown error'}`,
+        field: errMsg.includes('nomor_seri_ijazah') ? 'nomor_seri_ijazah'
+             : errMsg.includes('nik') ? 'nik'
+             : 'nim',
+        message: pesanError,
       });
     }
   }
@@ -440,7 +487,7 @@ export function generateTemplateExcel(): Buffer {
   const headers = [
     'nim', 'nik', 'nomor_seri_ijazah', 'pisn', 'nama_mahasiswa',
     'tempat_lahir', 'tanggal_lahir', 'program', 'program_en',
-    'gelar', 'gelar_en', 'jenis_kelamin', 'telepon', 'email',
+    'gelar', 'gelar_en', 'jenis_kelamin', 'telepon', 'email', 'foto',
     'ipk', 'predikat', 'judul_skripsi', 'tahun_masuk', 'tahun_lulus',
     'status_kelulusan', 'tanggal_kelulusan', 'nama_prodi',
   ];
@@ -448,7 +495,7 @@ export function generateTemplateExcel(): Buffer {
   const exampleRow = [
     '2021001001', '3201010101010001', 'DN/2024/0001', '',
     'Budi Santoso', 'Jakarta', '2000-01-15', 'S1', 'Bachelor',
-    'S.Kom.', 'S.Kom.', 'Laki-laki', '08123456789', 'budi@email.com',
+    'S.Kom.', 'S.Kom.', 'Laki-laki', '08123456789', 'budi@email.com', 'https://example.com/foto/budi.jpg',
     '3.75', 'Sangat Memuaskan', 'Analisis Sistem Informasi Berbasis AI',
     '2021', '2025', 'Lulus', '2025-02-10', 'Teknik Informatika',
   ];
@@ -469,6 +516,7 @@ export function generateTemplateExcel(): Buffer {
     ['6. Jangan tambah atau ubah nama kolom di baris pertama.'],
     ['7. Kolom yang tidak ada di template akan menyebabkan upload ditolak.'],
     ['8. NIM atau NIK yang duplikat dalam file maupun di database tidak akan diimport.'],
+    ['9. Kolom foto diisi dengan URL atau base64 dari gambar profil mahasiswa.'],
   ];
   const wsPetunjuk = XLSX.utils.aoa_to_sheet(petunjukData);
   wsPetunjuk['!cols'] = [{ wch: 70 }];
@@ -498,7 +546,7 @@ export function validateExcelFormat(filePath: string): {
   const ALLOWED_COLUMNS = [
     'nim', 'nik', 'nomor_seri_ijazah', 'pisn', 'nama_mahasiswa',
     'tempat_lahir', 'tanggal_lahir', 'program', 'program_en',
-    'gelar', 'gelar_en', 'jenis_kelamin', 'telepon', 'email',
+    'gelar', 'gelar_en', 'jenis_kelamin', 'telepon', 'email', "foto",
     'ipk', 'predikat', 'judul_skripsi', 'tahun_masuk', 'tahun_lulus',
     'status_kelulusan', 'tanggal_kelulusan', 'nama_prodi',
   ];

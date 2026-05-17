@@ -27,6 +27,7 @@ export interface MahasiswaRow {
   jenis_kelamin?: string;
   telepon?: string;
   email?: string;
+  foto?: string; // URL atau base64
   ipk?: number;
   predikat?: string;
   judul_skripsi?: string;

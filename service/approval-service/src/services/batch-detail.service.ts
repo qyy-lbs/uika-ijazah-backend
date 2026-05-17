@@ -1,9 +1,7 @@
 import { findBatchByIdWithMahasiswa } from "../repositories/batch.repository.js";
-import {
-  getApprovalLevelByRole,
-  isFacultyValidator,
-} from "../constants/approval-level.constant.js";
+import {getApprovalLevelByRole,isFacultyValidator,} from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
+import { VALIDATION_STATUS } from "../constants/status.constant.js";
 
 function getStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
@@ -32,7 +30,7 @@ function isRevokedOrRejected(
 ) {
   return validasiList.some((item) => {
     const status = item.status_validasi?.toLowerCase();
-    return status === "revoked" || status === "rejected";
+    return status === VALIDATION_STATUS.REVOKED || status === VALIDATION_STATUS.REJECTED;
   });
 }
 
@@ -44,7 +42,7 @@ function canValidateAtLevel(
     return false;
   }
 
-  if (hasStatusAtLevel(validasiList, currentLevel, "approved")) {
+  if (hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)) {
     return false;
   }
 
@@ -52,7 +50,7 @@ function canValidateAtLevel(
     return true;
   }
 
-  return hasStatusAtLevel(validasiList, currentLevel - 1, "approved");
+  return hasStatusAtLevel(validasiList, currentLevel - 1, VALIDATION_STATUS.APPROVED);
 }
 
 export async function getBatchDetailForUser(batchId: number, user: AuthUser) {

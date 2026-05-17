@@ -19,6 +19,7 @@ const COLUMN_MAP: Record<string, keyof MahasiswaRow> = {
   jenis_kelamin: 'jenis_kelamin',
   telepon: 'telepon',
   email: 'email',
+  foto : 'foto',
   ipk: 'ipk',
   predikat: 'predikat',
   judul_skripsi: 'judul_skripsi',
