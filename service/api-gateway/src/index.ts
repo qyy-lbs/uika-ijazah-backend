@@ -106,9 +106,9 @@ app.use(
 // ==========================================================
 
 // --- PROXY UNITS ---
-app.use('/api/units', verifyGatewayToken);
+app.use('/api/unit', verifyGatewayToken);
 app.use(createProxyMiddleware({
-  pathFilter: '/api/units', 
+  pathFilter: '/api/unit', 
   target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3004',
   changeOrigin: true,
   on: { 
@@ -120,9 +120,9 @@ app.use(createProxyMiddleware({
 }));
 
 // --- PROXY USERS ---
-app.use('/api/users', verifyGatewayToken);
+app.use('/api/user', verifyGatewayToken);
 app.use(createProxyMiddleware({
-  pathFilter: '/api/users', 
+  pathFilter: '/api/user', 
   target: process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3004', 
   changeOrigin: true,
   on: { 
@@ -147,7 +147,7 @@ app.use(createProxyMiddleware({
   }
 }));
 
-
+// --- PROXY AKADEMIK SERVICE ---
 app.use( "/api/akademik", verifyGatewayToken) 
 app.use(createProxyMiddleware({
     pathFilter: '/api/akademik', 
@@ -157,6 +157,15 @@ app.use(createProxyMiddleware({
   })
 );
 
+// --- PROXY APPROVAL SERVICE ---
+app.use( "/api/approval", verifyGatewayToken) 
+app.use(createProxyMiddleware({
+    pathFilter: '/api/approval', 
+
+    target: process.env.APPROVAL_SERVICE_URL || 'http://localhost:3006', 
+    changeOrigin: true,
+  })
+);
 
 // ==========================================================
 // --- START SERVER ---
