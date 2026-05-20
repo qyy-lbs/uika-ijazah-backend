@@ -1,16 +1,62 @@
-import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth.middleware';
-import { DashboardService } from '../services/dashboard.service';
+import type { Request, Response } from "express";
 
-const dashboardService = new DashboardService();
+import {
+  getSummaryService,
+} from "../services/dashboard.service.js";
 
-export class DashboardController {
-  async getMainDashboard(req: AuthRequest, res: Response) {
-    try {
-      const result = await dashboardService.getMainDashboardStats();
-      res.status(200).json(result);
-    } catch (error) {
-      res.status(500).json({ success: false, message: 'Internal server error' });
-    }
+import {
+  getLatestValidationService,
+} from "../services/dashboard.service.js";
+
+export const getHealth = async (
+  req: Request,
+  res: Response
+) => {
+  return res.status(200).json({
+    success: true,
+    message: "Dashboard Service Active",
+  });
+};
+
+export const getLatestValidation = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = await getLatestValidationService();
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
-}
+};
+
+export const getSummary = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = await getSummaryService();
+
+    return res.status(200).json({
+      success: true,
+      message: "Summary dashboard berhasil diambil",
+      data,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};

@@ -32,6 +32,7 @@ model batch_upload {
   uploaded_by        Int?
   periode            periode_enum?
   tahun_lulus        Int?
+  status             String?       @db.VarChar(20)
   log_error          String?
   created_at         DateTime?     @default(now()) @db.Timestamp(6)
   template           template?     @relation(fields: [id_template], references: [id_template], onDelete: Cascade, onUpdate: NoAction)
@@ -125,6 +126,7 @@ model nilai {
   id_akademik  Int?
   nilai_huruf  String?    @db.VarChar(5)
   nilai_angka  Decimal?   @db.Decimal(3, 2)
+  bobot_t      Decimal?   @db.Decimal(5, 2)
   created_at   DateTime?  @default(now()) @db.Timestamp(6)
   updated_at   DateTime?  @default(now()) @db.Timestamp(6)
   akademik     akademik?  @relation(fields: [id_akademik], references: [id_akademik], onDelete: Cascade, onUpdate: NoAction)
@@ -147,6 +149,7 @@ model template {
   users              users?              @relation(fields: [created_by], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model unit {
   id_unit                  Int             @id @default(autoincrement())
   uuid                     String?         @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -197,6 +200,7 @@ model users {
   template      template[]
   unit          unit?           @relation(fields: [id_unit], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
   validasi      validasi[]
+  refresh_token String?         @db.Text // Tambahkan kolom ini
 }
 
 model validasi {

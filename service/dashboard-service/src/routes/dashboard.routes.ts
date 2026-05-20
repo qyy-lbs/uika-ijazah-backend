@@ -1,11 +1,14 @@
-import { Router } from 'express';
-import { DashboardController } from '../controllers/dashboard.controller';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { Router } from "express";
+import { getHealth, getLatestValidation, getSummary,} from "../controllers/dashboard.controller.js";
+import { getStatistikValidasi} from "../controllers/statistik.controller.js";
+import { verifyToken} from "../middlewares/auth.middleware.js";
 
 const router = Router();
-const dashboardController = new DashboardController();
 
-router.use(authMiddleware);
-router.get('/main', dashboardController.getMainDashboard.bind(dashboardController));
+router.get("/health", getHealth);
+
+router.get( "/validations/latest",verifyToken, getLatestValidation);
+router.get("/summary",  verifyToken,getSummary);
+router.get("/statistik-validasi",verifyToken, getStatistikValidasi);
 
 export default router;
