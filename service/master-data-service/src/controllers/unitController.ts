@@ -1,24 +1,11 @@
-// src/controllers/unitController.ts
 import type { Request, Response } from 'express';
-import { getPrisma } from '../lib/prisma.js'; 
-
-const prisma = getPrisma();
+import * as unitService from '../services/unit.service.js';
 
 // ==================== UNIT ====================
 
-export const createUnit = async (req: Request, res: Response) => {
+export const createUnit = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { nama_unit, jenis_unit, rektor, dekan } = req.body;
-
-    const unit = await prisma.unit.create({
-      data: {
-        nama_unit,
-        jenis_unit,
-        rektor,
-        dekan
-      },
-    });
-
+    const unit = await unitService.createUnit(req.body);
     res.status(201).json({ message: 'Unit berhasil dibuat', data: unit });
   } catch (error: any) {
     console.error('Error create unit:', error);
@@ -29,13 +16,9 @@ export const createUnit = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllUnits = async (req: Request, res: Response) => {
+export const getAllUnits = async (req: Request, res: Response): Promise<void> => {
   try {
-    const units = await prisma.unit.findMany({
-      include: {
-        prodi: true 
-      }
-    });
+    const units = await unitService.getAllUnits();
     res.status(200).json(units);
   } catch (error: any) {
     res.status(500).json({
@@ -45,144 +28,64 @@ export const getAllUnits = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteUnits = async (req: Request, res: Response) => {
+export const deleteUnits = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-
-    const unit = await prisma.unit.findUnique({
-      where: { id_unit: Number(id) }
-    });
-
-    if (!unit) {
-      return res.status(404).json({ message: 'Unit tidak ditemukan' });
-    }
-
-    await prisma.unit.delete({
-      where: { id_unit: Number(id) }
-    });
-
+    await unitService.deleteUnit(req.params.id as string);
     res.status(200).json({ message: 'Unit berhasil dihapus' });
-  } catch (error) {
-    res.status(500).json({ message: 'Gagal menghapus unit' });
+  } catch (error: any) {
+    const statusCode = error.message === 'Unit tidak ditemukan' ? 404 : 500;
+    res.status(statusCode).json({ message: error.message || 'Gagal menghapus unit' });
   }
 };
 
-export const editUnit = async (req: Request, res: Response) => {
+export const editUnit = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { jenis_unit, nama_unit, dekan, nidn_dekan, wakil_dekan_1, nidn_wakil_dekan_1 } = req.body;
-
-    const existingUnit = await prisma.unit.findUnique({
-      where: { id_unit: Number(id) }
-    });
-
-    if (!existingUnit) {
-      return res.status(404).json({ message: 'Unit tidak ditemukan' });
-    }
-
-    const updatedUnit = await prisma.unit.update({
-      where: { id_unit: Number(id) },
-      data: {
-        jenis_unit,
-        nama_unit,
-        dekan,
-        nidn_dekan,
-        wakil_dekan_1,
-        nidn_wakil_dekan_1
-      }
-    });
-
+    const updatedUnit = await unitService.editUnit(req.params.id as string, req.body);
     res.status(200).json({ message: 'Unit berhasil diupdate', data: updatedUnit });
-  } catch (error) {
-    res.status(500).json({ message: 'Gagal mengupdate unit' });
+  } catch (error: any) {
+    const statusCode = error.message === 'Unit tidak ditemukan' ? 404 : 500;
+    res.status(statusCode).json({ message: error.message || 'Gagal mengupdate unit' });
   }
 };
 
 // ==================== PRODI ====================
 
-export const createProdi = async (req: Request, res: Response) => {
+export const createProdi = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id_unit, nama_prodi, nama_prodi_en, kaprodi, nidn_kaprodi, file_paraf_kaprodi, no_sk_akreditasi } = req.body;
-
-    if (!id_unit || !nama_prodi) {
-      return res.status(400).json({ message: 'id_unit dan nama_prodi wajib diisi' });
-    }
-
-    const unit = await prisma.unit.findUnique({
-      where: { id_unit: Number(id_unit) }
-    });
-
-    if (!unit) {
-      return res.status(404).json({ message: 'Unit tidak ditemukan' });
-    }
-
-    const prodi = await prisma.prodi.create({
-      data: {
-        id_unit: Number(id_unit),
-        nama_prodi,
-        nama_prodi_en,
-        kaprodi,
-        nidn_kaprodi,
-        file_paraf_kaprodi,
-        no_sk_akreditasi
-      },
-      include: {
-        unit: {
-          select: { id_unit: true, nama_unit: true, jenis_unit: true }
-        }
-      }
-    });
-
+    const prodi = await unitService.createProdi(req.body);
     res.status(201).json({ message: 'Prodi berhasil dibuat', data: prodi });
   } catch (error: any) {
-    if (error.code === 'P2002') {
-      return res.status(409).json({ message: 'Prodi dengan nama tersebut sudah terdaftar di unit ini' });
+    if (error.message.includes('wajib diisi')) {
+      res.status(400).json({ message: error.message });
+      return;
+    }
+    if (error.message === 'Unit tidak ditemukan') {
+      res.status(404).json({ message: error.message });
+      return;
+    }
+    if (error.message.includes('sudah terdaftar')) {
+      res.status(409).json({ message: error.message });
+      return;
     }
     res.status(500).json({ message: 'Gagal membuat prodi', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 };
 
-export const getProdiByUnit = async (req: Request, res: Response) => {
+export const getProdiByUnit = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id_unit } = req.params;
-    const prodiList = await prisma.prodi.findMany({
-      where: { id_unit: Number(id_unit) },
-      orderBy: { nama_prodi: 'asc' }
-    });
+    const prodiList = await unitService.getProdiByUnit(req.params.id_unit as string);
     res.status(200).json({ message: 'Data prodi berhasil diambil', prodiList });
   } catch (error) {
     res.status(500).json({ message: 'Gagal mengambil data prodi' });
   }
 };
 
-export const editProdi = async (req: Request, res: Response) => {
+export const editProdi = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { nama_prodi, nama_prodi_en, kaprodi, nidn_kaprodi, file_paraf_kaprodi, no_sk_akreditasi } = req.body;
-
-    const existingProdi = await prisma.prodi.findUnique({
-      where: { id_prodi: Number(id) }
-    });
-
-    if (!existingProdi) {
-      return res.status(404).json({ message: 'Prodi tidak ditemukan' });
-    }
-
-    const updatedProdi = await prisma.prodi.update({
-      where: { id_prodi: Number(id) },
-      data: {
-        nama_prodi,
-        nama_prodi_en,
-        kaprodi,
-        nidn_kaprodi,
-        file_paraf_kaprodi,
-        no_sk_akreditasi,
-        updated_at: new Date()
-      }
-    });
-
+    const updatedProdi = await unitService.editProdi(req.params.id as string, req.body);
     res.status(200).json({ message: 'Prodi berhasil diupdate', data: updatedProdi });
-  } catch (error) {
-    res.status(500).json({ message: 'Gagal mengupdate prodi' });
+  } catch (error: any) {
+    const statusCode = error.message === 'Prodi tidak ditemukan' ? 404 : 500;
+    res.status(statusCode).json({ message: error.message || 'Gagal mengupdate prodi' });
   }
 };
