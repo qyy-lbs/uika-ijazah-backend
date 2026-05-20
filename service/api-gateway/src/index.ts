@@ -58,19 +58,19 @@ app.use(
   })
 );
 
-// --- PROXY DOKUMEN SERVICE (Port 3007) ---
-app.use(
-  '/api/dokumen', 
-  verifyGatewayToken, 
-  createProxyMiddleware({
-    target: process.env.DOKUMEN_SERVICE_URL || 'http://localhost:3007',
-    changeOrigin: true,
-    pathRewrite: {
-    '/api/dokumen': '',
-  },
-    on: { proxyReq: fixRequestBody }
-  })
-);
+// --- PROXY DASHBOARD SERVICE (Port 3007) ---
+app.use('/api/dashboard', verifyGatewayToken);
+app.use(createProxyMiddleware({
+  pathFilter: '/api/dashboard', 
+  target: process.env.DASHBOARD_SERVICE_URL || 'http://localhost:3007',
+  changeOrigin: true,
+  on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Unit-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+}));
 
 // --- PROXY TEMPLATE SERVICE (Port 3008) ---
 app.use(
