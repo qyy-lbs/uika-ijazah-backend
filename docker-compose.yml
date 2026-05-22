@@ -24,8 +24,8 @@ services:
       - MASTER_DATA_SERVICE_URL=http://master-data-service:3004
       - DASHBOARD_SERVICE_URL=http://dashboard-service:3007
       - APPROVAL_SERVICE_URL=http://approval-service:3006
-      - JWT_SECRET=f3a8e9d2c1b0a9f8e7d6c5b4a392817263544536271809a8b7c6d5e4f3a2b1c0
-      - REFRESH_TOKEN_SECRET=8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
   # -----------------------------------------------------------------
   # 2. AUTH SERVICE (Internal)
@@ -36,9 +36,9 @@ services:
     restart: always
     environment:
       - PORT=3002                                          
-      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
-      - JWT_SECRET=f3a8e9d2c1b0a9f8e7d6c5b4a392817263544536271809a8b7c6d5e4f3a2b1c0
-      - REFRESH_TOKEN_SECRET=8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
   # -----------------------------------------------------------------
   # 3. INBOUND SERVICE (Internal)
@@ -49,9 +49,9 @@ services:
     restart: always
     environment:
       - PORT=3003                                        
-      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
-      - JWT_SECRET=f3a8e9d2c1b0a9f8e7d6c5b4a392817263544536271809a8b7c6d5e4f3a2b1c0
-      - REFRESH_TOKEN_SECRET=8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
   # -----------------------------------------------------------------
   # 4. MASTER DATA SERVICE (Internal)
@@ -62,9 +62,9 @@ services:
     restart: always
     environment:
       - PORT=3004
-      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
-      - JWT_SECRET=f3a8e9d2c1b0a9f8e7d6c5b4a392817263544536271809a8b7c6d5e4f3a2b1c0
-      - REFRESH_TOKEN_SECRET=8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
   # -----------------------------------------------------------------
   # 5. DASHBOARD SERVICE (Internal)
@@ -74,14 +74,14 @@ services:
       context: ./service/dashboard-service
       dockerfile: Dockerfile
       args:
-        - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
+        - DATABASE_URL=${DATABASE_URL}
     container_name: ijazah-service-dashboard
     restart: always
     environment:
       - PORT=3007
-      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
-      - JWT_SECRET=f3a8e9d2c1b0a9f8e7d6c5b4a392817263544536271809a8b7c6d5e4f3a2b1c0
-      - REFRESH_TOKEN_SECRET=8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
   # -----------------------------------------------------------------
   # 6. APPROVAL SERVICE (Internal)
@@ -91,11 +91,11 @@ services:
       context: ./service/approval-service
       dockerfile: Dockerfile
       args:
-        - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
+        - DATABASE_URL=${DATABASE_URL}
     container_name: ijazah-service-approval
     restart: always
     environment:
       - PORT=3006
-      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
-      - JWT_SECRET=f3a8e9d2c1b0a9f8e7d6c5b4a392817263544536271809a8b7c6d5e4f3a2b1c0
-      - REFRESH_TOKEN_SECRET=8f92b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
