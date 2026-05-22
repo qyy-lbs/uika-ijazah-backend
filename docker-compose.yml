@@ -7,7 +7,7 @@ services:
     container_name: ijazah-api-gateway
     restart: always
     ports:
-      - "3000:3000"                   
+      - "8010:3000"                   
     depends_on:
       - auth-service
       - inbound-service
