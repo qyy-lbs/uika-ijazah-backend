@@ -68,8 +68,6 @@ services:
   # -----------------------------------------------------------------
   approval-service:
     build: ./service/approval-service
-    env_file:
-      - ./approval-service/.env
     container_name: ijazah-service-approval
     restart: always
     environment:
