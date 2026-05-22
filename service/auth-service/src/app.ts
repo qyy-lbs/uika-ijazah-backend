@@ -1,0 +1,37 @@
+import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './routes/authRoutes.js';
+
+const app = express();
+
+app.set('trust proxy', 1);
+
+// 🔥 DEBUG SEMUA REQUEST MASUK KE AUTH SERVICE
+app.use((req, res, next) => {
+  console.log("AUTH HIT:", req.method, req.originalUrl);
+  next();
+});
+
+// 1. RATE LIMITERS (Anti-Spam)
+// (Catatan: Ini bisa diexport jika ingin dipakai spesifik di route tertentu)
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 50, // nanti diganti ke lebih kecil supaya aman 😊
+  message: { status: 'error', message: 'Terlalu banyak percobaan login. Silakan coba lagi nanti.' }
+});
+
+// Middleware Keamanan dan Format Data
+app.use(helmet()); // Mengamankan header server
+app.use(cors()); // Mengizinkan Frontend mengakses API ini
+app.use(express.json()); // Mengizinkan server membaca data JSON dari Frontend
+
+// Menyambungkan Routes
+// (Taktik jitu: Terapkan limiter langsung di rute auth jika diinginkan)
+app.use('/api/auth', authRoutes);
+
+// KUNCI UTAMA: Kita export 'app' untuk dipanggil oleh server.ts
+export default app;
