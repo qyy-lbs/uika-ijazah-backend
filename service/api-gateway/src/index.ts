@@ -10,7 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 // cors diubah sementara gara gara zullllllllllll salah url!!!!!!......
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000'], 
+  origin: ['http://localhost:5173', 
+    'http://localhost:3000', 
+    'http://103.158.196.32:5173', // kalau frontend dideploy di server
+    'http://103.158.196.32:3000'], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Pastikan OPTIONS diizinkan
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'] 
