@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+ 
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: ijazah-api-gateway
+    restart: always
+    ports:
+      - "7000:3000"                   
+    depends_on:
+      - auth-service
+      - inbound-service
+      - master-data-service
+      - dashboard-service
+      - approval-service
+
+  # -----------------------------------------------------------------
+  # 2. AUTH SERVICE (Internal)
+  # -----------------------------------------------------------------
+  auth-service:
+    build: ./services/auth-service
+    container_name: ijazah-service-auth
+    restart: always
+    environment:
+      - PORT=3002                         
+      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
+
+  # -----------------------------------------------------------------
+  # 3. INBOUND SERVICE (Internal)
+  # -----------------------------------------------------------------
+  inbound-service:
+    build: ./service/inbound-service
+    container_name: ijazah-service-inbound
+    restart: always
+    environment:
+      - PORT=3003                        
+      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
+
+  # -----------------------------------------------------------------
+  # 4. MASTER DATA SERVICE (Internal)
+  # -----------------------------------------------------------------
+  master-data-service:
+    build: ./service/master-data-service    
+    container_name: ijazah-service-masterdata
+    restart: always
+    environment:
+      - PORT=3004
+      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
+
+  # -----------------------------------------------------------------
+  # 5. DASHBOARD SERVICE (Internal)
+  # -----------------------------------------------------------------
+  dashboard-service:
+    build: ./service/dashboard-service
+    container_name: ijazah-service-dashboard
+    restart: always
+    environment:
+      - PORT=3007
+      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
+  # -----------------------------------------------------------------
+  # 6. APPROVAL SERVICE (Internal)
+  # -----------------------------------------------------------------
+  approval-service:
+    build: ./service/approval-service
+    container_name: ijazah-service-approval
+    restart: always
+    environment:
+      - PORT=3006
+      - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
