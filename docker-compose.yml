@@ -52,10 +52,10 @@ services:
   # 5. DASHBOARD SERVICE (Internal)
   # -----------------------------------------------------------------
   dashboard-service:
-    build: 
+    build:
       context: ./service/dashboard-service
-      dockerfile: Dockerfile  
-      args: 
+      dockerfile: Dockerfile
+      args:
         - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
     container_name: ijazah-service-dashboard
     restart: always
@@ -67,7 +67,11 @@ services:
   # 6. APPROVAL SERVICE (Internal)
   # -----------------------------------------------------------------
   approval-service:
-    build: ./service/approval-service
+    build:
+      context: ./service/approval-service
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=postgresql://neondb_owner:npg_n4fkcyZXH0EY@ep-noisy-union-aomnndsf-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require
     container_name: ijazah-service-approval
     restart: always
     environment:
