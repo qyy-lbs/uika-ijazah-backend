@@ -15,6 +15,14 @@ services:
       - dashboard-service
       - approval-service
 
+    environment:
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3002
+      - INBOUND_SERVICE_URL=http://inbound-service:3003
+      - MASTER_DATA_SERVICE_URL=http://master-data-service:3004
+      - DASHBOARD_SERVICE_URL=http://dashboard-service:3007
+      - APPROVAL_SERVICE_URL=http://approval-service:3006
+
   # -----------------------------------------------------------------
   # 2. AUTH SERVICE (Internal)
   # -----------------------------------------------------------------
