@@ -3,7 +3,7 @@ version: '3.8'
 services:
  
   api-gateway:
-    build: ./services/api-gateway
+    build: ./service/api-gateway
     container_name: ijazah-api-gateway
     restart: always
     ports:
@@ -19,7 +19,7 @@ services:
   # 2. AUTH SERVICE (Internal)
   # -----------------------------------------------------------------
   auth-service:
-    build: ./services/auth-service
+    build: ./service/auth-service
     container_name: ijazah-service-auth
     restart: always
     environment:
