@@ -14,7 +14,7 @@ RUN npm install --only=production
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
-CMD ["node", "dist/index.ts"]
+CMD ["node", "dist/index.js"]
 
 
 
