@@ -1077,31 +1077,33 @@ export async function getMahasiswaByBatchIds(params: {
   }
 
   if (search && search.trim() !== "") {
-    const keyword = search.trim();
+  const keyword = search.trim();
 
-    where.OR = [
-      {
-        nama_mahasiswa: {
-          contains: keyword,
-        },
+  where.OR = [
+    {
+      nama_mahasiswa: {
+        contains: keyword,
+        mode: "insensitive",
       },
-      {
-        nim: {
-          contains: keyword,
-        },
+    },
+    {
+      nim: {
+        contains: keyword,
+        mode: "insensitive",
       },
-      {
-        prodi: {
-          is: {
-            nama_prodi: {
-              contains: keyword,
-            },
+    },
+    {
+      prodi: {
+        is: {
+          nama_prodi: {
+            contains: keyword,
+            mode: "insensitive",
           },
         },
       },
-    ];
-  }
-
+    },
+  ];
+}
   const [mahasiswaData, total] = await Promise.all([
     prisma.mahasiswa.findMany({
       where,
