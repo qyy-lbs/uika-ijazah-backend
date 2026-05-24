@@ -27,14 +27,7 @@ export const UNIVERSITY_VALIDATOR_ROLES = [
   "wakil_rektor_1",
   "rektor",
 ];
-export function canViewAllLaporan(role: string) {
-  return [
-    "operator",
-    "tu_rektorat",
-    "warek_1",
-    "rektor",
-  ].includes(role);
-}
+
 export function isFacultyValidator(role: string): boolean {
   return FACULTY_VALIDATOR_ROLES.includes(role);
 }

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getApprovalLevelByRole } from "../constants/approval-level.constant.js";
 import { verifyToken } from "../middleware/auth.middleware.js";
-import { verifyApprovalRole } from "../middleware/approval-role.middleware.js";
+import { verifyApprovalRole, verifyReportAccess } from "../middleware/approval-role.middleware.js";
 import { getPendingBatches, getBatchDetail, approveBatch, rejectBatch, revokeMahasiswa, getLaporanApproval } from "../controllers/approval.controller.js";
 
 
@@ -42,6 +42,6 @@ router.post(
   "/mahasiswa/:nim/revoke", verifyToken, verifyApprovalRole, revokeMahasiswa
 );
 router.get(
-  "/laporan", verifyToken, verifyApprovalRole, getLaporanApproval
+  "/laporan", verifyToken, verifyReportAccess, getLaporanApproval
 );
 export default router;
