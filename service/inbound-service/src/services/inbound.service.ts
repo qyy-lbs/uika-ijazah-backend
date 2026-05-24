@@ -8,7 +8,8 @@ const BATCH_SIZE = 10;
 
 type ImportError = {
   row: number;
-  nim?: string;
+  nim?: string | null;
+  nama_mahasiswa?: string | null;
   field: string;
   message: string;
 };
@@ -16,20 +17,17 @@ type ImportError = {
 function buildImportError(data: {
   row: number;
   nim?: string | null;
+  nama_mahasiswa?: string | null;
   field: string;
   message: string;
 }): ImportError {
-  const result: ImportError = {
+  return {
     row: data.row,
+    nim: data.nim ?? null,
+    nama_mahasiswa: data.nama_mahasiswa ?? null,
     field: data.field,
     message: data.message,
   };
-
-  if (data.nim) {
-    result.nim = data.nim;
-  }
-
-  return result;
 }
 
 function normalizePageLimit(page?: number, limit?: number) {
@@ -167,14 +165,8 @@ export async function processUpload(params: {
   page?: number;
   limit?: number;
 }) {
-  const {
-    filePath,
-    namaFile,
-    uploadedBy,
-    periode,
-    tahunLulus,
-    idTemplate,
-  } = params;
+  const { filePath, namaFile, uploadedBy, periode, tahunLulus, idTemplate } =
+    params;
 
   const { page, limit } = normalizePageLimit(params.page, params.limit);
 
@@ -293,7 +285,7 @@ export async function processUpload(params: {
     total_valid: totalBerhasil,
     total_gagal: allErrors.length,
     total_batch: chunks.length,
-    errors: allErrors,
+    errors: allErrors.sort((a, b) => a.row - b.row),
     batches: batchResults,
     mahasiswa: uploadedMahasiswa,
   };
@@ -311,6 +303,10 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   const nimCount: Record<string, number[]> = {};
   const nikCount: Record<string, number[]> = {};
   const nomorIjazahCount: Record<string, number[]> = {};
+
+  const getNamaMahasiswa = (row?: MahasiswaRow) => {
+    return row?.nama_mahasiswa ? String(row.nama_mahasiswa).trim() : null;
+  };
 
   for (const [index, row] of rows.entries()) {
     const rowNum = index + 2;
@@ -344,15 +340,19 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   }
 
   const nimDuplikatDalamFile = new Set<string>();
+
   for (const [nim, baris] of Object.entries(nimCount)) {
     if (baris.length > 1) {
       nimDuplikatDalamFile.add(nim);
 
       for (const rowNum of baris) {
+        const row = rows[rowNum - 2];
+
         duplikatErrors.push(
           buildImportError({
             row: rowNum,
             nim,
+            nama_mahasiswa: getNamaMahasiswa(row),
             field: "nim",
             message: `NIM '${nim}' muncul ${baris.length}x dalam file (baris ${baris.join(
               ", ",
@@ -364,6 +364,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   }
 
   const nikDuplikatDalamFile = new Set<string>();
+
   for (const [nik, baris] of Object.entries(nikCount)) {
     if (baris.length > 1) {
       nikDuplikatDalamFile.add(nik);
@@ -375,6 +376,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
           buildImportError({
             row: rowNum,
             nim: row ? String(row.nim).trim() : null,
+            nama_mahasiswa: getNamaMahasiswa(row),
             field: "nik",
             message: `NIK '${nik}' muncul ${baris.length}x dalam file (baris ${baris.join(
               ", ",
@@ -386,6 +388,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   }
 
   const nomorIjazahDuplikatDalamFile = new Set<string>();
+
   for (const [nomorIjazah, baris] of Object.entries(nomorIjazahCount)) {
     if (baris.length > 1) {
       nomorIjazahDuplikatDalamFile.add(nomorIjazah);
@@ -397,6 +400,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
           buildImportError({
             row: rowNum,
             nim: row ? String(row.nim).trim() : null,
+            nama_mahasiswa: getNamaMahasiswa(row),
             field: "nomor_seri_ijazah",
             message: `Nomor seri ijazah '${nomorIjazah}' muncul ${baris.length}x dalam file (baris ${baris.join(
               ", ",
@@ -451,6 +455,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
         buildImportError({
           row: rowNum,
           nim,
+          nama_mahasiswa: getNamaMahasiswa(row),
           field: "nim",
           message: `NIM '${nim}' sudah terdaftar di database dan tidak dapat diimport ulang.`,
         }),
@@ -474,6 +479,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
           buildImportError({
             row: rowNum,
             nim,
+            nama_mahasiswa: getNamaMahasiswa(row),
             field: "nik",
             message: `NIK '${nik}' sudah terdaftar di database (milik NIM '${existingNik.nim}') dan tidak dapat diimport ulang.`,
           }),
@@ -498,6 +504,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
           buildImportError({
             row: rowNum,
             nim,
+            nama_mahasiswa: getNamaMahasiswa(row),
             field: "nomor_seri_ijazah",
             message: `Nomor seri ijazah '${nomorIjazah}' sudah terdaftar di database (milik NIM '${existingIjazah.nim}') dan tidak dapat diimport ulang.`,
           }),
@@ -514,7 +521,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
     duplikatErrors,
   };
 }
-
 // ─────────────────────────────────────────────
 // HELPER — Validasi nama_prodi ke DB
 // ─────────────────────────────────────────────
@@ -559,13 +565,17 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
         buildImportError({
           row: rowNum,
           nim: String(row.nim),
+          nama_mahasiswa: row.nama_mahasiswa
+            ? String(row.nama_mahasiswa).trim()
+            : null,
           field: "nama_prodi",
           message: `Prodi '${namaProdi}' tidak ditemukan di database. Periksa penulisan nama prodi.`,
         }),
       );
     } else {
-      (row as MahasiswaRow & { _resolved_id_prodi?: number })._resolved_id_prodi =
-        idProdi;
+      (
+        row as MahasiswaRow & { _resolved_id_prodi?: number }
+      )._resolved_id_prodi = idProdi;
 
       validatedRows.push(row);
     }
@@ -698,6 +708,7 @@ async function insertMahasiswaBatch(
         buildImportError({
           row: rowNum,
           nim,
+          nama_mahasiswa: row.nama_mahasiswa ? String(row.nama_mahasiswa).trim() : null,
           field,
           message: pesanError,
         }),

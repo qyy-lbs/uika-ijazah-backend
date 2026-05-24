@@ -45,7 +45,8 @@ export interface ParseResult {
 
 export interface RowError {
   row: number;
-  nim?: string;
+  nim?: string | null;
+  nama_mahasiswa?: string | null;
   field: string;
   message: string;
 }
