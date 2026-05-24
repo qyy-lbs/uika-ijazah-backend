@@ -7,6 +7,7 @@ import {
   statusUpload,
   riwayatUpload,
   downloadTemplate,
+  mahasiswaByBatches,
 } from "../controllers/inbound.controller";
 
 const router = Router();
@@ -27,7 +28,7 @@ router.get("/template", authenticate, downloadTemplate);
 router.post(
   "/validasi-format",
   authenticate,
-  authorize("admin", "operator"),
+  authorize("operator"),
   uploadExcel.single("file"),
   validasiFormat,
 );
@@ -41,7 +42,7 @@ router.post(
 router.post(
   "/upload",
   authenticate,
-  authorize("admin", "operator"),
+  authorize("operator"),
   uploadExcel.single("file"),
   uploadFile,
 );
@@ -55,7 +56,7 @@ router.post(
 router.get(
   "/riwayat",
   authenticate,
-  authorize("admin", "operator"),
+  authorize("operator"),
   riwayatUpload,
 );
 
@@ -68,8 +69,13 @@ router.get(
 router.get(
   "/status/:id",
   authenticate,
-  authorize("admin", "operator"),
+  authorize("operator"),
   statusUpload,
 );
-
+router.get(
+  "/mahasiswa/by-batches",
+  authenticate,
+  authorize( "operator"),
+  mahasiswaByBatches,
+);
 export default router;
