@@ -1,7 +1,7 @@
 import prisma from "../prisma/prisma.js";
 import type { Prisma } from "@prisma/client";
 import type { AuthUser } from "../types/auth.type.js";
-import { isFacultyValidator } from "../constants/approval-level.constant.js";
+import { isFacultyValidator, canViewAllLaporan } from "../constants/approval-level.constant.js";
 import {
   REPORT_STATUS,
   VALIDATION_STATUS,
@@ -141,11 +141,11 @@ export async function getLaporanApprovalForUser(
 
   let filteredMahasiswa = mahasiswaList;
 
-  if (isFacultyValidator(user.role)) {
-    filteredMahasiswa = filteredMahasiswa.filter(
-      (mhs) => mhs.prodi?.id_unit === user.id_unit,
-    );
-  }
+if (!canViewAllLaporan(user.role) && isFacultyValidator(user.role)) {
+  filteredMahasiswa = filteredMahasiswa.filter(
+    (mhs) => mhs.prodi?.id_unit === user.id_unit,
+  );
+}
 
   const laporan = filteredMahasiswa.map((mhs) => {
     const statusInfo = getLaporanStatus(
