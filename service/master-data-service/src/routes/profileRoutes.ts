@@ -8,14 +8,18 @@ import {
 } from "../controllers/profileController.js";
 
 import { verifyToken, authorizeRoles } from "../middlewares/masterMiddleware.js";
+import { getCurrentUser } from "../controllers/userController.js";
 
 const router = Router();
 
 // Semua rute di sini wajib pakai token
 router.use(verifyToken);
 
-// Rute Umum: Siapapun yang punya JWT bisa lihat profilnya sendiri
-router.get("/", getProfile); // Cukup "/" karena di index.js nanti sudah pakai /api/profile
+// Rute Umum Lama (Mungkin Komandan pakai untuk hal lain)
+router.get("/", getProfile); 
+
+// 🔥 RUTE BARU KHUSUS UNTUK AMBIL DATA PROFIL LENGKAP
+router.get("/me", getCurrentUser); 
 
 // --- PINTU BERLAPIS BERDASARKAN JABATAN ---
 router.get(
@@ -30,10 +34,11 @@ router.get(
   getFakultasDashboard
 );
 
+// 🔥 HAPUS getCurrentUser DARI SINI
 router.get(
   "/dashboard-operasional",
-  authorizeRoles("operator_data", "admin"),
-  getOperasionalDashboard
+  authorizeRoles("operator", "admin"),
+  getOperasionalDashboard 
 );
 
 export default router;

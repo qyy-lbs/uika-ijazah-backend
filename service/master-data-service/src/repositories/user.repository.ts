@@ -6,10 +6,22 @@ export async function findUserByEmail(email: string) {
   return prisma.users.findUnique({ where: { email } });
 }
 
-export async function findUserById(id_user: number) {
-  return prisma.users.findUnique({ where: { id_user } });
-}
-
+export const findUserById = async (id_user: number) => {
+  return await prisma.users.findUnique({
+    where: { id_user: Number(id_user) },
+    select: {
+      id_user: true,
+      email: true,
+      role: true,
+      id_unit: true,
+      
+      // 🔥 1. TAMBAHKAN BARIS INI AGAR PRISMA MENARIK DATA TANGGALNYA
+      created_at: true, 
+      
+      unit: true 
+    }
+  });
+};
 export async function createNewUser(data: any) {
   return prisma.users.create({
     data,
