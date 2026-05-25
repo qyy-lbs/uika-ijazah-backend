@@ -1,11 +1,11 @@
-import {
-  getLatestValidationsRepository,
-} from "../repositories/dashboard.repository.js";
+// import {
+//   getLatestValidationRepository,
+// } from "../repositories/dashboard.repository.js";
 
-const test = async () => {
-  const data = await getLatestValidationsRepository();
+// const test = async () => {
+//   const data = await getLatestValidationRepository();
 
-  console.log(data);
-};
+//   console.log(data);
+// };
 
-test();
+// test();
