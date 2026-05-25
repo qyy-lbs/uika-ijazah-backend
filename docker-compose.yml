@@ -102,7 +102,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
-akademik-service:
+  akademik-service:
     build:
       context: ./service/akademik-service
       dockerfile: Dockerfile
