@@ -108,7 +108,7 @@ services:
       dockerfile: Dockerfile
       args:
         - DATABASE_URL=${DATABASE_URL}
-    container_name: ijazah-service-approval
+    container_name: ijazah-service-akademik
     restart: always
     environment:
       - PORT=3005
