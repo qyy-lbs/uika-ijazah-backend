@@ -10,13 +10,21 @@ export async function generateNilaiDummyIfNeeded(data: {
   const { id_mahasiswa, id_prodi } = data;
 
   if (!id_prodi) {
-    throw new Error("Mahasiswa belum memiliki prodi");
+    return {
+      generated: false,
+      total_generated: 0,
+      message: "Mahasiswa belum memiliki prodi",
+    };
   }
 
   const matkulList = await findMatkulByProdiId(id_prodi);
 
   if (matkulList.length === 0) {
-    throw new Error("Mata kuliah untuk prodi mahasiswa belum tersedia");
+    return {
+      generated: false,
+      total_generated: 0,
+      message: "Mata kuliah untuk prodi mahasiswa belum tersedia",
+    };
   }
 
   const existingNilai = await findNilaiByMahasiswaId(id_mahasiswa);
@@ -45,6 +53,7 @@ export async function generateNilaiDummyIfNeeded(data: {
     return {
       generated: false,
       total_generated: 0,
+      message: "Nilai mahasiswa sudah tersedia",
     };
   }
 
@@ -56,5 +65,6 @@ export async function generateNilaiDummyIfNeeded(data: {
   return {
     generated: true,
     total_generated: nilaiToCreate.length,
+    message: "Nilai dummy berhasil dibuat",
   };
 }

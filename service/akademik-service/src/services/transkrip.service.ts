@@ -9,7 +9,7 @@ export async function getTranskripByNim(nim: string) {
   if (!mahasiswa) {
     throw new Error("Mahasiswa tidak ditemukan");
   }
-  await generateNilaiDummyIfNeeded({
+  const generateInfo = await generateNilaiDummyIfNeeded({
     id_mahasiswa: mahasiswa.id_mahasiswa,
     id_prodi: mahasiswa.id_prodi,
   });
@@ -60,6 +60,7 @@ export async function getTranskripByNim(nim: string) {
     total_sks: totalSks,
     total_bobot: totalBobot,
     predikat: predikatFinal,
+    generate_info: generateInfo,
     mata_kuliah: mataKuliah,
   };
 }
