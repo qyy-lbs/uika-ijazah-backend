@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+
 COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
@@ -20,16 +23,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+ENV NODE_ENV=production
+
 COPY package*.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
 
 RUN npm install --omit=dev
 
-# Copy hasil generate Prisma dari builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Copy hasil build
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3005
