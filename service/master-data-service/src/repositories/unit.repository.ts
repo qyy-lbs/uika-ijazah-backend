@@ -3,6 +3,12 @@ import { getPrisma } from "../prisma/prisma.js";
 const prisma = getPrisma();
 
 // ==================== UNIT REPOSITORY ====================
+export async function findUniversitasDB() {
+  // Mencari unit pertama yang jenisnya adalah 'Universitas'
+  return prisma.unit.findFirst({
+    where: { jenis_unit: 'universitas' }
+  });
+}
 
 export async function createUnitDB(data: any) {
   return prisma.unit.create({ data });

@@ -5,13 +5,20 @@ import * as unitService from '../services/unit.service.js';
 
 export const createUnit = async (req: Request, res: Response): Promise<void> => {
   try {
-    const unit = await unitService.createUnit(req.body);
+    // KITA GABUNGKAN TEKS & FILE DI SINI
+    // Multer sudah memparsing FormData ke dalam req.body dan req.files
+    const data = {
+      ...req.body,
+      files: req.files // Mengirim array/objek file ke service
+    };
+
+    const unit = await unitService.createUnit(data);
     res.status(201).json({ message: 'Unit berhasil dibuat', data: unit });
   } catch (error: any) {
     console.error('Error create unit:', error);
     res.status(500).json({ 
       message: 'Gagal membuat unit',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message 
     });
   }
 };
@@ -40,11 +47,17 @@ export const deleteUnits = async (req: Request, res: Response): Promise<void> =>
 
 export const editUnit = async (req: Request, res: Response): Promise<void> => {
   try {
-    const updatedUnit = await unitService.editUnit(req.params.id as string, req.body);
+    // 🔥 WAJIB: Gabungkan body dan files seperti pada createUnit!
+    const payload = {
+      ...req.body,
+      files: req.files 
+    };
+
+    const updatedUnit = await unitService.editUnit(req.params.id as string, payload);
     res.status(200).json({ message: 'Unit berhasil diupdate', data: updatedUnit });
   } catch (error: any) {
-    const statusCode = error.message === 'Unit tidak ditemukan' ? 404 : 500;
-    res.status(statusCode).json({ message: error.message || 'Gagal mengupdate unit' });
+    // ... error handling
+  
   }
 };
 
@@ -52,22 +65,32 @@ export const editUnit = async (req: Request, res: Response): Promise<void> => {
 
 export const createProdi = async (req: Request, res: Response): Promise<void> => {
   try {
-    const prodi = await unitService.createProdi(req.body);
-    res.status(201).json({ message: 'Prodi berhasil dibuat', data: prodi });
+    // 🔥 PENGAMAN 1: Jika req.body undefined, paksa menjadi objek kosong {} agar aplikasi tidak meledak
+    const payload = {
+      ...(req.body || {}),
+      files: req.files
+    };
+
+    const newProdi = await unitService.createProdi(payload);
+    
+    res.status(201).json({ message: 'Prodi berhasil dibuat', data: newProdi });
+    return; // PENTING: Hentikan eksekusi setelah sukses
+
   } catch (error: any) {
-    if (error.message.includes('wajib diisi')) {
-      res.status(400).json({ message: error.message });
-      return;
+    console.error("🚨 ALARM! ERROR CREATE PRODI:", error);
+
+    // Filter jika file bukan PNG
+    if (error.message === 'FORMAT_TIDAK_SAH') {
+      res.status(400).json({ message: 'Gagal! Hanya file berformat PNG yang diperbolehkan.' });
+      return; // 🔥 PENGAMAN 2: WAJIB ADA RETURN agar tidak terjadi ERR_HTTP_HEADERS_SENT
     }
-    if (error.message === 'Unit tidak ditemukan') {
-      res.status(404).json({ message: error.message });
-      return;
-    }
-    if (error.message.includes('sudah terdaftar')) {
-      res.status(409).json({ message: error.message });
-      return;
-    }
-    res.status(500).json({ message: 'Gagal membuat prodi', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
+
+    // Error umum lainnya
+    res.status(500).json({ 
+      message: 'Gagal membuat prodi', 
+      error: error.message 
+    });
+    return; // PENTING: Hentikan eksekusi
   }
 };
 

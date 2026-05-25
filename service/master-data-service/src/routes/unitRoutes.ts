@@ -1,4 +1,6 @@
 import { Router } from "express";
+
+import { upload } from '../middlewares/upload.middleware.js'; // Tambahkan ini
 import {
   createUnit,
   editUnit,
@@ -16,7 +18,7 @@ const router = Router();
 router.use(verifyToken);
 
 // Hanya Admin yang bisa menambah unit
-router.post("/createUnit", authorizeRoles("admin"), createUnit);
+router.post("/createUnit", upload, authorizeRoles("admin"), createUnit);
 
 // Semua role (Rektor/Dekan) bisa melihat daftar unit
 router.get("/getAllUnit", getAllUnits);
@@ -24,9 +26,9 @@ router.get("/getAllUnit", getAllUnits);
 router.delete("/deleteUnit/:id", authorizeRoles("admin"), deleteUnits);
 
 // Hanya Admin yang bisa mengubah unit
-router.put("/editUnit/:id", authorizeRoles("admin"), editUnit);
+router.put("/editUnit/:id",upload, authorizeRoles("admin"), editUnit);
 
-router.post("/createProdi", authorizeRoles("admin"), createProdi);
+router.post("/createProdi",upload, authorizeRoles("admin"), createProdi);
 router.get("/:id_unit/prodi", getProdiByUnit);
-router.put("/editProdi/:id", authorizeRoles("admin"), editProdi);
+router.put("/editProdi/:id",upload, authorizeRoles("admin"), editProdi);
 export default router;

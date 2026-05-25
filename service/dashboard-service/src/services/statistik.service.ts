@@ -11,29 +11,39 @@ export const getStatistikValidasiService =
         total: bigint;
       }[];
 
-    let approved = 0;
-    let pending = 0;
+    let terbit = 0;
+    let proses = 0;
     let rejected = 0;
+    let revoked = 0;
 
     rows.forEach((item) => {
 
       if (item.status_validasi === "approved") {
-        approved = Number(item.total);
+        terbit = Number(item.total);
       }
 
-      if (item.status_validasi === "pending") {
-        pending = Number(item.total);
-      }
-
-      if (item.status_validasi === "rejected") {
+      else if (
+        item.status_validasi === "rejected"
+      ) {
         rejected = Number(item.total);
+      }
+
+      else if (
+        item.status_validasi === "revoked"
+      ) {
+        revoked = Number(item.total);
+      }
+
+      else {
+        proses += Number(item.total);
       }
 
     });
 
     return {
-      approved,
-      pending,
-      rejected
+      terbit,
+      proses,
+      rejected,
+      revoked
     };
-  };
+  };  

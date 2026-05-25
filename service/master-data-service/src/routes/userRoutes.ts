@@ -10,6 +10,6 @@ router.use(authorizeRoles('admin'));
 
 router.post('/createUser', createUser);      // POST /api/users
 router.get('/getAllUser', getAllUsers);      // GET /api/users (Untuk tabel Figma)
-router.delete('/:id', deleteUser); // DELETE /api/users/1
-router.put('/:id', editUser); // PUT /api/users/1 (Untuk Edit User) [cite: 101, 150]
+router.delete('/deleteUser/:id', deleteUser); // DELETE /api/users/1
+router.put('/editUser/:id', editUser); // PUT /api/users/1 (Untuk Edit User) [cite: 101, 150]
 export default router;

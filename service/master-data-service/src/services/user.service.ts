@@ -29,6 +29,7 @@ export async function getAllUsers() {
 }
 
 export async function deleteUser(id: string) {
+  const userId = Number(id);
   const existingUser = await userRepository.findUserById(Number(id));
   if (!existingUser) throw new Error("User tidak ditemukan.");
   

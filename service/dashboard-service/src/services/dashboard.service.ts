@@ -1,39 +1,122 @@
 import {
-  getLatestValidationsRepository,
+  getLatestValidationRepository,
 } from "../repositories/dashboard.repository.js";
 
 import {
   mapDashboardStatus,
 } from "../helpers/dashboard.helper.js";
 
-export const getSummaryService = async () => {
+export const getSummaryService =
+  async () => {
 
-  const validations =
-    await getLatestValidationsRepository() as any[];
+    const validations =
+      await getLatestValidationRepository(
+        1,
+        999999,
+        ""
+      ) as any;
 
-  const summary = {
-    total_mahasiswa: validations.length,
-    proses: 0,
-    rejected: 0,
-    revoked: 0,
-    terbit: 0,
-  };
+    const rows = validations.data;
 
-  for (const item of validations) {
+    const summary = {
 
-    const status = mapDashboardStatus({
-      statusValidasi: item.status_validasi,
-      validated_by: item.validated_by,
-      hasDokumen: !!item.id_dokumen,
-      hasBlockchain: !!item.id_blockchain,
-    });
+      total_mahasiswa:
+        rows.length,
 
-    summary[status as keyof typeof summary]++;
-  }
+      proses: 0,
 
-  return summary;
+      rejected: 0,
+
+      revoked: 0,
+
+      terbit: 0,
+    };
+
+    for (const item of rows) {
+
+      if (item.status === "approved") {
+        summary.terbit++;
+      }
+
+      else if (
+        item.status === "rejected"
+      ) {
+        summary.rejected++;
+      }
+
+      else if (
+        item.status === "revoked"
+      ) {
+        summary.revoked++;
+      }
+
+      else {
+        summary.proses++;
+      }
+    }
+
+    return summary;
 };
 
-export const getLatestValidationService = async () => {
-  return await getLatestValidationsRepository();
+
+export const getLatestValidationService =
+  async (
+    page: number,
+    limit: number,
+    search: string
+  ) => {
+
+    const result: any =
+      await getLatestValidationRepository(
+        page,
+        limit,
+        search
+      );
+
+    return {
+
+      data: result.data.map(
+        (item: any) => ({
+
+          id_mahasiswa:
+            item.id_mahasiswa,
+
+          nama:
+            item.nama,
+
+          nim:
+            item.nim,
+
+          fakultas:
+            item.fakultas,
+
+          prodi:
+            item.prodi,
+
+          tahun_lulus:
+            item.tahun_lulus,
+
+          status:
+            item.status,
+
+          batch:
+            item.nomor_batch_upload,
+        })
+      ),
+
+      pagination: {
+
+        page,
+
+        limit,
+
+        total_data:
+          result.total,
+
+        total_page:
+          Math.ceil(
+            result.total / limit
+          ),
+      },
+    };
 };
