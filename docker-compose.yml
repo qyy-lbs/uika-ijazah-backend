@@ -16,6 +16,7 @@ services:
       - inbound-service
       - master-data-service
       - dashboard-service
+      - akademik-service
       - approval-service
     environment:
       - PORT=3000
@@ -23,6 +24,7 @@ services:
       - INBOUND_SERVICE_URL=http://inbound-service:3003
       - MASTER_DATA_SERVICE_URL=http://master-data-service:3004
       - DASHBOARD_SERVICE_URL=http://dashboard-service:3007
+      - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - APPROVAL_SERVICE_URL=http://approval-service:3006
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
