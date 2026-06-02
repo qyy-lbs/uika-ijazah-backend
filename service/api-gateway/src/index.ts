@@ -154,21 +154,29 @@ app.use(createProxyMiddleware({
 app.use( "/api/akademik", verifyGatewayToken) 
 app.use(createProxyMiddleware({
     pathFilter: '/api/akademik', 
-
     target: process.env.AKADEMIK_SERVICE_URL || 'http://localhost:3005', 
     changeOrigin: true,
-  })
-);
+      on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Akademik-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+  }));
 
 // --- PROXY APPROVAL SERVICE ---
 app.use( "/api/approval", verifyGatewayToken) 
 app.use(createProxyMiddleware({
     pathFilter: '/api/approval', 
-
     target: process.env.APPROVAL_SERVICE_URL || 'http://localhost:3006', 
     changeOrigin: true,
-  })
-);
+     on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Approval-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+  }));
 
 // ==========================================================
 // --- START SERVER ---
