@@ -43,10 +43,10 @@ export function verifyReportAccess(
   const allowedRoles = [
     "operator",
     "tu_fakultas",
-    "wadek_1",
+    "wakil_dekan_1",
     "dekan",
     "tu_rektorat",
-    "warek_1",
+    "wakil_rektor_1",
     "rektor",
   ];
 
