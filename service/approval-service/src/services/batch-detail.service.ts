@@ -1,5 +1,8 @@
 import { findBatchByIdWithMahasiswa } from "../repositories/batch.repository.js";
-import {getApprovalLevelByRole,isFacultyValidator,} from "../constants/approval-level.constant.js";
+import {
+  getApprovalLevelByRole,
+  isFacultyValidator,
+} from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
 import { VALIDATION_STATUS } from "../constants/status.constant.js";
 
@@ -68,13 +71,15 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
 
   let mahasiswa = batch.mahasiswa;
 
+  // 1. Filter berdasarkan Fakultas
   if (isFacultyValidator(user.role)) {
     mahasiswa = mahasiswa.filter((mhs) => mhs.prodi?.id_unit === user.id_unit);
   }
 
-  if (mahasiswa.length === 0) {
-    throw new Error("Anda tidak memiliki akses ke batch ini");
-  }
+  mahasiswa = mahasiswa.filter((mhs) => {
+    return !isRevokedOrRejected(mhs.validasi);
+  });
+
 
   const mahasiswaList = mahasiswa.map((mhs) => {
     const validasiList = mhs.validasi.map((v) => ({
@@ -116,7 +121,9 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
       nama_file: batch.nama_file,
       periode: batch.periode,
       tahun_lulus: batch.tahun_lulus,
-      total_record: batch.total_record,
+      
+      total_record: mahasiswaList.length, 
+      
       record_berhasil: batch.record_berhasil,
       record_gagal: batch.record_gagal,
       created_at: batch.created_at,
