@@ -6,20 +6,46 @@ import {
   mapDashboardStatus,
 } from "../helpers/dashboard.helper.js";
 
+type SummaryDashboard = {
+  total_mahasiswa: number;
+  proses: number;
+  rejected: number;
+  revoked: number;
+  terbit: number;
+};
+
+const getStatusDashboard = (item: any) => {
+  return mapDashboardStatus({
+    statusValidasi:
+      item.status,
+
+    validated_by:
+      item.validated_by || null,
+
+    hasDokumen:
+      Boolean(item.has_dokumen),
+
+    hasBlockchain:
+      Boolean(item.has_blockchain),
+  });
+};
+
+// ==================== SUMMARY DASHBOARD ====================
+
 export const getSummaryService =
   async () => {
 
     const validations =
-      await getLatestValidationRepository(
+      (await getLatestValidationRepository(
         1,
         999999,
         ""
-      ) as any;
+      )) as any;
 
-    const rows = validations.data;
+    const rows =
+      validations.data || [];
 
-    const summary = {
-
+    const summary: SummaryDashboard = {
       total_mahasiswa:
         rows.length,
 
@@ -33,20 +59,18 @@ export const getSummaryService =
     };
 
     for (const item of rows) {
+      const status =
+        getStatusDashboard(item);
 
-      if (item.status === "approved") {
+      if (status === "terbit") {
         summary.terbit++;
       }
 
-      else if (
-        item.status === "rejected"
-      ) {
+      else if (status === "rejected") {
         summary.rejected++;
       }
 
-      else if (
-        item.status === "revoked"
-      ) {
+      else if (status === "revoked") {
         summary.revoked++;
       }
 
@@ -56,8 +80,10 @@ export const getSummaryService =
     }
 
     return summary;
-};
+  };
 
+
+// ==================== LATEST VALIDATION / TABEL DASHBOARD ====================
 
 export const getLatestValidationService =
   async (
@@ -76,32 +102,45 @@ export const getLatestValidationService =
     return {
 
       data: result.data.map(
-        (item: any) => ({
+        (item: any) => {
 
-          id_mahasiswa:
-            item.id_mahasiswa,
+          const status =
+            getStatusDashboard(item);
 
-          nama:
-            item.nama,
+          return {
+            id_mahasiswa:
+              item.id_mahasiswa,
 
-          nim:
-            item.nim,
+            nama:
+              item.nama,
 
-          fakultas:
-            item.fakultas,
+            nim:
+              item.nim,
 
-          prodi:
-            item.prodi,
+            fakultas:
+              item.fakultas,
 
-          tahun_lulus:
-            item.tahun_lulus,
+            prodi:
+              item.prodi,
 
-          status:
-            item.status,
+            tahun_lulus:
+              item.tahun_lulus,
 
-          batch:
-            item.nomor_batch_upload,
-        })
+            status,
+
+            status_asli:
+              item.status,
+
+            has_dokumen:
+              Boolean(item.has_dokumen),
+
+            has_blockchain:
+              Boolean(item.has_blockchain),
+
+            batch:
+              item.nomor_batch_upload,
+          };
+        }
       ),
 
       pagination: {
@@ -119,4 +158,4 @@ export const getLatestValidationService =
           ),
       },
     };
-};
+  };

@@ -1,49 +1,66 @@
 import {
-  getStatistikValidasiRepository
+  getStatistikValidasiRepository,
 } from "../repositories/statistik.repository.js";
 
+import {
+  mapDashboardStatus,
+} from "../helpers/dashboard.helper.js";
+
 export const getStatistikValidasiService =
-  async () => {
+  async (
+    year?: number
+  ) => {
 
     const rows =
-      await getStatistikValidasiRepository() as {
-        status_validasi: string;
-        total: bigint;
+      (await getStatistikValidasiRepository(
+        year
+      )) as {
+        id_mahasiswa: number;
+        status_validasi: string | null;
+        validated_by: number | null;
+        has_dokumen: boolean;
+        has_blockchain: boolean;
       }[];
 
-    let terbit = 0;
-    let proses = 0;
-    let rejected = 0;
-    let revoked = 0;
+    const result = {
+      terbit: 0,
+      proses: 0,
+      rejected: 0,
+      revoked: 0,
+    };
 
     rows.forEach((item) => {
+      const status =
+        mapDashboardStatus({
+          statusValidasi:
+            item.status_validasi,
 
-      if (item.status_validasi === "approved") {
-        terbit = Number(item.total);
+          validated_by:
+            item.validated_by || null,
+
+          hasDokumen:
+            Boolean(item.has_dokumen),
+
+          hasBlockchain:
+            Boolean(item.has_blockchain),
+        });
+
+      if (status === "terbit") {
+        result.terbit++;
       }
 
-      else if (
-        item.status_validasi === "rejected"
-      ) {
-        rejected = Number(item.total);
+      else if (status === "rejected") {
+        result.rejected++;
       }
 
-      else if (
-        item.status_validasi === "revoked"
-      ) {
-        revoked = Number(item.total);
+      else if (status === "revoked") {
+        result.revoked++;
       }
 
       else {
-        proses += Number(item.total);
+        result.proses++;
       }
-
     });
 
-    return {
-      terbit,
-      proses,
-      rejected,
-      revoked
-    };
-  };  
+    return result;
+  };
