@@ -166,18 +166,39 @@ app.use(createProxyMiddleware({
   }
   }));
 // --- PROXY Template SERVICE ---
-app.use( "/api/template", verifyGatewayToken) 
-app.use(createProxyMiddleware({
-    pathFilter: '/api/template', 
-    target: process.env.TEMPLATE_SERVICE_URL || 'http://localhost:3008', 
+app.use("/api/template", verifyGatewayToken);
+
+app.use(
+  createProxyMiddleware({
+    pathFilter: "/api/template",
+    target: process.env.TEMPLATE_SERVICE_URL || "http://localhost:3008",
     changeOrigin: true,
-     on: { 
-    proxyReq: fixRequestBody,
-    proxyRes: (proxyRes, req) => {
-      console.log(`[Template-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
-    }
-  }
-  }));
+    on: {
+      proxyReq: fixRequestBody,
+      proxyRes: (proxyRes, req) => {
+        console.log(
+          `[Template-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`
+        );
+      },
+    },
+  })
+);
+
+// --- PROXY Template Uploads ---
+app.use(
+  createProxyMiddleware({
+    pathFilter: "/uploads/templates",
+    target: process.env.TEMPLATE_SERVICE_URL || "http://localhost:3008",
+    changeOrigin: true,
+    on: {
+      proxyRes: (proxyRes, req) => {
+        console.log(
+          `[Template-Uploads] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`
+        );
+      },
+    },
+  })
+);
   
 // ==========================================================
 // --- START SERVER ---
