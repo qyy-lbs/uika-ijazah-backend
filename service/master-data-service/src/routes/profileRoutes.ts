@@ -12,13 +12,10 @@ import { getCurrentUser } from "../controllers/userController.js";
 
 const router = Router();
 
-// Semua rute di sini wajib pakai token
 router.use(verifyToken);
 
-// Rute Umum Lama (Mungkin Komandan pakai untuk hal lain)
 router.get("/", getProfile); 
 
-// 🔥 RUTE BARU KHUSUS UNTUK AMBIL DATA PROFIL LENGKAP
 router.get("/me", getCurrentUser); 
 
 // --- PINTU BERLAPIS BERDASARKAN JABATAN ---

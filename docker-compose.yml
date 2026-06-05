@@ -17,6 +17,7 @@ services:
       - dashboard-service
       - akademik-service
       - approval-service
+      - template-service
     environment:
       - PORT=3000
       - AUTH_SERVICE_URL=http://auth-service:3002
@@ -28,6 +29,7 @@ services:
       - TEMPLATE_SERVICE_URL=http://template-service:3008 
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
 
   # -----------------------------------------------------------------
   # 2. AUTH SERVICE (Internal)
@@ -135,3 +137,4 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
