@@ -75,19 +75,7 @@ app.use(createProxyMiddleware({
   }
 }));
 
-// --- PROXY TEMPLATE SERVICE (Port 3008) ---
-app.use(
-  '/api/template', 
-  verifyGatewayToken, 
-  createProxyMiddleware({
-    target: process.env.TEMPLATE_SERVICE_URL || 'http://localhost:3008',
-    changeOrigin: true,
-    pathRewrite: {
-    '/api/template': '',
-  },
-    on: { proxyReq: fixRequestBody }
-  })
-);
+
 
 // --- PROXY BLOCKCHAIN SERVICE (Port 3009) ---
 app.use(
@@ -177,7 +165,20 @@ app.use(createProxyMiddleware({
     }
   }
   }));
-
+// --- PROXY Template SERVICE ---
+app.use( "/api/template", verifyGatewayToken) 
+app.use(createProxyMiddleware({
+    pathFilter: '/api/template', 
+    target: process.env.TEMPLATE_SERVICE_URL || 'http://localhost:3008', 
+    changeOrigin: true,
+     on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Template-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+  }));
+  
 // ==========================================================
 // --- START SERVER ---
 // ==========================================================
@@ -185,5 +186,10 @@ app.listen(Number(PORT),'0.0.0.0', () => {
   console.log(`🚀 Gateway UIKA Ijazah Berhasil di Port ${PORT}`);
   console.log(`🛡️  Middleware Keamanan: AKTIF`);
   console.log(`🔑 Auth Target: ${process.env.AUTH_SERVICE_URL || 'http://localhost:3002'}`);
+  console.log(`📥 Inbound Target: ${process.env.INBOUND_SERVICE_URL || 'http://localhost:3003'}`);
   console.log(`🗄️  Master Data Target: ${process.env.MASTER_DATA_SERVICE_URL || 'http://localhost:3004'}`);
+  console.log(`🎓 Akademik Target: ${process.env.AKADEMIK_SERVICE_URL || 'http://localhost:3005'}`);
+  console.log(`✅ Approval Target: ${process.env.APPROVAL_SERVICE_URL || 'http://localhost:3006'}`);
+  console.log(`📊 Dashboard Target: ${process.env.DASHBOARD_SERVICE_URL || 'http://localhost:3007'}`);
+  console.log(`📋 Template Target: ${process.env.TEMPLATE_SERVICE_URL || 'http://localhost:3008'}`);
 });
