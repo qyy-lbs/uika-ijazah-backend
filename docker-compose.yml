@@ -17,6 +17,7 @@ services:
       - dashboard-service
       - akademik-service
       - approval-service
+      - template-service
     environment:
       - PORT=3000
       - AUTH_SERVICE_URL=http://auth-service:3002
@@ -25,6 +26,7 @@ services:
       - DASHBOARD_SERVICE_URL=http://dashboard-service:3007
       - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - APPROVAL_SERVICE_URL=http://approval-service:3006
+      - TEMPLATE_SERVICE_URL=http://template-service:3008
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
@@ -113,3 +115,23 @@ services:
       - PORT=3005
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
+
+
+  # -----------------------------------------------------------------
+  # 6. TEMPLATE SERVICE (Internal)
+  # -----------------------------------------------------------------
+  template-service:
+    build:
+      context: ./service/template-service
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=${DATABASE_URL}
+    container_name: ijazah-service-template
+    restart: always
+    environment:
+      - PORT=3008
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+
+
