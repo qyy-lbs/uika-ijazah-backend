@@ -18,7 +18,7 @@ RUN npm install --only=production
 RUN npx prisma generate
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 3006
+EXPOSE 3008
 CMD ["node", "dist/server.js"]
 
 
