@@ -56,6 +56,9 @@ export async function getTemplate(req: CustomRequest, res: Response) {
 }
 export async function uploadBackground(req: CustomRequest, res: Response) {
   try {
+    console.log("CONTENT TYPE:", req.headers["content-type"]);
+console.log("BODY:", req.body);
+console.log("FILE:", req.file);
     const jenis = req.params.jenis;
 
     if (!jenis || Array.isArray(jenis)) {
@@ -72,9 +75,7 @@ export async function uploadBackground(req: CustomRequest, res: Response) {
       });
     }
 
-    const publicBaseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3008";
-
-    const fileUrl = `${publicBaseUrl}/uploads/templates/${req.file.filename}`;
+    const fileUrl = `/uploads/templates/${req.file.filename}`;
 
     const data = await uploadBackgroundTemplate({
       jenis,

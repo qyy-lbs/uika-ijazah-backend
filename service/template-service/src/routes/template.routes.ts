@@ -9,7 +9,7 @@ const adminOnly = [verifyToken, authorizeRoles("admin")];
 router.get("/health", healthTemplate);
 
 router.get("/me", verifyToken, getTemplateMe);
-router.post("/:jenis/background", adminOnly, uploadBackground, uploadTemplateBackground.single("file"), uploadBackground);
+router.post("/:jenis/background", adminOnly, uploadTemplateBackground.single("file"), uploadBackground);
 router.patch("/:jenis/background/select", adminOnly, selectBackground);
 router.delete("/:jenis/background/:assetId", adminOnly, deleteBackground);  
 router.put("/:jenis/layout", adminOnly, saveLayout);  

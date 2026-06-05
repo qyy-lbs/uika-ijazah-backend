@@ -1,10 +1,21 @@
 import type { jenis_template_enum } from "@prisma/client";
-import { createTemplate,findTemplateByJenis,updateTemplateById,} from "../repositories/template.repository.js";
-import {getDefaultLayout,parseLayout,toJsonInput,type TemplateAsset,} from "../utils/template-layout.util.js";
+import {
+  createTemplate,
+  findTemplateByJenis,
+  updateTemplateById,
+} from "../repositories/template.repository.js";
+import {
+  getDefaultLayout,
+  parseLayout,
+  toJsonInput,
+  type TemplateAsset,
+} from "../utils/template-layout.util.js";
 import {
   IJAZAH_PLACEHOLDERS,
   TRANSKRIP_PLACEHOLDERS,
 } from "../constants/placeholders.constant.js";
+import fs from "fs";
+import path from "path";
 
 function normalizeJenisTemplate(jenis: string): jenis_template_enum {
   if (jenis !== "ijazah" && jenis !== "transkrip") {
@@ -64,7 +75,10 @@ export async function uploadBackgroundTemplate(data: {
 }) {
   const jenis_template = normalizeJenisTemplate(data.jenis);
 
-  const template = await getOrCreateTemplate(jenis_template, data.userId ?? null);
+  const template = await getOrCreateTemplate(
+    jenis_template,
+    data.userId ?? null,
+  );
 
   const layout = parseLayout(template.konfigurasi_layout);
 
@@ -81,7 +95,10 @@ export async function uploadBackgroundTemplate(data: {
   };
 
   const updatedAssets = shouldSetActive
-    ? [...layout.assets.map((asset) => ({ ...asset, isActive: false })), newAsset]
+    ? [
+        ...layout.assets.map((asset) => ({ ...asset, isActive: false })),
+        newAsset,
+      ]
     : [...layout.assets, newAsset];
 
   const updatedLayout = {
@@ -113,12 +130,15 @@ export async function selectBackgroundTemplate(data: {
 }) {
   const jenis_template = normalizeJenisTemplate(data.jenis);
 
-  const template = await getOrCreateTemplate(jenis_template, data.userId ?? null);
+  const template = await getOrCreateTemplate(
+    jenis_template,
+    data.userId ?? null,
+  );
 
   const layout = parseLayout(template.konfigurasi_layout);
 
   const selectedAsset = layout.assets.find(
-    (asset) => asset.id === data.assetId
+    (asset) => asset.id === data.assetId,
   );
 
   if (!selectedAsset) {
@@ -184,6 +204,9 @@ export async function deleteBackgroundTemplate(data: {
     konfigurasi_layout: toJsonInput(updatedLayout),
   });
 
+  // Hapus file fisik setelah database berhasil diupdate
+  deletePhysicalTemplateFile(selectedAsset.src);
+
   return {
     id_template: updatedTemplate.id_template,
     uuid: updatedTemplate.uuid,
@@ -195,6 +218,30 @@ export async function deleteBackgroundTemplate(data: {
     updated_at: updatedTemplate.updated_at,
   };
 }
+function deletePhysicalTemplateFile(fileUrl: string) {
+  try {
+    if (!fileUrl) return;
+
+    let filePath = fileUrl;
+
+    // Kalau URL absolute, ambil pathname-nya saja
+    if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+      const parsedUrl = new URL(fileUrl);
+      filePath = parsedUrl.pathname;
+    }
+
+    // Kalau path-nya /uploads/templates/xxx.jpg
+    const normalizedPath = filePath.replace(/^\/+/, "");
+
+    const fullPath = path.join(process.cwd(), normalizedPath);
+
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  } catch (error) {
+    console.error("Gagal menghapus file fisik template:", error);
+  }
+}
 export async function updateTemplateLayout(data: {
   jenis: string;
   elements: unknown[];
@@ -205,7 +252,10 @@ export async function updateTemplateLayout(data: {
 }) {
   const jenis_template = normalizeJenisTemplate(data.jenis);
 
-  const template = await getOrCreateTemplate(jenis_template, data.userId ?? null);
+  const template = await getOrCreateTemplate(
+    jenis_template,
+    data.userId ?? null,
+  );
 
   const layout = parseLayout(template.konfigurasi_layout);
 
