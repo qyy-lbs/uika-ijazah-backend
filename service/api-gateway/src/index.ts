@@ -184,6 +184,20 @@ app.use(
 );  
 
 
+app.use( "/api/dashboard", verifyGatewayToken) 
+app.use(createProxyMiddleware({
+    pathFilter: '/api/dashboard', 
+    target: process.env.DASHBOARD_SERVICE_URL || 'http://localhost:3007', 
+    changeOrigin: true,
+     on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[dashboard-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+  }));
+
+
 // ==========================================================
 // 9. PROXY QR SERVICE (PORT 3010 - PINTU TERKUNCI)
 // ==========================================================

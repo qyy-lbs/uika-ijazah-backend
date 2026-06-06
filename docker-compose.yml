@@ -32,6 +32,9 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - PUBLIC_BASE_URL="http://103.158.196.32:8010"
+      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+
+
 
   # -----------------------------------------------------------------
   # 2. AUTH SERVICE (Internal)
