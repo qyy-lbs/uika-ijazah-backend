@@ -171,7 +171,7 @@ services:
   # 10. QR SERVICE (Internal)
   # -----------------------------------------------------------------
   
-document-service:
+qr-service:
     build:
       context: ./service/qr-service
       dockerfile: Dockerfile
