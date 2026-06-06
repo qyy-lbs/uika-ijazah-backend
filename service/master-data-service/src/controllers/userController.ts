@@ -117,8 +117,8 @@ export const getCurrentUser = async (req: any, res: any) => {
         email: user.email,
         role: user.role,
         created_at: user.created_at,
-        nama: namaTampil, // 🔥 Hasil saringan nama yang sudah akurat
-        nidn: nidnTampil  // 🔥 Hasil saringan NIDN yang sudah akurat
+        nama: namaTampil, 
+        nidn: nidnTampil  
       },
     });
 
@@ -127,6 +127,39 @@ export const getCurrentUser = async (req: any, res: any) => {
     return res.status(500).json({ 
       status: false, 
       message: error.message || "Terjadi kesalahan pada server (Internal Server Error)." 
+    });
+  }
+};
+
+
+export const changePassword = async (req: any, res: any) => {
+  try {
+    const userId = req.user?.id_user || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ 
+        status: false, 
+        message: "Akses ditolak. Token tidak valid." 
+      });
+    }
+
+    // Panggil Service untuk mengurus semuanya
+    await userService.changePassword(Number(userId), req.body);
+
+    return res.status(200).json({ 
+      status: true, 
+      message: "Kata sandi berhasil diperbarui dengan aman!" 
+    });
+
+  } catch (error: any) {
+    console.error("🚨 Error di changePassword:", error);
+    
+    // Deteksi jika error berasal dari salah password lama
+    const statusCode = error.message.includes("salah") ? 400 : 500;
+    
+    return res.status(statusCode).json({ 
+      status: false, 
+      message: error.message || "Terjadi kesalahan pada server saat mengubah sandi." 
     });
   }
 };
