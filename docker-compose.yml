@@ -18,6 +18,7 @@ services:
       - akademik-service
       - approval-service
       - template-service
+      - document-service
       - qr-service
     environment:
       - PORT=3000
