@@ -1,7 +1,6 @@
 # Tahap 1: Build TypeScript
 FROM node:20-alpine AS builder
 WORKDIR /app
-ARG DATABASE_URL
 COPY package*.json ./
 RUN npm install
 COPY . .

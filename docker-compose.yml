@@ -1,6 +1,4 @@
-
 services:
- 
   # -----------------------------------------------------------------
   # 1. API GATEWAY (Gerbang Publik Utama - Port 8010)
   # -----------------------------------------------------------------
@@ -9,7 +7,7 @@ services:
     container_name: ijazah-api-gateway
     restart: always
     ports:
-      - "8010:3000"                   
+      - "8010:3000"
     depends_on:
       - auth-service
       - inbound-service
@@ -28,9 +26,9 @@ services:
       - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - APPROVAL_SERVICE_URL=http://approval-service:3006
       - DASHBOARD_SERVICE_URL=http://dashboard-service:3007
-      - TEMPLATE_SERVICE_URL=http://template-service:3008 
-      - DOCUMENT_SERVICE_URL=http://document-service:3009 
-      - QR_SERVICE_URL=http://qr-service:3010 
+      - TEMPLATE_SERVICE_URL=http://template-service:3008
+      - DOCUMENT_SERVICE_URL=http://document-service:3009
+      - QR_SERVICE_URL=http://qr-service:3010
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - PUBLIC_BASE_URL="http://103.158.196.32:8010"
@@ -43,7 +41,7 @@ services:
     container_name: ijazah-service-auth
     restart: always
     environment:
-      - PORT=3002                                          
+      - PORT=3002
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
@@ -56,7 +54,7 @@ services:
     container_name: ijazah-service-inbound
     restart: always
     environment:
-      - PORT=3003                                        
+      - PORT=3003
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
@@ -65,7 +63,7 @@ services:
   # 4. MASTER DATA SERVICE (Internal)
   # -----------------------------------------------------------------
   master-data-service:
-    build: ./service/master-data-service    
+    build: ./service/master-data-service
     container_name: ijazah-service-masterdata
     restart: always
     environment:
@@ -75,7 +73,7 @@ services:
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
   # -----------------------------------------------------------------
-  # 5. AKADEMIK SERVICE (Internal)  
+  # 5. AKADEMIK SERVICE (Internal)
   # -----------------------------------------------------------------
   akademik-service:
     build:
@@ -107,8 +105,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
- 
- # -----------------------------------------------------------------
+  # -----------------------------------------------------------------
   # 7. DASHBOARD SERVICE (Internal)
   # -----------------------------------------------------------------
   dashboard-service:
@@ -125,7 +122,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
-# -----------------------------------------------------------------
+  # -----------------------------------------------------------------
   # 8. Template SERVICE (Internal)
   # -----------------------------------------------------------------
   template-service:
@@ -144,8 +141,7 @@ services:
       - PUBLIC_BASE_URL="http://103.158.196.32:8010"
       - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
 
-
-# -----------------------------------------------------------------
+  # -----------------------------------------------------------------
   # 9. DOCUMENT SERVICE (Internal)
   # -----------------------------------------------------------------
 
@@ -168,21 +164,19 @@ services:
       - TEMPLATE_SERVICE_URL="http://localhost:3008"
 
 # -----------------------------------------------------------------
-  # 10. QR SERVICE (Internal)
-  # -----------------------------------------------------------------
-  
+# 10. QR SERVICE (Internal)
+# -----------------------------------------------------------------
+
 qr-service:
-    build:
-      context: ./service/qr-service
-      dockerfile: Dockerfile
-      args:
-        - DATABASE_URL=${DATABASE_URL}
-    container_name: ijazah-service-qr
-    restart: always
-    environment:
-      - PORT=3010
+  build:
+    context: ./service/qr-service
+    dockerfile: Dockerfile
+    args:
       - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
-      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+  container_name: ijazah-service-qr
+  restart: always
+  environment:
+    - PORT=3010
+    - JWT_SECRET=${JWT_SECRET}
+    - PUBLIC_BASE_URL="http://103.158.196.32:8010"
+    - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
