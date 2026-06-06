@@ -163,11 +163,11 @@ services:
       - AKADEMIK_SERVICE_URL="http://localhost:3005"
       - TEMPLATE_SERVICE_URL="http://localhost:3008"
 
-# -----------------------------------------------------------------
-# 10. QR SERVICE (Internal)
-# -----------------------------------------------------------------
+  # -----------------------------------------------------------------
+  # 10. QR SERVICE (Internal)
+  # -----------------------------------------------------------------
 
-qr-service:
+  qr-service:
   build:
     context: ./service/qr-service
     dockerfile: Dockerfile
@@ -178,5 +178,4 @@ qr-service:
   environment:
     - PORT=3010
     - JWT_SECRET=${JWT_SECRET}
-    - PUBLIC_BASE_URL="http://103.158.196.32:8010"
     - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
