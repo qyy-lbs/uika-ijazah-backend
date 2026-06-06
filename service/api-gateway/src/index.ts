@@ -198,6 +198,44 @@ app.use(
     },
   })
 );  
+
+
+// ==========================================================
+// 9. PROXY QR SERVICE (PORT 3010 - PINTU TERKUNCI)
+// ==========================================================
+
+// --- PROXY UNITS ---
+app.use('/api/qr', verifyGatewayToken);
+app.use(createProxyMiddleware({
+  pathFilter: '/api/qr', 
+  target: process.env.QR_SERVICE_URL || 'http://localhost:3010',
+  changeOrigin: true,
+  on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Qr-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+}));
+
+
+// ==========================================================
+// 3. PROXY DOCUMENT SERVICE (PORT 3009 - PINTU TERKUNCI)
+// ==========================================================
+
+// --- PROXY DOCUMENT ---
+app.use('/api/document', verifyGatewayToken);
+app.use(createProxyMiddleware({
+  pathFilter: '/api/document', 
+  target: process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
+  changeOrigin: true,
+  on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[Document-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+}));
   
 // ==========================================================
 // --- START SERVER ---
