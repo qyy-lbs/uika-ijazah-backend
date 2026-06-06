@@ -1,6 +1,13 @@
 import type { Request, Response } from "express";
 import type { CustomRequest } from "../middlewares/auth.middleware.js";
-import { getTemplateByJenis,uploadBackgroundTemplate,selectBackgroundTemplate,deleteBackgroundTemplate, updateTemplateLayout, getPlaceholdersByJenis } from "../services/template.service.js";
+import {
+  getTemplateByJenis,
+  uploadBackgroundTemplate,
+  selectBackgroundTemplate,
+  deleteBackgroundTemplate,
+  updateTemplateLayout,
+  getPlaceholdersByJenis,
+} from "../services/template.service.js";
 
 export async function healthTemplate(_req: Request, res: Response) {
   return res.json({
@@ -57,8 +64,8 @@ export async function getTemplate(req: CustomRequest, res: Response) {
 export async function uploadBackground(req: CustomRequest, res: Response) {
   try {
     console.log("CONTENT TYPE:", req.headers["content-type"]);
-console.log("BODY:", req.body);
-console.log("FILE:", req.file);
+    console.log("BODY:", req.body);
+    console.log("FILE:", req.file);
     const jenis = req.params.jenis;
 
     if (!jenis || Array.isArray(jenis)) {
@@ -235,6 +242,31 @@ export async function getPlaceholders(req: CustomRequest, res: Response) {
     return res.json({
       success: true,
       message: "Placeholder template berhasil diambil",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Terjadi kesalahan",
+    });
+  }
+}
+export async function getTemplateForDocument(req: Request, res: Response) {
+  try {
+    const jenis = req.params.jenis;
+
+    if (!jenis || Array.isArray(jenis)) {
+      return res.status(400).json({
+        success: false,
+        message: "Jenis template tidak valid",
+      });
+    }
+
+    const data = await getTemplateByJenis(jenis, null);
+
+    return res.json({
+      success: true,
+      message: "Template untuk document-service berhasil diambil",
       data,
     });
   } catch (error) {

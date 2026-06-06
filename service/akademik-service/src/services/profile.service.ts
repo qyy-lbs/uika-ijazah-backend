@@ -10,6 +10,33 @@ const APPROVAL_LEVEL_LABEL: Record<number, string> = {
   6: "Rektor",
 };
 
+function formatTanggalIndonesia(value: Date | string | null | undefined) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatTempatTanggalLahir(
+  tempat: string | null | undefined,
+  tanggal: Date | string | null | undefined
+) {
+  const tanggalFormatted = formatTanggalIndonesia(tanggal);
+
+  if (!tempat && !tanggalFormatted) return null;
+
+  return `${tempat || "-"}, ${tanggalFormatted || "-"}`;
+}
+
 function getNextValidatorLabel(lastApprovedLevel: number): string {
   const nextLevel = lastApprovedLevel + 1;
 
@@ -77,11 +104,6 @@ function getMahasiswaApprovalStatus(
     };
   }
 
-  /**
-   * Kalau belum ada validasi sama sekali:
-   * lastApprovedLevel = 0
-   * next validator = level 1 = TU Fakultas
-   */
   const lastApprovedLevel = lastApproved?.level_validasi ?? 0;
   const nextValidator = getNextValidatorLabel(lastApprovedLevel);
 
@@ -95,7 +117,12 @@ function getMahasiswaApprovalStatus(
     validated_at: lastApproved?.validated_at ?? null,
   };
 }
-
+type ValidasiProfileItem = {
+  level_validasi: number;
+  status_validasi: string | null;
+  catatan: string | null;
+  validated_at: Date | null;
+};
 export async function getProfileByNim(nim: string) {
   const mahasiswa = await findMahasiswaByNim(nim);
 
@@ -105,44 +132,143 @@ export async function getProfileByNim(nim: string) {
 
   const transkrip = await getTranskripByNim(nim);
 
+  const unit = mahasiswa.prodi?.unit ?? null;
+  const prodi = mahasiswa.prodi ?? null;
+
   const approval = getMahasiswaApprovalStatus(
-    mahasiswa.validasi.map((v) => ({
-      level_validasi: v.level_validasi,
-      status_validasi: v.status_validasi,
-      catatan: v.catatan,
-      validated_at: v.validated_at,
-    }))
+  mahasiswa.validasi.map((v: ValidasiProfileItem) => ({
+    level_validasi: v.level_validasi,
+    status_validasi: v.status_validasi,
+    catatan: v.catatan,
+    validated_at: v.validated_at,
+  }))
+);
+
+  const tempatTanggalLahir = formatTempatTanggalLahir(
+    mahasiswa.tempat_lahir,
+    mahasiswa.tanggal_lahir
   );
 
   return {
     mahasiswa: {
       id_mahasiswa: mahasiswa.id_mahasiswa,
       uuid: mahasiswa.uuid,
+
       nim: mahasiswa.nim,
+      nomor_pokok_mahasiswa: mahasiswa.nim,
+
+      // Sesuai klarifikasi kamu:
+      // NINA memakai nomor_seri_ijazah
+      nina: mahasiswa.nomor_seri_ijazah,
+
       nik: mahasiswa.nik,
       nomor_seri_ijazah: mahasiswa.nomor_seri_ijazah,
       pisn: mahasiswa.pisn,
+
       nama_mahasiswa: mahasiswa.nama_mahasiswa,
+      nama: mahasiswa.nama_mahasiswa,
+
       tempat_lahir: mahasiswa.tempat_lahir,
       tanggal_lahir: mahasiswa.tanggal_lahir,
+      tanggal_lahir_formatted: formatTanggalIndonesia(mahasiswa.tanggal_lahir),
+      tempat_tanggal_lahir: tempatTanggalLahir,
+
       jenis_kelamin: mahasiswa.jenis_kelamin,
       email: mahasiswa.email,
       telepon: mahasiswa.telepon,
       foto: mahasiswa.foto,
+
+      program: mahasiswa.program,
+      program_en: mahasiswa.program_en,
+
+      gelar: mahasiswa.gelar,
+      gelar_en: mahasiswa.gelar_en,
+
+      judul_skripsi: mahasiswa.judul_skripsi,
+
+      tahun_masuk: mahasiswa.tahun_masuk,
+      tahun_lulus: mahasiswa.tahun_lulus,
+
+      status_kelulusan: mahasiswa.status_kelulusan,
+      tanggal_kelulusan: mahasiswa.tanggal_kelulusan,
+      tanggal_kelulusan_formatted: formatTanggalIndonesia(
+        mahasiswa.tanggal_kelulusan
+      ),
+
       id_batch_upload: mahasiswa.id_batch_upload,
     },
 
     akademik: {
-      fakultas: mahasiswa.prodi?.unit?.nama_unit,
-      program_studi: mahasiswa.prodi?.nama_prodi,
+      fakultas: unit?.nama_unit ?? null,
+      fakultas_en: unit?.nama_unit_en ?? null,
+
+      program_studi: prodi?.nama_prodi ?? null,
+      program_studi_en: prodi?.nama_prodi_en ?? null,
+
+      program: mahasiswa.program,
+      program_en: mahasiswa.program_en,
+
       tahun_masuk: mahasiswa.tahun_masuk,
       tahun_lulus: mahasiswa.tahun_lulus,
+
       tanggal_kelulusan: mahasiswa.tanggal_kelulusan,
+      tanggal_kelulusan_formatted: formatTanggalIndonesia(
+        mahasiswa.tanggal_kelulusan
+      ),
+
+      nomor_sk_akreditasi: prodi?.no_sk_akreditasi ?? null,
+      akreditasi_aipt: unit?.akreditasi_aipt ?? null,
+
       ipk: transkrip.ipk,
       total_sks: transkrip.total_sks,
       total_bobot: transkrip.total_bobot,
       predikat: transkrip.predikat,
+
       status_kelulusan: mahasiswa.status_kelulusan,
+    },
+
+    pejabat: {
+      nama_rektor: unit?.rektor ?? null,
+      nidn_rektor: unit?.nidn_rektor ?? null,
+
+      nama_wakil_rektor_1: unit?.wakil_rektor_1 ?? null,
+      nidn_wakil_rektor_1: unit?.nidn_wakil_rektor_1 ?? null,
+
+      nama_tu_rektorat: unit?.tu_rektorat ?? null,
+
+      nama_dekan: unit?.dekan ?? null,
+      nidn_dekan: unit?.nidn_dekan ?? null,
+
+      nama_wakil_dekan_1: unit?.wakil_dekan_1 ?? null,
+      nidn_wakil_dekan_1: unit?.nidn_wakil_dekan_1 ?? null,
+
+      nama_tu_fakultas: unit?.tu_fakultas ?? null,
+
+      nama_kaprodi: prodi?.kaprodi ?? null,
+      nidn_kaprodi: prodi?.nidn_kaprodi ?? null,
+    },
+
+    assets: {
+      ttd_rektor: unit?.file_ttd_rektor ?? null,
+      paraf_warek: unit?.file_paraf_warek ?? null,
+      paraf_katu_rektor: unit?.file_paraf_tu_rektorat ?? null,
+      stempel_rektor: unit?.file_stempel_universitas ?? null,
+
+      ttd_dekan: unit?.file_ttd_dekan ?? null,
+      paraf_wadek: unit?.file_paraf_wadek ?? null,
+      paraf_katu_fakultas: unit?.file_paraf_tu_fakultas ?? null,
+      stempel_dekan: unit?.file_stempel_fakultas ?? null,
+
+      paraf_kaprodi: prodi?.file_paraf_kaprodi ?? null,
+    },
+
+    dokumen_placeholder: {
+      nomor_dokumen: null,
+      tanggal_terbit: null,
+      tanggal_terbit_formatted: null,
+      qr_code: null,
+      kode_qr: null,
+      url_akses: null,
     },
 
     batch: {

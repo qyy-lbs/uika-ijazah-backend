@@ -1,6 +1,6 @@
 import { Router } from "express";
-import {healthTemplate,getTemplateMe,getTemplate,uploadBackground,selectBackground,deleteBackground,saveLayout, getPlaceholders} from "../controllers/template.controller.js";
-import {verifyToken,authorizeRoles,} from "../middlewares/auth.middleware.js";
+import {healthTemplate,getTemplateMe,getTemplate,uploadBackground,selectBackground,deleteBackground,saveLayout, getPlaceholders, getTemplateForDocument} from "../controllers/template.controller.js";
+import {verifyToken,authorizeRoles, verifyInternalService,} from "../middlewares/auth.middleware.js";
 import { uploadTemplateBackground } from "../middlewares/upload.middleware.js";
 const router = Router();
 
@@ -14,6 +14,7 @@ router.patch("/:jenis/background/select", adminOnly, selectBackground);
 router.delete("/:jenis/background/:assetId", adminOnly, deleteBackground);  
 router.put("/:jenis/layout", adminOnly, saveLayout);  
 router.get("/:jenis/placeholders", adminOnly, getPlaceholders);
+router.get("/internal/:jenis", verifyInternalService, getTemplateForDocument);
 // Menu template builder hanya untuk admin
 router.get("/:jenis", adminOnly, getTemplate);
 
