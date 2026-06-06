@@ -205,7 +205,7 @@ app.use(
 // ==========================================================
 
 // --- PROXY UNITS ---
-app.use('/api/qr', verifyGatewayToken);
+app.use('/api/qr');
 app.use(createProxyMiddleware({
   pathFilter: '/api/qr', 
   target: process.env.QR_SERVICE_URL || 'http://localhost:3010',
@@ -224,7 +224,7 @@ app.use(createProxyMiddleware({
 // ==========================================================
 
 // --- PROXY DOCUMENT ---
-app.use('/api/document', verifyGatewayToken);
+app.use('/api/document');
 app.use(createProxyMiddleware({
   pathFilter: '/api/document', 
   target: process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
