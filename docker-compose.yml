@@ -18,6 +18,7 @@ services:
       - akademik-service
       - approval-service
       - template-service
+      - qr-service
     environment:
       - PORT=3000
       - AUTH_SERVICE_URL=http://auth-service:3002
@@ -27,6 +28,8 @@ services:
       - APPROVAL_SERVICE_URL=http://approval-service:3006
       - DASHBOARD_SERVICE_URL=http://dashboard-service:3007
       - TEMPLATE_SERVICE_URL=http://template-service:3008 
+      - DOCUMENT_SERVICE_URL=http://document-service:3009 
+      - QR_SERVICE_URL=http://qr-service:3010 
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - PUBLIC_BASE_URL="http://103.158.196.32:8010"
@@ -138,3 +141,47 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - PUBLIC_BASE_URL="http://103.158.196.32:8010"
+      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+
+
+# -----------------------------------------------------------------
+  # 9. DOCUMENT SERVICE (Internal)
+  # -----------------------------------------------------------------
+
+  document-service:
+    build:
+      context: ./service/document-service
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=${DATABASE_URL}
+    container_name: ijazah-service-document
+    restart: always
+    environment:
+      - PORT=3009
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
+      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+      - AKADEMIK_SERVICE_URL="http://localhost:3005"
+      - TEMPLATE_SERVICE_URL="http://localhost:3008"
+
+# -----------------------------------------------------------------
+  # 10. QR SERVICE (Internal)
+  # -----------------------------------------------------------------
+  
+document-service:
+    build:
+      context: ./service/qr-service
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=${DATABASE_URL}
+    container_name: ijazah-service-qr
+    restart: always
+    environment:
+      - PORT=3010
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
+      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"

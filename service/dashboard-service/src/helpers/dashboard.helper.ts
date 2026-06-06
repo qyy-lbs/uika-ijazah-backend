@@ -40,8 +40,7 @@ export const mapDashboardStatus = ({
   // TERBIT
   // Kalau dokumen dan blockchain sudah ada, berarti ijazah sudah terbit
   if (
-    hasDokumen &&
-    hasBlockchain
+    status === "terbit"
   ) {
     return "terbit";
   }
