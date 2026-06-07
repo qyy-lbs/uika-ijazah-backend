@@ -196,6 +196,8 @@ export async function saveLayout(req: CustomRequest, res: Response) {
       isSaved?: boolean;
       isLocked?: boolean;
       hasPreviewed?: boolean;
+      imageNaturalWidth?: number | null;
+      imageNaturalHeight?: number | null;
     };
 
     if (!Array.isArray(body.elements)) {
@@ -211,6 +213,8 @@ export async function saveLayout(req: CustomRequest, res: Response) {
       isSaved: body.isSaved,
       isLocked: body.isLocked,
       hasPreviewed: body.hasPreviewed,
+      imageNaturalWidth: typeof body.imageNaturalWidth === "number" ? body.imageNaturalWidth : null,
+      imageNaturalHeight: typeof body.imageNaturalHeight === "number" ? body.imageNaturalHeight : null,
       userId: req.user?.id_user ?? null,
     });
 

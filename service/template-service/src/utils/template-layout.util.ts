@@ -27,6 +27,10 @@ export type TemplateLayout = {
   isSaved: boolean;
   isLocked: boolean;
   hasPreviewed: boolean;
+  // Dimensi natural gambar template saat disimpan dari frontend (w-[780px] rendered)
+  // Digunakan document-service untuk menghitung scaleY yang benar
+  imageNaturalWidth?: number | null;
+  imageNaturalHeight?: number | null;
 };
 
 export function getDefaultLayout(): TemplateLayout {
@@ -37,6 +41,8 @@ export function getDefaultLayout(): TemplateLayout {
     isSaved: false,
     isLocked: false,
     hasPreviewed: false,
+    imageNaturalWidth: null,
+    imageNaturalHeight: null,
   };
 }
 
@@ -45,7 +51,7 @@ export function parseLayout(layout: Prisma.JsonValue | null): TemplateLayout {
     return getDefaultLayout();
   }
 
-  const data = layout as Partial<TemplateLayout>;
+  const data = layout as Partial<TemplateLayout> & Record<string, unknown>;
 
   return {
     activeAssetId: data.activeAssetId ?? null,
@@ -54,6 +60,10 @@ export function parseLayout(layout: Prisma.JsonValue | null): TemplateLayout {
     isSaved: Boolean(data.isSaved),
     isLocked: Boolean(data.isLocked),
     hasPreviewed: Boolean(data.hasPreviewed),
+    imageNaturalWidth:
+      typeof data.imageNaturalWidth === "number" ? data.imageNaturalWidth : null,
+    imageNaturalHeight:
+      typeof data.imageNaturalHeight === "number" ? data.imageNaturalHeight : null,
   };
 }
 

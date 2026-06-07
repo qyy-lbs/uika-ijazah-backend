@@ -28,7 +28,7 @@ function formatTanggalIndonesia(value: Date | string | null | undefined) {
 
 function formatTempatTanggalLahir(
   tempat: string | null | undefined,
-  tanggal: Date | string | null | undefined
+  tanggal: Date | string | null | undefined,
 ) {
   const tanggalFormatted = formatTanggalIndonesia(tanggal);
 
@@ -49,10 +49,10 @@ function getMahasiswaApprovalStatus(
     status_validasi: string | null;
     catatan: string | null;
     validated_at: Date | null;
-  }[]
+  }[],
 ) {
   const rejected = validasiList.find(
-    (item) => item.status_validasi?.toLowerCase() === "rejected"
+    (item) => item.status_validasi?.toLowerCase() === "rejected",
   );
 
   if (rejected) {
@@ -70,7 +70,7 @@ function getMahasiswaApprovalStatus(
   }
 
   const revoked = validasiList.find(
-    (item) => item.status_validasi?.toLowerCase() === "revoked"
+    (item) => item.status_validasi?.toLowerCase() === "revoked",
   );
 
   if (revoked) {
@@ -132,21 +132,22 @@ export async function getProfileByNim(nim: string) {
 
   const transkrip = await getTranskripByNim(nim);
 
-  const unit = mahasiswa.prodi?.unit ?? null;
+  const fakultasUnit = mahasiswa.prodi?.unit ?? null;
+  const universitasUnit = fakultasUnit?.unit ?? null;
   const prodi = mahasiswa.prodi ?? null;
 
   const approval = getMahasiswaApprovalStatus(
-  mahasiswa.validasi.map((v: ValidasiProfileItem) => ({
-    level_validasi: v.level_validasi,
-    status_validasi: v.status_validasi,
-    catatan: v.catatan,
-    validated_at: v.validated_at,
-  }))
-);
+    mahasiswa.validasi.map((v: ValidasiProfileItem) => ({
+      level_validasi: v.level_validasi,
+      status_validasi: v.status_validasi,
+      catatan: v.catatan,
+      validated_at: v.validated_at,
+    })),
+  );
 
   const tempatTanggalLahir = formatTempatTanggalLahir(
     mahasiswa.tempat_lahir,
-    mahasiswa.tanggal_lahir
+    mahasiswa.tanggal_lahir,
   );
 
   return {
@@ -192,15 +193,15 @@ export async function getProfileByNim(nim: string) {
       status_kelulusan: mahasiswa.status_kelulusan,
       tanggal_kelulusan: mahasiswa.tanggal_kelulusan,
       tanggal_kelulusan_formatted: formatTanggalIndonesia(
-        mahasiswa.tanggal_kelulusan
+        mahasiswa.tanggal_kelulusan,
       ),
 
       id_batch_upload: mahasiswa.id_batch_upload,
     },
 
     akademik: {
-      fakultas: unit?.nama_unit ?? null,
-      fakultas_en: unit?.nama_unit_en ?? null,
+      fakultas: fakultasUnit?.nama_unit ?? null,
+      fakultas_en: fakultasUnit?.nama_unit_en ?? null,
 
       program_studi: prodi?.nama_prodi ?? null,
       program_studi_en: prodi?.nama_prodi_en ?? null,
@@ -213,11 +214,13 @@ export async function getProfileByNim(nim: string) {
 
       tanggal_kelulusan: mahasiswa.tanggal_kelulusan,
       tanggal_kelulusan_formatted: formatTanggalIndonesia(
-        mahasiswa.tanggal_kelulusan
+        mahasiswa.tanggal_kelulusan,
       ),
 
       nomor_sk_akreditasi: prodi?.no_sk_akreditasi ?? null,
-      akreditasi_aipt: unit?.akreditasi_aipt ?? null,
+
+      // AIPT dari parent unit universitas
+      akreditasi_aipt: universitasUnit?.akreditasi_aipt ?? null,
 
       ipk: transkrip.ipk,
       total_sks: transkrip.total_sks,
@@ -226,39 +229,42 @@ export async function getProfileByNim(nim: string) {
 
       status_kelulusan: mahasiswa.status_kelulusan,
     },
-
     pejabat: {
-      nama_rektor: unit?.rektor ?? null,
-      nidn_rektor: unit?.nidn_rektor ?? null,
+      // Rektor dari parent unit universitas
+      nama_rektor: universitasUnit?.rektor ?? null,
+      nidn_rektor: universitasUnit?.nidn_rektor ?? null,
 
-      nama_wakil_rektor_1: unit?.wakil_rektor_1 ?? null,
-      nidn_wakil_rektor_1: unit?.nidn_wakil_rektor_1 ?? null,
+      nama_wakil_rektor_1: universitasUnit?.wakil_rektor_1 ?? null,
+      nidn_wakil_rektor_1: universitasUnit?.nidn_wakil_rektor_1 ?? null,
 
-      nama_tu_rektorat: unit?.tu_rektorat ?? null,
+      nama_tu_rektorat: universitasUnit?.tu_rektorat ?? null,
 
-      nama_dekan: unit?.dekan ?? null,
-      nidn_dekan: unit?.nidn_dekan ?? null,
+      // Dekan dari unit fakultas
+      nama_dekan: fakultasUnit?.dekan ?? null,
+      nidn_dekan: fakultasUnit?.nidn_dekan ?? null,
 
-      nama_wakil_dekan_1: unit?.wakil_dekan_1 ?? null,
-      nidn_wakil_dekan_1: unit?.nidn_wakil_dekan_1 ?? null,
+      nama_wakil_dekan_1: fakultasUnit?.wakil_dekan_1 ?? null,
+      nidn_wakil_dekan_1: fakultasUnit?.nidn_wakil_dekan_1 ?? null,
 
-      nama_tu_fakultas: unit?.tu_fakultas ?? null,
+      nama_tu_fakultas: fakultasUnit?.tu_fakultas ?? null,
 
       nama_kaprodi: prodi?.kaprodi ?? null,
       nidn_kaprodi: prodi?.nidn_kaprodi ?? null,
     },
-
     assets: {
-      ttd_rektor: unit?.file_ttd_rektor ?? null,
-      paraf_warek: unit?.file_paraf_warek ?? null,
-      paraf_katu_rektor: unit?.file_paraf_tu_rektorat ?? null,
-      stempel_rektor: unit?.file_stempel_universitas ?? null,
+      // Asset rektor dari parent unit universitas
+      ttd_rektor: universitasUnit?.file_ttd_rektor ?? null,
+      paraf_warek: universitasUnit?.file_paraf_warek ?? null,
+      paraf_katu_rektor: universitasUnit?.file_paraf_tu_rektorat ?? null,
+      stempel_rektor: universitasUnit?.file_stempel_universitas ?? null,
 
-      ttd_dekan: unit?.file_ttd_dekan ?? null,
-      paraf_wadek: unit?.file_paraf_wadek ?? null,
-      paraf_katu_fakultas: unit?.file_paraf_tu_fakultas ?? null,
-      stempel_dekan: unit?.file_stempel_fakultas ?? null,
+      // Asset dekan/fakultas dari unit fakultas
+      ttd_dekan: fakultasUnit?.file_ttd_dekan ?? null,
+      paraf_wadek: fakultasUnit?.file_paraf_wadek ?? null,
+      paraf_katu_fakultas: fakultasUnit?.file_paraf_tu_fakultas ?? null,
+      stempel_dekan: fakultasUnit?.file_stempel_fakultas ?? null,
 
+      // Asset kaprodi dari prodi
       paraf_kaprodi: prodi?.file_paraf_kaprodi ?? null,
     },
 

@@ -12,7 +12,22 @@ export async function renderHtmlToPdf(params: {
 
   try {
     const page = await browser.newPage();
+    page.on("requestfailed", (request) => {
+      const url = request.url();
 
+      if (
+        url.includes("/uploads/") ||
+        url.endsWith(".png") ||
+        url.endsWith(".jpg") ||
+        url.endsWith(".jpeg") ||
+        url.endsWith(".webp")
+      ) {
+        console.error("Gagal load asset PDF:", {
+          url,
+          error: request.failure()?.errorText,
+        });
+      }
+    });
     await page.setViewport({
       width: params.width,
       height: params.height,

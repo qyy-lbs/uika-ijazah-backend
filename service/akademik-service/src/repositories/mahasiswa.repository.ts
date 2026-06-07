@@ -8,7 +8,11 @@ export async function findMahasiswaByNim(nim: string) {
     include: {
       prodi: {
         include: {
-          unit: true,
+          unit: {
+            include: {
+              unit: true, // parent unit universitas
+            },
+          },
         },
       },
       batch_upload: true,

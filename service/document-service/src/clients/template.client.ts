@@ -6,10 +6,20 @@ export type TemplateElement = {
   placeholder?: string;
   field?: string;
   type?: string;
+
   x?: number;
   y?: number;
   width?: number;
   height?: number;
+
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textdecoration?: string;
+  align?: string;
+  roleLabel?: string;
+
   [key: string]: unknown;
 };
 
@@ -20,6 +30,10 @@ export type TemplateLayout = {
   isSaved: boolean;
   isLocked: boolean;
   hasPreviewed: boolean;
+  // Dimensi natural gambar template saat disimpan dari frontend
+  // Digunakan backend untuk menghitung scaleY yang benar
+  imageNaturalWidth?: number;
+  imageNaturalHeight?: number;
 };
 
 export type TemplateDocument = {

@@ -40,11 +40,28 @@ export function resolvePublicAssetUrl(src: string | null | undefined) {
     return src;
   }
 
-  const publicBaseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3009";
+  const normalizedSrc = src.startsWith("/") ? src : `/${src}`;
 
-  if (src.startsWith("/")) {
-    return `${publicBaseUrl}${src}`;
+  const documentBaseUrl =
+    process.env.PUBLIC_BASE_URL || "http://localhost:3009";
+
+  const templateBaseUrl =
+    process.env.TEMPLATE_PUBLIC_BASE_URL ||
+    process.env.TEMPLATE_SERVICE_URL ||
+    "http://localhost:3008";
+
+  const akademikBaseUrl =
+    process.env.AKADEMIK_PUBLIC_BASE_URL ||
+    process.env.AKADEMIK_SERVICE_URL ||
+    "http://localhost:3005";
+
+  if (normalizedSrc.startsWith("/uploads/templates")) {
+    return `${templateBaseUrl}${normalizedSrc}`;
   }
 
-  return `${publicBaseUrl}/${src}`;
+  if (normalizedSrc.startsWith("/uploads/documents")) {
+    return `${documentBaseUrl}${normalizedSrc}`;
+  }
+
+  return `${akademikBaseUrl}${normalizedSrc}`;
 }

@@ -6,7 +6,10 @@ type FieldMapping = {
   field: string;
   type: ElementType;
   fontSize?: number;
+  fontFamily?: string;
   fontWeight?: string;
+  fontStyle?: string;
+  textDecoration?: string;
   align?: string;
   roleLabel?: string;
 };
@@ -15,9 +18,42 @@ type NormalizedTemplateElement = TemplateElement & {
   field?: string;
   type?: ElementType;
   fontSize?: number;
+  fontFamily?: string;
   fontWeight?: string;
+  fontStyle?: string;
+  textDecoration?: string;
   align?: string;
   roleLabel?: string;
+};
+
+function normalizeTextDecoration(value: unknown, fallback?: string) {
+  if (value === "underline" || value === "none") {
+    return value;
+  }
+
+  if (fallback === "underline" || fallback === "none") {
+    return fallback;
+  }
+
+  return "none";
+}
+
+function normalizeFontStyle(value: unknown, fallback?: string) {
+  if (value === "italic" || value === "normal") {
+    return value;
+  }
+
+  if (fallback === "italic" || fallback === "normal") {
+    return fallback;
+  }
+
+  return "normal";
+}
+
+const DEFAULT_TEXT_STYLE = {
+  fontFamily: "Times New Roman",
+  fontWeight: "400",
+  align: "center",
 };
 
 const IJAZAH_FIELD_MAP: Record<string, FieldMapping> = {
@@ -204,11 +240,18 @@ const TRANSKRIP_FIELD_MAP: Record<string, FieldMapping> = {
     field: "transkrip",
     type: "table",
     fontSize: 7,
+    fontFamily: "Times New Roman",
+    fontWeight: "500",
+    align: "left",
   },
   "TTD Dekan": {
     field: "assets.ttd_dekan",
     type: "signature",
     roleLabel: "Dekan,",
+    fontSize: 8,
+    fontFamily: "Times New Roman",
+    fontWeight: "600",
+    align: "center",
   },
   "Nama Dekan": {
     field: "pejabat.nama_dekan",
@@ -228,6 +271,60 @@ const TRANSKRIP_FIELD_MAP: Record<string, FieldMapping> = {
   },
 };
 
+function normalizeFontSize(value: unknown, fallback?: number) {
+  const parsed = Number(value ?? fallback ?? 0);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function normalizeFontFamily(value: unknown, fallback?: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  if (typeof fallback === "string" && fallback.trim()) {
+    return fallback;
+  }
+
+  return DEFAULT_TEXT_STYLE.fontFamily;
+}
+
+function normalizeFontWeight(value: unknown, fallback?: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  if (typeof fallback === "string" && fallback.trim()) {
+    return fallback;
+  }
+
+  return DEFAULT_TEXT_STYLE.fontWeight;
+}
+
+function normalizeAlign(value: unknown, fallback?: string) {
+  if (value === "left" || value === "center" || value === "right") {
+    return value;
+  }
+
+  if (fallback === "left" || fallback === "center" || fallback === "right") {
+    return fallback;
+  }
+
+  return DEFAULT_TEXT_STYLE.align;
+}
+
+function normalizeRoleLabel(value: unknown, fallback?: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  if (typeof fallback === "string" && fallback.trim()) {
+    return fallback;
+  }
+
+  return undefined;
+}
+
 export function normalizeTemplateElement(
   element: TemplateElement,
   jenis: "ijazah" | "transkrip"
@@ -239,50 +336,26 @@ export function normalizeTemplateElement(
       ? TRANSKRIP_FIELD_MAP[label]
       : IJAZAH_FIELD_MAP[label];
 
-  if (jenis === "transkrip" && label === "TTD Dekan") {
-    return {
-      ...element,
-      field: element.field || mapping?.field,
-      type: "signature",
-      fontSize:
-        Number(element.fontSize ?? mapping?.fontSize ?? 0) || undefined,
-      fontWeight:
-        typeof element.fontWeight === "string"
-          ? element.fontWeight
-          : mapping?.fontWeight,
-      align:
-        typeof element.align === "string"
-          ? element.align
-          : mapping?.align,
-      roleLabel:
-        typeof element.roleLabel === "string"
-          ? element.roleLabel
-          : mapping?.roleLabel || "Dekan,",
-    };
-  }
+  const resolvedType =
+    jenis === "transkrip" && label === "TTD Dekan"
+      ? "signature"
+      : ((element.type as ElementType) || mapping?.type || "text");
 
   return {
     ...element,
 
-    // utama: ambil dari frontend
+    // Prioritas utama dari frontend/database.
+    // Kalau kosong, baru fallback ke mapping.
     field: element.field || mapping?.field,
-    type: (element.type as ElementType) || mapping?.type || "text",
+    type: resolvedType,
 
-    // utama: ambil dari frontend
-    fontSize:
-      Number(element.fontSize ?? mapping?.fontSize ?? 0) || undefined,
-    fontWeight:
-      typeof element.fontWeight === "string"
-        ? element.fontWeight
-        : mapping?.fontWeight,
-    align:
-      typeof element.align === "string"
-        ? element.align
-        : mapping?.align,
+    fontSize: normalizeFontSize(element.fontSize, mapping?.fontSize),
+    fontFamily: normalizeFontFamily(element.fontFamily, mapping?.fontFamily),
+    fontWeight: normalizeFontWeight(element.fontWeight, mapping?.fontWeight),
+    fontStyle: normalizeFontStyle(element.fontStyle, mapping?.fontStyle),
+    textDecoration: normalizeTextDecoration(element.textDecoration, mapping?.textDecoration),
+    align: normalizeAlign(element.align, mapping?.align),
 
-    roleLabel:
-      typeof element.roleLabel === "string"
-        ? element.roleLabel
-        : mapping?.roleLabel,
+    roleLabel: normalizeRoleLabel(element.roleLabel, mapping?.roleLabel),
   };
 }

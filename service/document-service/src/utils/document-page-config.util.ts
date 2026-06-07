@@ -8,31 +8,43 @@ export type DocumentPageConfig = {
   defaultFontSize: number;
 };
 
-export function getDocumentPageConfig(jenis: JenisDokumen): DocumentPageConfig {
+export function getDocumentPageConfig(
+  jenis: JenisDokumen,
+  // Dimensi aktual gambar template yang tersimpan di layout.imageWidth/imageHeight
+  imageNaturalWidth?: number,
+  imageNaturalHeight?: number
+): DocumentPageConfig {
   if (jenis === "ijazah") {
+    // Ijazah landscape: canvas frontend selalu 780px wide
+    const canvasWidth = 780;
+    // Hitung canvasHeight dari aspect ratio gambar, fallback ke 552 (rasio A4 landscape)
+    const canvasHeight =
+      imageNaturalWidth && imageNaturalHeight
+        ? Math.round(canvasWidth * (imageNaturalHeight / imageNaturalWidth))
+        : 552;
+
     return {
-      // PDF landscape
       pdfWidth: 1100,
-      pdfHeight: 780,
-
-      // ukuran preview frontend ijazah: img w-[780px]
-      // landscape ratio kira-kira 780 x 552
-      canvasWidth: 780,
-      canvasHeight: 552,
-
-      defaultFontSize: 14,
+      pdfHeight: Math.round(1100 * (canvasHeight / canvasWidth)),
+      canvasWidth,
+      canvasHeight,
+      defaultFontSize: 12,
     };
   }
 
+  // Transkrip portrait: canvas frontend selalu 780px wide
+  const canvasWidth = 780;
+  // Hitung canvasHeight dari aspect ratio gambar, fallback ke 1224 (rasio gambar default 816x1281)
+  const canvasHeight =
+    imageNaturalWidth && imageNaturalHeight
+      ? Math.round(canvasWidth * (imageNaturalHeight / imageNaturalWidth))
+      : 1224;
+
   return {
-    // PDF portrait
     pdfWidth: 780,
-    pdfHeight: 1100,
-
-    // ukuran preview frontend transkrip
-    canvasWidth: 780,
-    canvasHeight: 1100,
-
+    pdfHeight: canvasHeight, // PDF height = canvas height karena scale 1:1
+    canvasWidth,
+    canvasHeight,
     defaultFontSize: 7,
   };
 }

@@ -248,6 +248,8 @@ export async function updateTemplateLayout(data: {
   isSaved?: boolean;
   isLocked?: boolean;
   hasPreviewed?: boolean;
+  imageNaturalWidth?: number | null;
+  imageNaturalHeight?: number | null;
   userId?: number | null;
 }) {
   const jenis_template = normalizeJenisTemplate(data.jenis);
@@ -269,6 +271,10 @@ export async function updateTemplateLayout(data: {
     isSaved: data.isSaved ?? layout.isSaved,
     isLocked: data.isLocked ?? layout.isLocked,
     hasPreviewed: data.hasPreviewed ?? layout.hasPreviewed,
+
+    // Simpan dimensi gambar agar document-service bisa hitung scaleY dengan benar
+    imageNaturalWidth: data.imageNaturalWidth ?? layout.imageNaturalWidth ?? null,
+    imageNaturalHeight: data.imageNaturalHeight ?? layout.imageNaturalHeight ?? null,
   };
 
   const updatedTemplate = await updateTemplateById(template.id_template, {

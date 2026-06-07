@@ -40,14 +40,52 @@ function getTextJustify(element: TemplateElement) {
   return "center";
 }
 
+function getFontFamily(element: TemplateElement) {
+  return typeof element.fontFamily === "string" && element.fontFamily.trim()
+    ? element.fontFamily
+    : "Times New Roman";
+}
+
+function getFontWeight(element: TemplateElement, fallback = "400") {
+  return typeof element.fontWeight === "string" && element.fontWeight.trim()
+    ? element.fontWeight
+    : fallback;
+}
+
+function getFontSize(element: TemplateElement, fallback: number) {
+  const fontSize = Number(element.fontSize ?? fallback);
+
+  return Number.isFinite(fontSize) && fontSize > 0 ? fontSize : fallback;
+}
+
+function getFontStyle(element: TemplateElement, fallback = "normal") {
+  return element.fontStyle === "italic" ? "italic" : fallback;
+}
+
+function getTextDecoration(element: TemplateElement, fallback = "none") {
+  return element.textDecoration === "underline" ? "underline" : fallback;
+}
+
 function renderTextElement(
   element: TemplateElement,
   profile: unknown,
   scaleX: number,
   scaleY: number,
-  defaultFontSize: number
+  defaultFontSize: number,
 ) {
   const value = valueToString(getValueByPath(profile, element.field));
+
+  console.log("RENDER TEXT:", {
+    label: element.label,
+    field: element.field,
+    value,
+    fontSize: element.fontSize,
+    fontFamily: element.fontFamily,
+    fontWeight: element.fontWeight,
+    textDecoration: element.textDecoration,
+    align: element.align,
+  });
+
   const safeValue = escapeHtml(value || "");
 
   const left = (element.x ?? 0) * scaleX;
@@ -55,7 +93,13 @@ function renderTextElement(
   const width = (element.width ?? 120) * scaleX;
   const height = (element.height ?? 24) * scaleY;
 
-  const fontSize = Number(element.fontSize ?? defaultFontSize) * scaleX;
+  const baseFontSize = getFontSize(element, defaultFontSize);
+  const fontScale = Math.min(scaleX, scaleY);
+  const fontSize = baseFontSize * fontScale;
+  const fontFamily = getFontFamily(element);
+  const fontWeight = getFontWeight(element, "600");
+  const fontStyle = getFontStyle(element);
+  const textDecoration = getTextDecoration(element);
   const align = getTextAlign(element);
   const justify = getTextJustify(element);
 
@@ -68,8 +112,11 @@ function renderTextElement(
         width:${width}px;
         height:${height}px;
         font-size:${fontSize}px;
-        font-weight:${element.fontWeight ?? "600"};
+        font-family:${fontFamily};
+        font-weight:${fontWeight};
+        text-decoration:${textDecoration};
         text-align:${align};
+        font-style:${fontStyle};  
         justify-content:${justify};
       "
     >
@@ -82,7 +129,7 @@ function renderImageElement(
   element: TemplateElement,
   profile: unknown,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
 ) {
   const rawValue = valueToString(getValueByPath(profile, element.field));
   const imageUrl = resolvePublicAssetUrl(rawValue);
@@ -125,7 +172,7 @@ function renderSignatureElement(
   element: TemplateElement,
   profile: unknown,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
 ) {
   const rawValue = valueToString(getValueByPath(profile, element.field));
   const imageUrl = resolvePublicAssetUrl(rawValue);
@@ -136,7 +183,14 @@ function renderSignatureElement(
   const height = (element.height ?? 70) * scaleY;
 
   const roleLabel =
-    typeof element.roleLabel === "string" ? element.roleLabel : "Dekan,";
+    typeof element.roleLabel === "string" && element.roleLabel.trim()
+      ? element.roleLabel
+      : "Dekan,";
+
+  const fontSize = getFontSize(element, 8);
+  const fontFamily = getFontFamily(element);
+  const fontWeight = getFontWeight(element, "600");
+  const align = getTextAlign(element);
 
   return `
     <div
@@ -146,6 +200,10 @@ function renderSignatureElement(
         top:${top}px;
         width:${width}px;
         height:${height}px;
+        font-size:${fontSize}px;
+        font-family:${fontFamily};
+        font-weight:${fontWeight};
+        text-align:${align};
       "
     >
       <div class="signature-role">${escapeHtml(roleLabel)}</div>
@@ -162,7 +220,7 @@ function renderSignatureElement(
 function renderQrElement(
   element: TemplateElement,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
 ) {
   const left = (element.x ?? 0) * scaleX;
   const top = (element.y ?? 0) * scaleY;
@@ -188,7 +246,7 @@ function renderTranskripTable(
   element: TemplateElement,
   profile: any,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
 ) {
   const rows = Array.isArray(profile?.transkrip) ? profile.transkrip : [];
 
@@ -213,6 +271,10 @@ function renderTranskripTable(
   const top = (element.y ?? 0) * scaleY;
   const width = (element.width ?? 700) * scaleX;
 
+  const fontSize = getFontSize(element, 7);
+  const fontFamily = getFontFamily(element);
+  const fontWeight = getFontWeight(element, "500");
+
   const totalSks = profile?.akademik?.total_sks ?? "";
   const ipk = profile?.akademik?.ipk ?? "";
   const predikat = profile?.akademik?.predikat ?? "";
@@ -223,10 +285,12 @@ function renderTranskripTable(
       .map((item: any, index: number) => {
         return `
           <tr>
-            <td class="text-center">${escapeHtml(String(item.no ?? index + 1))}</td>
+            <td class="text-center">${escapeHtml(
+              String(item.no ?? index + 1),
+            )}</td>
             <td class="text-center">${escapeHtml(String(item.kode ?? ""))}</td>
             <td class="mk-name">${escapeHtml(
-              String(item.nama ?? item.mata_kuliah ?? "")
+              String(item.nama ?? item.mata_kuliah ?? ""),
             )}</td>
             <td class="text-center">${escapeHtml(String(item.hm ?? ""))}</td>
             <td class="text-center">${escapeHtml(String(item.am ?? ""))}</td>
@@ -272,7 +336,9 @@ function renderTranskripTable(
                 <td></td>
                 <td></td>
                 <td></td>
-                <td class="text-center footer-label">${escapeHtml(String(totalSks))}</td>
+                <td class="text-center footer-label">${escapeHtml(
+                  String(totalSks),
+                )}</td>
               </tr>
 
               <tr>
@@ -289,7 +355,9 @@ function renderTranskripTable(
                 <td></td>
                 <td colspan="5" class="footer-label">
                   Predikat Kelulusan
-                  <span class="footer-value">${escapeHtml(String(predikat))}</span>
+                  <span class="footer-value">${escapeHtml(
+                    String(predikat),
+                  )}</span>
                 </td>
               </tr>
 
@@ -314,7 +382,7 @@ function renderTranskripTable(
         <td class="text-center bold">${escapeHtml(angka)}</td>
         <td class="qualification-text bold">${escapeHtml(kualifikasi)}</td>
       </tr>
-    `
+    `,
   ).join("");
 
   return `
@@ -324,6 +392,9 @@ function renderTranskripTable(
         left:${left}px;
         top:${top}px;
         width:${width}px;
+        font-size:${fontSize}px;
+        font-family:${fontFamily};
+        font-weight:${fontWeight};
       "
     >
       <div class="nilai-grid">
@@ -373,7 +444,7 @@ function renderElement(
   profile: unknown,
   scaleX: number,
   scaleY: number,
-  defaultFontSize: number
+  defaultFontSize: number,
 ) {
   if (element.type === "signature") {
     return renderSignatureElement(element, profile, scaleX, scaleY);
@@ -399,10 +470,25 @@ export function renderDocumentHtml(params: {
   profile: unknown;
 }) {
   const jenis = params.template.jenis_template;
-  const pageConfig = getDocumentPageConfig(jenis);
+  const layout = params.template.konfigurasi_layout;
+
+  const pageConfig = getDocumentPageConfig(
+    jenis,
+    layout.imageNaturalWidth,
+    layout.imageNaturalHeight,
+  );
 
   const scaleX = pageConfig.pdfWidth / pageConfig.canvasWidth;
   const scaleY = pageConfig.pdfHeight / pageConfig.canvasHeight;
+
+  console.log("DOCUMENT RENDER CONFIG:", {
+    jenis,
+    imageNaturalWidth: layout.imageNaturalWidth,
+    imageNaturalHeight: layout.imageNaturalHeight,
+    pageConfig,
+    scaleX,
+    scaleY,
+  });
 
   const backgroundUrl = resolvePublicAssetUrl(params.template.file_template);
 
@@ -415,8 +501,8 @@ export function renderDocumentHtml(params: {
         params.profile,
         scaleX,
         scaleY,
-        pageConfig.defaultFontSize
-      )
+        pageConfig.defaultFontSize,
+      ),
     )
     .join("");
 
@@ -435,7 +521,7 @@ export function renderDocumentHtml(params: {
             margin: 0;
             padding: 0;
             background: #ffffff;
-            font-family: Arial, sans-serif;
+            font-family: "Times New Roman", Arial, sans-serif;
           }
 
           .page {
@@ -492,8 +578,6 @@ export function renderDocumentHtml(params: {
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            font-size: 8px;
-            font-weight: 600;
             color: #111827;
           }
 
@@ -514,7 +598,6 @@ export function renderDocumentHtml(params: {
           }
 
           .transkrip-table-block {
-            font-size: 7px;
             color: #111827;
           }
 
@@ -527,7 +610,9 @@ export function renderDocumentHtml(params: {
           .nilai-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7px;
+            font-size: inherit;
+            font-family: inherit;
+            font-weight: inherit;
           }
 
           .nilai-table th,
@@ -578,20 +663,22 @@ export function renderDocumentHtml(params: {
           }
 
           .note-section {
-            font-size: 7px;
+            font-size: inherit;
             line-height: 1.35;
             margin-bottom: 6px;
           }
 
           .qualification-title {
-            font-size: 7px;
+            font-size: inherit;
             margin-bottom: 3px;
           }
 
           .qualification-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7px;
+            font-size: inherit;
+            font-family: inherit;
+            font-weight: inherit;
           }
 
           .qualification-table th,

@@ -6,6 +6,7 @@ import { generateNomorDokumen } from "../utils/document-number.util.js";
 import { getDocumentOutputPath } from "../utils/file-path.util.js";
 import { renderDocumentHtml } from "./document-html-renderer.service.js";
 import { renderHtmlToPdf } from "./pdf-renderer.service.js";
+import { getDocumentPageConfig } from "../utils/document-page-config.util.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
@@ -26,22 +27,27 @@ async function generateSingleDocument(params: {
 
   const publicUrl = `${getPublicBaseUrl()}${output.relativePath}`;
 
+  // Fix Bug 2: generate sekali, pakai ulang di dua tempat
+  const nomorDokumen = generateNomorDokumen({
+    jenis: params.jenis,
+    nim: params.nim,
+  });
+  const tanggalTerbit = new Date();
+  const tanggalTerbitFormatted = tanggalTerbit.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
   const profileForRender =
     typeof params.profile === "object" && params.profile !== null
       ? {
           ...(params.profile as Record<string, unknown>),
           dokumen_placeholder: {
             ...((params.profile as any).dokumen_placeholder || {}),
-            nomor_dokumen: generateNomorDokumen({
-              jenis: params.jenis,
-              nim: params.nim,
-            }),
-            tanggal_terbit: new Date(),
-            tanggal_terbit_formatted: new Date().toLocaleDateString("id-ID", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            }),
+            nomor_dokumen: nomorDokumen,
+            tanggal_terbit: tanggalTerbit,
+            tanggal_terbit_formatted: tanggalTerbitFormatted,
             qr_code: null,
             url_akses: publicUrl,
           },
@@ -53,27 +59,27 @@ async function generateSingleDocument(params: {
     profile: profileForRender,
   });
 
-  const pageConfig =
-  params.jenis === "ijazah"
-    ? { width: 1100, height: 780 }
-    : { width: 780, height: 1100 };
+  // Fix Bug 1: pakai dimensi gambar dari layout yang sama dengan renderer
+  const layout = template.konfigurasi_layout;
+  const pageConfig = getDocumentPageConfig(
+    params.jenis,
+    layout.imageNaturalWidth ?? undefined,
+    layout.imageNaturalHeight ?? undefined,
+  );
 
-await renderHtmlToPdf({
-  html,
-  outputPath: output.absolutePath,
-  width: pageConfig.width,
-  height: pageConfig.height,
-});
+  await renderHtmlToPdf({
+    html,
+    outputPath: output.absolutePath,
+    width: pageConfig.pdfWidth,
+    height: pageConfig.pdfHeight,
+  });
 
   const dokumen = await upsertDokumenByMahasiswaAndJenis({
     id_mahasiswa: params.id_mahasiswa,
     id_template: template.id_template,
     jenis_dokumen: params.jenis as jenis_dokumen_enum,
-    nomor_dokumen: generateNomorDokumen({
-      jenis: params.jenis,
-      nim: params.nim,
-    }),
-    tanggal_terbit: new Date(),
+    nomor_dokumen: nomorDokumen,        // Fix Bug 2: pakai yang sama
+    tanggal_terbit: tanggalTerbit,      // Fix Bug 2: pakai yang sama
     file_pdf: output.relativePath,
     file_pdf_final: output.relativePath,
     kode_qr: null,

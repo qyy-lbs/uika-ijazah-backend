@@ -6,6 +6,10 @@ export async function findTemplateByJenis(jenis_template: jenis_template_enum) {
     where: {
       jenis_template,
     },
+    // Pastikan selalu ambil record pertama yang dibuat, bukan random
+    orderBy: {
+      id_template: "asc",
+    },
   });
 }
 
