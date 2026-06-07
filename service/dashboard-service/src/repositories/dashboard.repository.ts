@@ -1,138 +1,135 @@
 import prisma from "../prisma/prisma.js";
 
-export const getLatestValidationRepository =
-  async (
-    page: number,
-    limit: number,
-    search: string
-  ) => {
 
-    const offset =
-      (page - 1) * limit;
+export const getLatestValidationRepository = async (
+  page: number,
+  limit: number,
+  search: string
+) => {
+  const offset = (page - 1) * limit;
 
-    const safeSearch =
-      (search || "").replace(/'/g, "''");
+  const safeSearch = (search || "").replace(/'/g, "''");
 
-    const query = `
-      SELECT
-        m.id_mahasiswa,
-        m.nama_mahasiswa AS nama,
-        m.nim,
+  const whereQuery = `
+    WHERE (
+      m.nama_mahasiswa ILIKE '%${safeSearch}%'
+      OR m.nim ILIKE '%${safeSearch}%'
+      OR p.nama_prodi ILIKE '%${safeSearch}%'
+      OR u.nama_unit ILIKE '%${safeSearch}%'
+      OR b.nomor_batch_upload ILIKE '%${safeSearch}%'
+      OR CAST(COALESCE(m.tahun_lulus, b.tahun_lulus) AS TEXT) ILIKE '%${safeSearch}%'
+      OR b.periode::text ILIKE '%${safeSearch}%'
+      OR CONCAT('semester ', b.periode::text) ILIKE '%${safeSearch}%'
+    )
+  `;
 
-        u.nama_unit AS fakultas,
+  const query = `
+    SELECT
+      m.id_mahasiswa,
+      m.nama_mahasiswa AS nama,
+      m.nim,
 
-        p.nama_prodi AS prodi,
+      u.nama_unit AS fakultas,
 
-        m.tahun_lulus,
+      p.nama_prodi AS prodi,
 
-        COALESCE(
-          v.status_validasi,
-          'proses'
-        ) AS status,
+      COALESCE(m.tahun_lulus, b.tahun_lulus) AS tahun_lulus,
 
-        v.validated_by,
+      b.id_batch_upload,
+      b.nomor_batch_upload,
+      b.periode::text AS periode,
 
-        CASE
-          WHEN EXISTS (
-            SELECT 1
-            FROM dokumen d
-            WHERE d.id_mahasiswa = m.id_mahasiswa
-              AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
-              AND d.tanggal_terbit IS NOT NULL
-          )
-          THEN true
-          ELSE false
-        END AS has_dokumen,
+      COALESCE(
+        v.status_validasi,
+        'proses'
+      ) AS status,
 
-        CASE
-          WHEN EXISTS (
-            SELECT 1
-            FROM dokumen d
-            INNER JOIN blockchain bc
-              ON bc.id_dokumen = d.id_dokumen
-            WHERE d.id_mahasiswa = m.id_mahasiswa
-              AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
-              AND d.tanggal_terbit IS NOT NULL
-              AND bc.hash_dokumen IS NOT NULL
-              AND bc.hash_block IS NOT NULL
-          )
-          THEN true
-          ELSE false
-        END AS has_blockchain,
+      v.validated_by,
 
-        b.nomor_batch_upload
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM dokumen d
+          WHERE d.id_mahasiswa = m.id_mahasiswa
+            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+            AND d.tanggal_terbit IS NOT NULL
+        )
+        THEN true
+        ELSE false
+      END AS has_dokumen,
 
-      FROM mahasiswa m
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM dokumen d
+          INNER JOIN blockchain bc
+            ON bc.id_dokumen = d.id_dokumen
+          WHERE d.id_mahasiswa = m.id_mahasiswa
+            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+            AND d.tanggal_terbit IS NOT NULL
+            AND bc.hash_dokumen IS NOT NULL
+            AND bc.hash_block IS NOT NULL
+        )
+        THEN true
+        ELSE false
+      END AS has_blockchain
 
-      LEFT JOIN prodi p
-        ON p.id_prodi = m.id_prodi
+    FROM mahasiswa m
 
-      LEFT JOIN unit u
-        ON u.id_unit = p.id_unit
+    LEFT JOIN prodi p
+      ON p.id_prodi = m.id_prodi
 
-      LEFT JOIN batch_upload b
-        ON b.id_batch_upload = m.id_batch_upload
+    LEFT JOIN unit u
+      ON u.id_unit = p.id_unit
 
-      LEFT JOIN (
-        SELECT DISTINCT ON (id_mahasiswa)
-          id_mahasiswa,
-          status_validasi,
-          validated_by,
-          created_at
-        FROM validasi
-        ORDER BY
-          id_mahasiswa,
-          created_at DESC
-      ) v
-        ON v.id_mahasiswa = m.id_mahasiswa
+    LEFT JOIN batch_upload b
+      ON b.id_batch_upload = m.id_batch_upload
 
-      WHERE
-        m.nama_mahasiswa ILIKE '%${safeSearch}%'
-        OR m.nim ILIKE '%${safeSearch}%'
-        OR p.nama_prodi ILIKE '%${safeSearch}%'
-        OR u.nama_unit ILIKE '%${safeSearch}%'
-        OR b.nomor_batch_upload ILIKE '%${safeSearch}%'
-
+    LEFT JOIN (
+      SELECT DISTINCT ON (id_mahasiswa)
+        id_mahasiswa,
+        status_validasi,
+        validated_by,
+        created_at
+      FROM validasi
       ORDER BY
-        m.id_mahasiswa DESC
+        id_mahasiswa,
+        created_at DESC
+    ) v
+      ON v.id_mahasiswa = m.id_mahasiswa
 
-      LIMIT ${limit}
-      OFFSET ${offset}
-    `;
+    ${whereQuery}
 
-    const countQuery = `
-      SELECT COUNT(*) AS total
+    ORDER BY
+      m.id_mahasiswa DESC
 
-      FROM mahasiswa m
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `;
 
-      LEFT JOIN prodi p
-        ON p.id_prodi = m.id_prodi
+  const countQuery = `
+    SELECT COUNT(*) AS total
 
-      LEFT JOIN unit u
-        ON u.id_unit = p.id_unit
+    FROM mahasiswa m
 
-      LEFT JOIN batch_upload b
-        ON b.id_batch_upload = m.id_batch_upload
+    LEFT JOIN prodi p
+      ON p.id_prodi = m.id_prodi
 
-      WHERE
-        m.nama_mahasiswa ILIKE '%${safeSearch}%'
-        OR m.nim ILIKE '%${safeSearch}%'
-        OR p.nama_prodi ILIKE '%${safeSearch}%'
-        OR u.nama_unit ILIKE '%${safeSearch}%'
-        OR b.nomor_batch_upload ILIKE '%${safeSearch}%'
-    `;
+    LEFT JOIN unit u
+      ON u.id_unit = p.id_unit
 
-    const data =
-      await prisma.$queryRawUnsafe(query);
+    LEFT JOIN batch_upload b
+      ON b.id_batch_upload = m.id_batch_upload
 
-    const totalData: any =
-      await prisma.$queryRawUnsafe(
-        countQuery
-      );
+    ${whereQuery}
+  `;
 
-    return {
-      data,
-      total:
-        Number(totalData[0].total),
-    };
+  const data = await prisma.$queryRawUnsafe(query);
+
+  const totalData: any = await prisma.$queryRawUnsafe(countQuery);
+
+  return {
+    data,
+    total: Number(totalData[0].total),
   };
+};

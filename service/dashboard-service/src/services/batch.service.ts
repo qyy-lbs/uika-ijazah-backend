@@ -26,46 +26,53 @@ export const getDetailBatchService = async (
   id: number,
   status?: string
 ) => {
-
-  const rows : any =
-    await getDetailBatchRepository(id);
+  const rows: any = await getDetailBatchRepository(id);
 
   if (!rows.length) {
     return null;
   }
 
-  let mahasiswa = rows.map((item: any) => ({
-    id_mahasiswa: item.id_mahasiswa,
-    nama: item.nama,
-    nim: item.nim,
-    status:
-      item.status_validasi || "proses",
-  }));
+  let mahasiswa = rows
+    .filter((item: any) => item.id_mahasiswa)
+    .map((item: any) => ({
+      id_mahasiswa: item.id_mahasiswa,
+
+      nama: item.nama,
+      nama_mahasiswa: item.nama,
+
+      nim: item.nim,
+
+      prodi: item.prodi || "-",
+      program_studi: item.program_studi || item.prodi || "-",
+
+      fakultas: item.fakultas || "-",
+
+      tahun_lulus: item.tahun_lulus,
+      tahun: item.tahun_lulus,
+
+      status: item.status || item.status_validasi || "proses",
+    }));
 
   if (status) {
-
-    mahasiswa = mahasiswa.filter(
-      (mhs : any) => {
-
-        if (status === "proses") {
-          return mhs.status === "proses";
-        }
-
-        if (status === "approved") {
-          return mhs.status === "approved";
-        }
-
-        if (status === "rejected") {
-          return mhs.status === "rejected";
-        }
-
-        if (status === "revoked") {
-          return mhs.status === "revoked";
-        }
-
-        return true;
+    mahasiswa = mahasiswa.filter((mhs: any) => {
+      if (status === "proses") {
+        return mhs.status === "proses";
       }
-    );
+
+      if (status === "approved") {
+        return mhs.status === "approved";
+      }
+
+      if (status === "rejected") {
+        return mhs.status === "rejected";
+      }
+
+      if (status === "revoked") {
+        return mhs.status === "revoked";
+      }
+
+      return true;
+    });
   }
 
   return {
@@ -73,6 +80,7 @@ export const getDetailBatchService = async (
     nomor_batch_upload: rows[0].nomor_batch_upload,
     tahun_lulus: rows[0].tahun_lulus,
     periode: rows[0].periode,
+    fakultas: rows[0].fakultas || "-",
     mahasiswa,
   };
 };
@@ -95,13 +103,14 @@ export const getBatchService = async (
       search
     );
 
-  const data = result.data as {
-    id_batch_upload: number;
-    nomor_batch_upload: string;
-    tahun_lulus: number;
-    periode: string;
-    total_mahasiswa: bigint;
-  }[];
+const data = result.data as {
+  id_batch_upload: number;
+  nomor_batch_upload: string;
+  tahun_lulus: number;
+  periode: string;
+  fakultas: string;
+  total_mahasiswa: bigint;
+}[];
 
   const totalRows:any =
     result.total as {

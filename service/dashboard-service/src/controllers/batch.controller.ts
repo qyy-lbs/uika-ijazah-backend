@@ -2,11 +2,9 @@ import type { Request, Response } from "express";
 
 import {
   getBatchDashboardService,
-  getBatchService,
+  getBatchService,getDetailBatchService
 } from "../services/batch.service.js";
 
-import { getDetailBatchService }
-from "../services/detail-batch.service.js";
 
 export const getBatches = async (
   req: Request,
