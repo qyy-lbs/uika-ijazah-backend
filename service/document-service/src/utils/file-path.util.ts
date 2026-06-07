@@ -46,7 +46,10 @@ export function resolvePublicAssetUrl(src: string | null | undefined) {
     process.env.TEMPLATE_PUBLIC_BASE_URL ||
     process.env.TEMPLATE_SERVICE_URL ||
     "http://localhost:3008";
-
+    
+ if (src.startsWith("/uploads/templates")) {
+    return `${templateBaseUrl}${src}`;
+  }
   const akademikBaseUrl =
     process.env.AKADEMIK_PUBLIC_BASE_URL ||
     process.env.AKADEMIK_SERVICE_URL ||
@@ -56,10 +59,6 @@ export function resolvePublicAssetUrl(src: string | null | undefined) {
     process.env.QR_PUBLIC_BASE_URL ||
     process.env.QR_SERVICE_URL ||
     "http://localhost:3010";
-
-  if (src.startsWith("/uploads/templates")) {
-    return `${templateBaseUrl}${src}`;
-  }
 
   if (src.startsWith("/uploads/qr")) {
     return `${qrBaseUrl}${src}`;

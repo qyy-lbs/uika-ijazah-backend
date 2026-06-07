@@ -7,18 +7,24 @@ export async function renderHtmlToPdf(params: {
   height: number;
 }) {
   const browser = await puppeteer.launch({
-  headless: true,
-  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-  args: ["--no-sandbox", "--disable-setuid-sandbox"],
-});
+    headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 
   try {
     const page = await browser.newPage();
+
+    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(60000);
+
     page.on("requestfailed", (request) => {
       const url = request.url();
 
       if (
         url.includes("/uploads/") ||
+        url.includes("fonts.googleapis.com") ||
+        url.includes("fonts.gstatic.com") ||
         url.endsWith(".png") ||
         url.endsWith(".jpg") ||
         url.endsWith(".jpeg") ||
@@ -30,21 +36,25 @@ export async function renderHtmlToPdf(params: {
         });
       }
     });
+
     await page.setViewport({
       width: params.width,
       height: params.height,
       deviceScaleFactor: 1,
     });
 
-    await page.setContent(params.html);
+    await page.setContent(params.html, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
 
     try {
       await page.waitForNetworkIdle({
         idleTime: 500,
-        timeout: 10000,
+        timeout: 5000,
       });
     } catch {
-      // tetap lanjut generate PDF
+      console.warn("Network idle timeout, PDF tetap dilanjutkan.");
     }
 
     await page.pdf({

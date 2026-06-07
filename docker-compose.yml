@@ -173,8 +173,8 @@ services:
       # Public URL lewat gateway
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
       - AKADEMIK_PUBLIC_BASE_URL=http://103.158.196.32:8010
-      - TEMPLATE_PUBLIC_BASE_URL=http://103.158.196.32:8010
-      - QR_PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - TEMPLATE_PUBLIC_BASE_URL=http://template-service:3008
+      - QR_PUBLIC_BASE_URL=http://qr-service:301
     volumes:
       - ./service/document-service/uploads:/app/uploads
 

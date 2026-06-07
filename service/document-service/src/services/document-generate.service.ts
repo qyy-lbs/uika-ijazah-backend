@@ -34,10 +34,10 @@ async function generateSingleDocument(params: {
     nim: params.nim,
   });
   const qr = await generateQrForDocument({
-  nim: params.nim,
-  jenis_dokumen: params.jenis,
-  nomor_dokumen: nomorDokumen,
-});
+    nim: params.nim,
+    jenis_dokumen: params.jenis,
+    nomor_dokumen: nomorDokumen,
+  });
   const tanggalTerbit = new Date();
   const tanggalTerbitFormatted = tanggalTerbit.toLocaleDateString("id-ID", {
     day: "2-digit",
@@ -54,8 +54,13 @@ async function generateSingleDocument(params: {
             nomor_dokumen: nomorDokumen,
             tanggal_terbit: tanggalTerbit,
             tanggal_terbit_formatted: tanggalTerbitFormatted,
-            qr_code: qr.qr_image_url,
+
+            // Pakai relative path supaya resolvePublicAssetUrl mengarah ke qr-service internal
+            qr_code: qr.qr_image,
+
+            kode_qr: qr.kode_qr,
             url_akses: qr.url_akses,
+            file_pdf_url: publicUrl,
           },
         }
       : params.profile;
@@ -84,8 +89,8 @@ async function generateSingleDocument(params: {
     id_mahasiswa: params.id_mahasiswa,
     id_template: template.id_template,
     jenis_dokumen: params.jenis as jenis_dokumen_enum,
-    nomor_dokumen: nomorDokumen,        // Fix Bug 2: pakai yang sama
-    tanggal_terbit: tanggalTerbit,      // Fix Bug 2: pakai yang sama
+    nomor_dokumen: nomorDokumen, // Fix Bug 2: pakai yang sama
+    tanggal_terbit: tanggalTerbit, // Fix Bug 2: pakai yang sama
     file_pdf: output.relativePath,
     file_pdf_final: output.relativePath,
     kode_qr: qr.kode_qr,
