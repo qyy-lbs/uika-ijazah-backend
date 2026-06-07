@@ -17,7 +17,6 @@ export const getStatistikValidasiService =
       )) as {
         id_mahasiswa: number;
         status_validasi: string | null;
-        validated_by: number | null;
         has_dokumen: boolean;
         has_blockchain: boolean;
       }[];
@@ -35,14 +34,8 @@ export const getStatistikValidasiService =
           statusValidasi:
             item.status_validasi,
 
-          validated_by:
-            item.validated_by || null,
-
-          hasDokumen:
-            Boolean(item.has_dokumen),
-
-          hasBlockchain:
-            Boolean(item.has_blockchain),
+          hasVerifiedDocument:
+            Boolean(item.has_dokumen && item.has_blockchain),
         });
 
       if (status === "terbit") {
