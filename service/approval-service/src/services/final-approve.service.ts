@@ -1,27 +1,67 @@
+import { generateDocumentByNim } from "../clients/document.client.js";
+
+type ApprovedMahasiswa = {
+  nim: string;
+  nama_mahasiswa: string | null;
+};
+
+type GenerateDocumentResult = {
+  nim: string;
+  nama_mahasiswa: string | null;
+  success: boolean;
+  data?: unknown;
+  error?: string;
+};
+
 export async function triggerFinalApprovalProcess(data: {
   batchId: number;
-  approvedMahasiswa: {
-    nim: string;
-    nama_mahasiswa: string | null;
-  }[];
+  approvedMahasiswa: ApprovedMahasiswa[];
 }) {
-  // Placeholder sementara.
-  // Nanti bagian ini akan memanggil Document Service.
-  // Alur final:
-  // 1. Generate ijazah
-  // 2. Generate transkrip
-  // 3. Generate QR
-  // 4. Hash dokumen ke Blockchain Service
+  const generatedDocuments: GenerateDocumentResult[] = [];
+
+  /**
+   * Jangan pakai Promise.all dulu.
+   * Generate dokumen memakai Puppeteer, jadi lebih aman sequential
+   * agar server tidak membuka banyak Chromium sekaligus.
+   */
+  for (const mahasiswa of data.approvedMahasiswa) {
+    try {
+      const result = await generateDocumentByNim(mahasiswa.nim);
+
+      generatedDocuments.push({
+        nim: mahasiswa.nim,
+        nama_mahasiswa: mahasiswa.nama_mahasiswa,
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      generatedDocuments.push({
+        nim: mahasiswa.nim,
+        nama_mahasiswa: mahasiswa.nama_mahasiswa,
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Gagal generate dokumen",
+      });
+    }
+  }
+
+  const successCount = generatedDocuments.filter((item) => item.success).length;
+  const failedCount = generatedDocuments.filter((item) => !item.success).length;
 
   return {
     triggered: true,
     batch_id: data.batchId,
     total_mahasiswa: data.approvedMahasiswa.length,
+    success_count: successCount,
+    failed_count: failedCount,
     next_process: [
       "generate_ijazah",
       "generate_transkrip",
       "generate_qr",
-      "hash_blockchain",
+      "verify_qr",
     ],
+    generated_documents: generatedDocuments,
   };
 }

@@ -55,7 +55,10 @@ async function generateSingleDocument(params: {
             nomor_dokumen: nomorDokumen,
             tanggal_terbit: tanggalTerbit,
             tanggal_terbit_formatted: tanggalTerbitFormatted,
-            qr_code: qr.qr_image_url,
+
+            // Pakai relative path supaya resolvePublicAssetUrl mengarah ke qr-service internal
+            qr_code: qr.qr_image,
+
             kode_qr: qr.kode_qr,
             url_akses: qr.url_akses,
             file_pdf_url: publicUrl,
