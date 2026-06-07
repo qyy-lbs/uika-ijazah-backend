@@ -103,12 +103,11 @@ services:
     container_name: ijazah-service-approval
     restart: always
     environment:
-    - PORT=3006
-    - DATABASE_URL=${DATABASE_URL}
-    - JWT_SECRET=${JWT_SECRET}
-    - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-    - DOCUMENT_SERVICE_URL=http://document-service:3009
-    - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
+      - PORT=3006
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+
   # -----------------------------------------------------------------
   # 7. DASHBOARD SERVICE (Internal)
   # -----------------------------------------------------------------
