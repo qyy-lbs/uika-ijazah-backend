@@ -6,6 +6,10 @@ import {
   findDokumenByNim,
 } from "../repositories/dokumen.repository.js";
 import { verifyDocumentByKodeQr } from "../services/document-verify.service.js";
+import {
+  getValidDocumentBatchDetail,
+  getValidDocumentBatches,
+} from "../services/dokumen-valid.service.js";
 
 type NimParams = {
   nim: string;
@@ -157,6 +161,66 @@ export async function verifyDocument(req: Request<VerifyParams>, res: Response) 
       success: false,
       message:
         error instanceof Error ? error.message : "Gagal verifikasi dokumen",
+    });
+  }
+}
+export async function getValidBatches(req: Request, res: Response) {
+  try {
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 10);
+
+    const data = await getValidDocumentBatches({
+      search: typeof req.query.search === "string" ? req.query.search : "",
+      fakultas: typeof req.query.fakultas === "string" ? req.query.fakultas : "",
+      tahun: typeof req.query.tahun === "string" ? req.query.tahun : "",
+      page: Number.isFinite(page) && page > 0 ? page : 1,
+      limit: Number.isFinite(limit) && limit > 0 ? limit : 10,
+    });
+
+    return res.json({
+      success: true,
+      message: "Daftar batch dokumen valid berhasil diambil",
+      data: data.data,
+      pagination: data.pagination,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil batch dokumen valid",
+    });
+  }
+}
+
+export async function getValidBatchDetail(req: Request, res: Response) {
+  try {
+    const batchId = Number(req.params.batchId);
+
+    if (!Number.isFinite(batchId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID batch tidak valid",
+      });
+    }
+
+    const data = await getValidDocumentBatchDetail(batchId, {
+      search: typeof req.query.search === "string" ? req.query.search : "",
+    });
+
+    return res.json({
+      success: true,
+      message: "Detail batch dokumen valid berhasil diambil",
+      data,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil detail batch dokumen valid",
     });
   }
 }

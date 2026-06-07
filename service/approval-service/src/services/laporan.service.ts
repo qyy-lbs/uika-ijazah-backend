@@ -121,23 +121,28 @@ export async function getLaporanApprovalForUser(
   }
 
   const mahasiswaList = await prisma.mahasiswa.findMany({
-    where,
-    include: {
-      prodi: {
-        include: {
-          unit: true,
-        },
-      },
-      validasi: {
-        orderBy: {
-          level_validasi: "asc",
-        },
+  where,
+  include: {
+    prodi: {
+      include: {
+        unit: true,
       },
     },
-    orderBy: {
-      created_at: "desc",
+    validasi: {
+      orderBy: [
+        {
+          validated_at: "desc",
+        },
+        {
+          created_at: "desc",
+        },
+      ],
     },
-  });
+  },
+  orderBy: {
+    id_mahasiswa: "desc",
+  },
+});
 
   let filteredMahasiswa = mahasiswaList;
 
@@ -147,7 +152,8 @@ export async function getLaporanApprovalForUser(
     );
   }
 
-  const laporan = filteredMahasiswa.map((mhs) => {
+  const laporan = filteredMahasiswa
+  .map((mhs) => {
     const statusInfo = getLaporanStatus(
       mhs.validasi.map((v) => ({
         level_validasi: v.level_validasi,
@@ -156,6 +162,11 @@ export async function getLaporanApprovalForUser(
       })),
     );
 
+    /**
+     * tanggal utama laporan diambil dari validated_at.
+     * Jika belum pernah divalidasi sama sekali, fallback ke created_at
+     * agar data tetap punya tanggal.
+     */
     const tanggal = statusInfo.tanggal ?? mhs.created_at;
 
     return {
@@ -169,6 +180,12 @@ export async function getLaporanApprovalForUser(
       status: statusInfo.status,
       keterangan: statusInfo.keterangan,
     };
+  })
+  .sort((a, b) => {
+    const timeA = a.tanggal ? new Date(a.tanggal).getTime() : 0;
+    const timeB = b.tanggal ? new Date(b.tanggal).getTime() : 0;
+
+    return timeB - timeA;
   });
 
   const filteredByStatus = query.status

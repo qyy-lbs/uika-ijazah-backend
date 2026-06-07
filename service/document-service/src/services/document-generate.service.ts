@@ -95,7 +95,7 @@ async function generateSingleDocument(params: {
     file_pdf_final: output.relativePath,
     kode_qr: qr.kode_qr,
     url_akses: qr.url_akses,
-    is_verified: false,
+    is_verified: true,
   });
 
   return {
