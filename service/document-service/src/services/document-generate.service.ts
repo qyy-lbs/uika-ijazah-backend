@@ -7,6 +7,7 @@ import { getDocumentOutputPath } from "../utils/file-path.util.js";
 import { renderDocumentHtml } from "./document-html-renderer.service.js";
 import { renderHtmlToPdf } from "./pdf-renderer.service.js";
 import { getDocumentPageConfig } from "../utils/document-page-config.util.js";
+import { generateQrForDocument } from "../clients/qr.client.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
@@ -32,6 +33,11 @@ async function generateSingleDocument(params: {
     jenis: params.jenis,
     nim: params.nim,
   });
+  const qr = await generateQrForDocument({
+  nim: params.nim,
+  jenis_dokumen: params.jenis,
+  nomor_dokumen: nomorDokumen,
+});
   const tanggalTerbit = new Date();
   const tanggalTerbitFormatted = tanggalTerbit.toLocaleDateString("id-ID", {
     day: "2-digit",
@@ -48,8 +54,8 @@ async function generateSingleDocument(params: {
             nomor_dokumen: nomorDokumen,
             tanggal_terbit: tanggalTerbit,
             tanggal_terbit_formatted: tanggalTerbitFormatted,
-            qr_code: null,
-            url_akses: publicUrl,
+            qr_code: qr.qr_image_url,
+            url_akses: qr.url_akses,
           },
         }
       : params.profile;
@@ -82,8 +88,8 @@ async function generateSingleDocument(params: {
     tanggal_terbit: tanggalTerbit,      // Fix Bug 2: pakai yang sama
     file_pdf: output.relativePath,
     file_pdf_final: output.relativePath,
-    kode_qr: null,
-    url_akses: publicUrl,
+    kode_qr: qr.kode_qr,
+    url_akses: qr.url_akses,
     is_verified: false,
   });
 

@@ -501,7 +501,8 @@ function renderElement(
   }
 
   if (element.type === "qr") {
-  return renderQrElement(element, profile, scaleX, scaleY);
+      return renderQrElement(element, profile, scaleX, scaleY);
+
   }
   
 
@@ -750,6 +751,9 @@ export function renderDocumentHtml(params: {
           .bold {
             font-weight: 700;
           }
+            .qr-image-element {
+  display: block;
+}
         </style>
       </head>
 
