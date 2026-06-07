@@ -75,22 +75,6 @@ app.use(createProxyMiddleware({
 }));
 
 
-
-// --- PROXY BLOCKCHAIN SERVICE (Port 3009) ---
-app.use(
-  '/api/blockchain', 
-  verifyGatewayToken, 
-  createProxyMiddleware({
-    target: process.env.BLOCKCHAIN_SERVICE_URL || 'http://localhost:3009',
-    changeOrigin: true,
-    pathRewrite: {
-    '/api/blockchain': '',
-  },
-    on: { proxyReq: fixRequestBody }
-  })
-);
-
-
 // ==========================================================
 // 3. PROXY MASTER DATA SERVICE (PORT 3004 - PINTU TERKUNCI)
 // ==========================================================
@@ -198,6 +182,59 @@ app.use(
     },
   })
 );  
+
+
+app.use( "/api/dashboard", verifyGatewayToken) 
+app.use(createProxyMiddleware({
+    pathFilter: '/api/dashboard', 
+    target: process.env.DASHBOARD_SERVICE_URL || 'http://localhost:3007', 
+    changeOrigin: true,
+     on: { 
+    proxyReq: fixRequestBody,
+    proxyRes: (proxyRes, req) => {
+      console.log(`[dashboard-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    }
+  }
+  }));
+
+
+// ==========================================================
+// 9. PROXY QR SERVICE (PORT 3010 - PINTU TERKUNCI)
+// ==========================================================
+
+// --- PROXY UNITS ---
+app.use(
+  createProxyMiddleware({
+    pathFilter: '/api/qr',
+    target: process.env.QR_SERVICE_URL || 'http://localhost:3010',
+    changeOrigin: true,
+    on: {
+      proxyReq: fixRequestBody,
+      proxyRes: (proxyRes, req) => {
+        console.log(`[Qr-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+      }
+    }
+  })
+);
+
+
+// ==========================================================
+// 3. PROXY DOCUMENT SERVICE (PORT 3009 - PINTU TERKUNCI)
+// ==========================================================
+
+app.use(
+  createProxyMiddleware({
+    pathFilter: '/api/document',
+    target: process.env.DOCUMENT_SERVICE_URL || 'http://localhost:3009',
+    changeOrigin: true,
+    on: {
+      proxyReq: fixRequestBody,
+      proxyRes: (proxyRes, req) => {
+        console.log(`[Document-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+      }
+    }
+  })
+);
   
 // ==========================================================
 // --- START SERVER ---

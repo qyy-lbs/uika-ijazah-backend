@@ -16,146 +16,113 @@ type SummaryDashboard = {
 
 const getStatusDashboard = (item: any) => {
   return mapDashboardStatus({
-    statusValidasi:
-      item.status,
+    statusValidasi: item.status,
 
-    validated_by:
-      item.validated_by || null,
+    validated_by: item.validated_by || null,
 
-    hasDokumen:
-      Boolean(item.has_dokumen),
+    hasDokumen: Boolean(item.has_dokumen),
 
-    hasBlockchain:
-      Boolean(item.has_blockchain),
+    hasBlockchain: Boolean(item.has_blockchain),
   });
 };
 
 // ==================== SUMMARY DASHBOARD ====================
 
-export const getSummaryService =
-  async () => {
+export const getSummaryService = async () => {
+  const validations = (await getLatestValidationRepository(
+    1,
+    999999,
+    ""
+  )) as any;
 
-    const validations =
-      (await getLatestValidationRepository(
-        1,
-        999999,
-        ""
-      )) as any;
+  const rows = validations.data || [];
 
-    const rows =
-      validations.data || [];
-
-    const summary: SummaryDashboard = {
-      total_mahasiswa:
-        rows.length,
-
-      proses: 0,
-
-      rejected: 0,
-
-      revoked: 0,
-
-      terbit: 0,
-    };
-
-    for (const item of rows) {
-      const status =
-        getStatusDashboard(item);
-
-      if (status === "terbit") {
-        summary.terbit++;
-      }
-
-      else if (status === "rejected") {
-        summary.rejected++;
-      }
-
-      else if (status === "revoked") {
-        summary.revoked++;
-      }
-
-      else {
-        summary.proses++;
-      }
-    }
-
-    return summary;
+  const summary: SummaryDashboard = {
+    total_mahasiswa: rows.length,
+    proses: 0,
+    rejected: 0,
+    revoked: 0,
+    terbit: 0,
   };
 
+  for (const item of rows) {
+    const status = getStatusDashboard(item);
+
+    if (status === "terbit") {
+      summary.terbit++;
+    } else if (status === "rejected") {
+      summary.rejected++;
+    } else if (status === "revoked") {
+      summary.revoked++;
+    } else {
+      summary.proses++;
+    }
+  }
+
+  return summary;
+};
 
 // ==================== LATEST VALIDATION / TABEL DASHBOARD ====================
 
-export const getLatestValidationService =
-  async (
-    page: number,
-    limit: number,
-    search: string
-  ) => {
+export const getLatestValidationService = async (
+  page: number,
+  limit: number,
+  search: string
+) => {
+  const result: any = await getLatestValidationRepository(
+    page,
+    limit,
+    search
+  );
 
-    const result: any =
-      await getLatestValidationRepository(
-        page,
-        limit,
-        search
-      );
+  return {
+    data: result.data.map((item: any) => {
+      const status = getStatusDashboard(item);
 
-    return {
+      return {
+        id_mahasiswa: item.id_mahasiswa,
 
-      data: result.data.map(
-        (item: any) => {
+        nama: item.nama,
 
-          const status =
-            getStatusDashboard(item);
+        nim: item.nim,
 
-          return {
-            id_mahasiswa:
-              item.id_mahasiswa,
+        fakultas: item.fakultas,
 
-            nama:
-              item.nama,
+        prodi: item.prodi,
 
-            nim:
-              item.nim,
+        tahun_lulus: item.tahun_lulus,
 
-            fakultas:
-              item.fakultas,
+        // INI YANG SEBELUMNYA BELUM ADA
+        periode:
+          item.periode ||
+          item.periode_lulus ||
+          item.semester ||
+          "-",
 
-            prodi:
-              item.prodi,
+        status,
 
-            tahun_lulus:
-              item.tahun_lulus,
+        status_asli: item.status,
 
-            status,
+        has_dokumen: Boolean(item.has_dokumen),
 
-            status_asli:
-              item.status,
+        has_blockchain: Boolean(item.has_blockchain),
 
-            has_dokumen:
-              Boolean(item.has_dokumen),
+        batch: item.nomor_batch_upload,
 
-            has_blockchain:
-              Boolean(item.has_blockchain),
+        nomor_batch_upload: item.nomor_batch_upload,
 
-            batch:
-              item.nomor_batch_upload,
-          };
-        }
-      ),
+        id_batch_upload: item.id_batch_upload,
+      };
+    }),
 
-      pagination: {
+    pagination: {
+      page,
 
-        page,
+      limit,
 
-        limit,
+      total_data: result.total,
 
-        total_data:
-          result.total,
-
-        total_page:
-          Math.ceil(
-            result.total / limit
-          ),
-      },
-    };
+      total_page: Math.ceil(result.total / limit),
+    },
   };
+};

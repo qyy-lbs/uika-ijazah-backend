@@ -64,10 +64,7 @@ export const getBatchDashboardRepository = async () => {
   `);
 };
 
-
-export const getDetailBatchRepository = async (
-  id_batch_upload: number
-) => {
+export const getDetailBatchRepository = async (id_batch_upload: number) => {
   return await prisma.$queryRawUnsafe(`
     SELECT
       b.id_batch_upload,
@@ -79,12 +76,23 @@ export const getDetailBatchRepository = async (
       m.nama_mahasiswa AS nama,
       m.nim,
 
+      p.nama_prodi AS prodi,
+      p.nama_prodi AS program_studi,
+
+      u.nama_unit AS fakultas,
+
       COALESCE(v.status_validasi, 'proses') AS status
 
     FROM batch_upload b
 
     LEFT JOIN mahasiswa m
       ON m.id_batch_upload = b.id_batch_upload
+
+    LEFT JOIN prodi p
+      ON p.id_prodi = m.id_prodi
+
+    LEFT JOIN unit u
+      ON u.id_unit = p.id_unit
 
     LEFT JOIN (
       SELECT DISTINCT ON (id_mahasiswa)
@@ -100,7 +108,6 @@ export const getDetailBatchRepository = async (
   `);
 };
 
-
 export const getBatchRepository = async (
   page: number,
   limit: number,
@@ -108,26 +115,34 @@ export const getBatchRepository = async (
   periode?: string,
   search?: string
 ) => {
-
   const offset = (page - 1) * limit;
+
+  const safeTahun = tahun_lulus?.replace(/'/g, "''");
+  const safePeriode = periode?.replace(/'/g, "''");
+  const safeSearch = search?.replace(/'/g, "''");
 
   let whereQuery = `WHERE 1=1`;
 
-  if (tahun_lulus) {
+  if (safeTahun) {
     whereQuery += `
-      AND b.tahun_lulus = ${tahun_lulus}
+      AND b.tahun_lulus = ${safeTahun}
     `;
   }
 
-  if (periode) {
+  if (safePeriode) {
     whereQuery += `
-      AND b.periode = '${periode}'
+      AND b.periode::text ILIKE '%${safePeriode}%'
     `;
   }
 
-  if (search) {
+  if (safeSearch) {
     whereQuery += `
-      AND b.nomor_batch_upload ILIKE '%${search}%'
+      AND (
+        b.nomor_batch_upload ILIKE '%${safeSearch}%'
+        OR COALESCE(u.nama_unit, '') ILIKE '%${safeSearch}%'
+        OR CAST(b.tahun_lulus AS TEXT) ILIKE '%${safeSearch}%'
+        OR b.periode::text ILIKE '%${safeSearch}%'
+      )
     `;
   }
 
@@ -136,13 +151,25 @@ export const getBatchRepository = async (
       b.id_batch_upload,
       b.nomor_batch_upload,
       b.tahun_lulus,
-      b.periode,
-      COUNT(m.id_mahasiswa) as total_mahasiswa
+      b.periode::text AS periode,
+
+      COALESCE(
+        STRING_AGG(DISTINCT u.nama_unit, ', '),
+        '-'
+      ) AS fakultas,
+
+      COUNT(DISTINCT m.id_mahasiswa) AS total_mahasiswa
 
     FROM batch_upload b
 
     LEFT JOIN mahasiswa m
       ON m.id_batch_upload = b.id_batch_upload
+
+    LEFT JOIN prodi p
+      ON p.id_prodi = m.id_prodi
+
+    LEFT JOIN unit u
+      ON u.id_unit = p.id_unit
 
     ${whereQuery}
 
@@ -152,6 +179,8 @@ export const getBatchRepository = async (
       b.tahun_lulus,
       b.periode
 
+    HAVING COUNT(DISTINCT m.id_mahasiswa) > 0
+
     ORDER BY b.id_batch_upload DESC
 
     LIMIT ${limit}
@@ -159,13 +188,33 @@ export const getBatchRepository = async (
   `);
 
   const total = await prisma.$queryRawUnsafe(`
-    SELECT COUNT(*) as total
-    FROM batch_upload b
-    ${whereQuery}
+    SELECT COUNT(*) AS total
+    FROM (
+      SELECT
+        b.id_batch_upload
+
+      FROM batch_upload b
+
+      LEFT JOIN mahasiswa m
+        ON m.id_batch_upload = b.id_batch_upload
+
+      LEFT JOIN prodi p
+        ON p.id_prodi = m.id_prodi
+
+      LEFT JOIN unit u
+        ON u.id_unit = p.id_unit
+
+      ${whereQuery}
+
+      GROUP BY
+        b.id_batch_upload
+
+      HAVING COUNT(DISTINCT m.id_mahasiswa) > 0
+    ) AS filtered_batch
   `);
 
   return {
     data,
-    total
+    total,
   };
 };
