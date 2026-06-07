@@ -165,6 +165,7 @@ services:
       - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
       - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - TEMPLATE_SERVICE_URL=http://template-service:3008
+      - BLOCKCHAIN_SERVICE_URL="http://localhost:3011"
 
   # -----------------------------------------------------------------
   # 10. QR SERVICE (Internal)
