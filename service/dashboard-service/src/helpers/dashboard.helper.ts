@@ -6,14 +6,10 @@ export type DashboardStatus =
 
 export const mapDashboardStatus = ({
   statusValidasi,
-  validated_by,
-  hasDokumen,
-  hasBlockchain,
+  hasVerifiedDocument,
 }: {
   statusValidasi: string | null;
-  validated_by: number | null;
-  hasDokumen: boolean;
-  hasBlockchain: boolean;
+  hasVerifiedDocument: boolean;
 }): DashboardStatus => {
   const status = String(statusValidasi || "")
     .toLowerCase()
@@ -38,10 +34,8 @@ export const mapDashboardStatus = ({
   }
 
   // TERBIT
-  // Kalau dokumen dan blockchain sudah ada, berarti ijazah sudah terbit
-  if (
-    status === "terbit"
-  ) {
+  // Diambil dari dokumen ijazah yang sudah verified
+  if (hasVerifiedDocument) {
     return "terbit";
   }
 
