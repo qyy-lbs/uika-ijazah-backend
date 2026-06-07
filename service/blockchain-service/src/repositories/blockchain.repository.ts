@@ -12,6 +12,8 @@ export async function findBlockchainByDokumen(id_dokumen: number) {
   return prisma.blockchain.findFirst({
     where: {
       id_dokumen,
+    }, orderBy: {
+      created_at: "desc",
     },
   });
 }
@@ -38,6 +40,27 @@ export async function createBlockchainRecord(params: {
       index_block: params.index_block,
       previous_hash: params.previous_hash,
       hash_block: params.hash_block,
+    },
+  });
+}
+
+export async function updateBlockchainByDokumen(params: {
+  id_dokumen: number;
+  hash_dokumen: string;
+  index_block: number;
+  previous_hash: string | null;
+  hash_block: string;
+}) {
+  return prisma.blockchain.update({
+    where: {
+      id_dokumen: params.id_dokumen,
+    },
+    data: {
+      hash_dokumen: params.hash_dokumen,
+      index_block: params.index_block,
+      previous_hash: params.previous_hash,
+      hash_block: params.hash_block,
+      created_at: new Date(),
     },
   });
 }

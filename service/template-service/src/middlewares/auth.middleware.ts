@@ -74,6 +74,7 @@ export function verifyInternalService(
   next: NextFunction,
 ): void {
   const serviceKey = req.header("x-internal-service-key");
+  
 
   if (!serviceKey) {
     res.status(403).json({

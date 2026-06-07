@@ -12,7 +12,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   "/uploads/documents",
-  express.static(path.join(process.cwd(), "uploads", "documents"))
+  express.static(path.join(process.cwd(), "uploads", "documents"), {
+    setHeaders: (res) => {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    },
+  })
 );
 
 app.use("/api/document", documentRoutes);
