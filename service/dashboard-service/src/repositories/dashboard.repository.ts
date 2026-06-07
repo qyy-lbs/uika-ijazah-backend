@@ -1,5 +1,6 @@
 import prisma from "../prisma/prisma.js";
 
+
 export const getLatestValidationRepository = async (
   page: number,
   limit: number,
@@ -29,6 +30,7 @@ export const getLatestValidationRepository = async (
       m.nim,
 
       u.nama_unit AS fakultas,
+
       p.nama_prodi AS prodi,
 
       COALESCE(m.tahun_lulus, b.tahun_lulus) AS tahun_lulus,
@@ -70,19 +72,7 @@ export const getLatestValidationRepository = async (
         )
         THEN true
         ELSE false
-      END AS has_blockchain,
-
-      CASE
-        WHEN EXISTS (
-          SELECT 1
-          FROM dokumen d
-          WHERE d.id_mahasiswa = m.id_mahasiswa
-            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
-            AND d.is_verified = true
-        )
-        THEN true
-        ELSE false
-      END AS has_verified_document
+      END AS has_blockchain
 
     FROM mahasiswa m
 

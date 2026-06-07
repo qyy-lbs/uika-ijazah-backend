@@ -17,7 +17,12 @@ type SummaryDashboard = {
 const getStatusDashboard = (item: any) => {
   return mapDashboardStatus({
     statusValidasi: item.status,
-    hasVerifiedDocument: Boolean(item.has_verified_document),
+
+    validated_by: item.validated_by || null,
+
+    hasDokumen: Boolean(item.has_dokumen),
+
+    hasBlockchain: Boolean(item.has_blockchain),
   });
 };
 
