@@ -5,6 +5,7 @@ import {
   findDokumenById,
   findDokumenByNim,
 } from "../repositories/dokumen.repository.js";
+import { verifyDocumentByKodeQr } from "../services/document-verify.service.js";
 
 type NimParams = {
   nim: string;
@@ -125,6 +126,37 @@ export async function getDocumentDetail(req: Request<IdParams>, res: Response) {
       success: false,
       message:
         error instanceof Error ? error.message : "Gagal mengambil detail dokumen",
+    });
+  }
+}
+type VerifyParams = {
+  kodeQr: string;
+};
+
+export async function verifyDocument(req: Request<VerifyParams>, res: Response) {
+  try {
+    const { kodeQr } = req.params;
+
+    const data = await verifyDocumentByKodeQr(kodeQr);
+
+    if (!data.is_valid) {
+      return res.status(404).json({
+        success: false,
+        message: data.message,
+        data,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Dokumen valid",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Gagal verifikasi dokumen",
     });
   }
 }

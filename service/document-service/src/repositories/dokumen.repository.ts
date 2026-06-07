@@ -133,3 +133,35 @@ export async function findDokumenById(id_dokumen: number) {
     },
   });
 }
+export async function findDokumenByKodeQr(kode_qr: string) {
+  return prisma.dokumen.findFirst({
+    where: {
+      kode_qr,
+    },
+    include: {
+      mahasiswa: {
+        select: {
+          id_mahasiswa: true,
+          nim: true,
+          nama_mahasiswa: true,
+          nik: true,
+          tempat_lahir: true,
+          tanggal_lahir: true,
+          jenis_kelamin: true,
+          foto: true,
+          prodi: {
+            include: {
+              unit: true,
+            },
+          },
+        },
+      },
+      template: {
+        select: {
+          id_template: true,
+          jenis_template: true,
+        },
+      },
+    },
+  });
+}

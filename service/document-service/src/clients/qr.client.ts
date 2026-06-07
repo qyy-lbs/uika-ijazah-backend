@@ -25,11 +25,11 @@ export async function generateQrForDocument(params: {
   const internalKey = process.env.INTERNAL_SERVICE_KEY;
 
   if (!baseUrl) {
-    throw new Error("QR_SERVICE_URL belum diatur");
+    throw new Error("QR_SERVICE_URL belum diatur di document-service");
   }
 
   if (!internalKey) {
-    throw new Error("INTERNAL_SERVICE_KEY belum diatur");
+    throw new Error("INTERNAL_SERVICE_KEY belum diatur di document-service");
   }
 
   const url = `${baseUrl}/api/qr/generate`;
