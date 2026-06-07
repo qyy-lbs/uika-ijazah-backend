@@ -31,8 +31,8 @@ services:
       - QR_SERVICE_URL=http://qr-service:3010
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
-      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+      - PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
 
 
 
@@ -141,8 +141,8 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
-      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+      - PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
 
   # -----------------------------------------------------------------
   # 9. DOCUMENT SERVICE (Internal)
@@ -161,8 +161,8 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - PUBLIC_BASE_URL="http://103.158.196.32:8010"
-      - INTERNAL_SERVICE_KEY="ijazahTranskrip_internal_service_secret"
+      - PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
       - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - TEMPLATE_SERVICE_URL=http://template-service:3008
 
