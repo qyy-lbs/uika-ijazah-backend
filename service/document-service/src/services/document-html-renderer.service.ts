@@ -219,26 +219,46 @@ function renderSignatureElement(
 
 function renderQrElement(
   element: TemplateElement,
+  profile: unknown,
   scaleX: number,
   scaleY: number,
 ) {
+  const rawValue = valueToString(getValueByPath(profile, element.field));
+  const qrUrl = resolvePublicAssetUrl(rawValue);
+
   const left = (element.x ?? 0) * scaleX;
   const top = (element.y ?? 0) * scaleY;
   const width = (element.width ?? 72) * scaleX;
   const height = (element.height ?? 72) * scaleY;
 
+  if (!qrUrl) {
+    return `
+      <div
+        class="element qr-element"
+        style="
+          left:${left}px;
+          top:${top}px;
+          width:${width}px;
+          height:${height}px;
+        "
+      >
+        QR
+      </div>
+    `;
+  }
+
   return `
-    <div
-      class="element qr-element"
+    <img
+      class="element qr-image-element"
+      src="${qrUrl}"
       style="
         left:${left}px;
         top:${top}px;
         width:${width}px;
         height:${height}px;
+        object-fit:contain;
       "
-    >
-      QR
-    </div>
+    />
   `;
 }
 
@@ -455,7 +475,7 @@ function renderElement(
   }
 
   if (element.type === "qr") {
-    return renderQrElement(element, scaleX, scaleY);
+    return renderQrElement(element, profile, scaleX, scaleY);
   }
 
   if (element.type === "table") {
@@ -703,6 +723,9 @@ export function renderDocumentHtml(params: {
           .bold {
             font-weight: 700;
           }
+            .qr-image-element {
+  display: block;
+}
         </style>
       </head>
 

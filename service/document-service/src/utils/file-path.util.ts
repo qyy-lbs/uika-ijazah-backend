@@ -40,10 +40,7 @@ export function resolvePublicAssetUrl(src: string | null | undefined) {
     return src;
   }
 
-  const normalizedSrc = src.startsWith("/") ? src : `/${src}`;
-
-  const documentBaseUrl =
-    process.env.PUBLIC_BASE_URL || "http://localhost:3009";
+  const documentBaseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3009";
 
   const templateBaseUrl =
     process.env.TEMPLATE_PUBLIC_BASE_URL ||
@@ -55,13 +52,31 @@ export function resolvePublicAssetUrl(src: string | null | undefined) {
     process.env.AKADEMIK_SERVICE_URL ||
     "http://localhost:3005";
 
-  if (normalizedSrc.startsWith("/uploads/templates")) {
-    return `${templateBaseUrl}${normalizedSrc}`;
+  const qrBaseUrl =
+    process.env.QR_PUBLIC_BASE_URL ||
+    process.env.QR_SERVICE_URL ||
+    "http://localhost:3010";
+
+  if (src.startsWith("/uploads/templates")) {
+    return `${templateBaseUrl}${src}`;
   }
 
-  if (normalizedSrc.startsWith("/uploads/documents")) {
-    return `${documentBaseUrl}${normalizedSrc}`;
+  if (src.startsWith("/uploads/qr")) {
+    return `${qrBaseUrl}${src}`;
   }
 
-  return `${akademikBaseUrl}${normalizedSrc}`;
+  if (
+    src.startsWith("/uploads/mahasiswa") ||
+    src.startsWith("/uploads/unit") ||
+    src.startsWith("/uploads/prodi") ||
+    src.startsWith("/uploads/assets")
+  ) {
+    return `${akademikBaseUrl}${src}`;
+  }
+
+  if (src.startsWith("/")) {
+    return `${documentBaseUrl}${src}`;
+  }
+
+  return `${documentBaseUrl}/${src}`;
 }
