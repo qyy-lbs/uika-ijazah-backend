@@ -143,6 +143,8 @@ services:
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
       - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
+    volumes:
+      - ./service/template-service/uploads:/app/uploads
 
   # -----------------------------------------------------------------
   # 9. DOCUMENT SERVICE (Internal)
@@ -161,10 +163,20 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - PUBLIC_BASE_URL=http://103.158.196.32:8010
       - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
+
+      # Internal service-to-service
       - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - TEMPLATE_SERVICE_URL=http://template-service:3008
+      - QR_SERVICE_URL=http://qr-service:3010
+
+      # Public URL lewat gateway
+      - PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - AKADEMIK_PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - TEMPLATE_PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - QR_PUBLIC_BASE_URL=http://103.158.196.32:8010
+    volumes:
+      - ./service/document-service/uploads:/app/uploads
 
   # -----------------------------------------------------------------
   # 10. QR SERVICE (Internal)
@@ -180,7 +192,15 @@ services:
     restart: always
     environment:
       - PORT=3010
-      - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
+
+      # URL publik untuk gambar QR
+      - PUBLIC_BASE_URL=http://103.158.196.32:8010
+
+      # URL yang tertanam di dalam QR
+      # Nanti kalau frontend sudah dideploy, ganti ke URL frontend yang benar
+      - VERIFY_BASE_URL=http://103.158.196.32:5173/verify
+    volumes:
+      - ./service/qr-service/uploads:/app/uploads
