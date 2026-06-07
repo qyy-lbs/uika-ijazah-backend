@@ -73,7 +73,23 @@ function renderTextElement(
   scaleY: number,
   defaultFontSize: number,
 ) {
-  const value = valueToString(getValueByPath(profile, element.field));
+  let value = valueToString(
+  getValueByPath(profile, element.field)
+);
+
+if (element.label === "Gelar") {
+  const gelar = valueToString(
+    getValueByPath(profile, "mahasiswa.gelar")
+  );
+
+  const gelarEn = valueToString(
+    getValueByPath(profile, "mahasiswa.gelar_en")
+  );
+
+  value = [gelar, gelarEn]
+    .filter(Boolean)
+    .join(" / ");
+}
 
   console.log("RENDER TEXT:", {
     label: element.label,
@@ -86,7 +102,16 @@ function renderTextElement(
     align: element.align,
   });
 
-  const safeValue = escapeHtml(value || "");
+  let finalValue = value || "";
+
+  if (
+  element.label === "NIDN Rektor" ||
+  element.label === "NIDN Dekan")
+     {
+      finalValue = `NIDN. ${finalValue}`;
+      }
+
+  const safeValue = escapeHtml(finalValue);
 
   const left = (element.x ?? 0) * scaleX;
   const top = (element.y ?? 0) * scaleY;
@@ -221,7 +246,7 @@ function renderQrElement(
   element: TemplateElement,
   profile: unknown,
   scaleX: number,
-  scaleY: number,
+  scaleY: number
 ) {
   const rawValue = valueToString(getValueByPath(profile, element.field));
   const qrUrl = resolvePublicAssetUrl(rawValue);
@@ -257,6 +282,7 @@ function renderQrElement(
         width:${width}px;
         height:${height}px;
         object-fit:contain;
+        display:block;
       "
     />
   `;
@@ -475,8 +501,10 @@ function renderElement(
   }
 
   if (element.type === "qr") {
-    return renderQrElement(element, profile, scaleX, scaleY);
+      return renderQrElement(element, profile, scaleX, scaleY);
+
   }
+  
 
   if (element.type === "table") {
     return renderTranskripTable(element, profile, scaleX, scaleY);
