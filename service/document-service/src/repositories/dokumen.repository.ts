@@ -165,14 +165,3 @@ export async function findDokumenByKodeQr(kode_qr: string) {
     },
   });
 }
-
-export async function findBlockchainByDokumen(id_dokumen: number) {
-  return prisma.blockchain.findFirst({
-    where: {
-      id_dokumen,
-    },
-    orderBy: {
-      created_at: "desc",
-    },
-  });
-}

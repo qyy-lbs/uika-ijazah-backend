@@ -8,11 +8,16 @@ import {
   verifyDocument,
 } from "../controllers/document.controller.js";
 import { verifyInternalService } from "../middlewares/internal.middleware.js";
+import {
+  getValidBatches,
+  getValidBatchDetail,
+} from "../controllers/document.controller.js";
 
 const router = Router();
 
 router.get("/health", healthDocument);
-
+router.get("/valid-batches", getValidBatches);
+router.get("/valid-batches/:batchId/mahasiswa", getValidBatchDetail);
 router.get("/test-dependencies/:nim", testDependencies);
 router.post("/internal/generate/:nim", verifyInternalService, generateDocuments);
 

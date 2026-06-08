@@ -8,7 +8,6 @@ import { renderDocumentHtml } from "./document-html-renderer.service.js";
 import { renderHtmlToPdf } from "./pdf-renderer.service.js";
 import { getDocumentPageConfig } from "../utils/document-page-config.util.js";
 import { generateQrForDocument } from "../clients/qr.client.js";
-import { recordDocumentToBlockchain } from "../clients/blockchain.client.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
@@ -96,21 +95,16 @@ async function generateSingleDocument(params: {
     file_pdf_final: output.relativePath,
     kode_qr: qr.kode_qr,
     url_akses: qr.url_akses,
-    is_verified: false,
-  });
-
-  const blockchain = await recordDocumentToBlockchain({
-    id_dokumen: dokumen.id_dokumen,
+    is_verified: true,
   });
 
   return {
     dokumen,
-    blockchain,
     template: {
       id_template: template.id_template,
       jenis_template: template.jenis_template,
       file_template: template.file_template,
-      total_elements: template.konfigurasi_layout.elements.length?.toExponential.length ?? 0,
+      total_elements: template.konfigurasi_layout.elements.length,
     },
     file: {
       relative_path: output.relativePath,
@@ -128,19 +122,20 @@ export async function generateDocumentsByNim(nim: string) {
     throw new Error("id_mahasiswa tidak ditemukan dari akademik-service");
   }
 
-  const ijazah = await generateSingleDocument({
-    jenis: "ijazah",
-    id_mahasiswa: idMahasiswaRaw,
-    nim,
-    profile,
-  });
-
-  const transkrip = await generateSingleDocument({
-    jenis: "transkrip",
-    id_mahasiswa: idMahasiswaRaw,
-    nim,
-    profile,
-  });
+  const [ijazah, transkrip] = await Promise.all([
+    generateSingleDocument({
+      jenis: "ijazah",
+      id_mahasiswa: idMahasiswaRaw,
+      nim,
+      profile,
+    }),
+    generateSingleDocument({
+      jenis: "transkrip",
+      id_mahasiswa: idMahasiswaRaw,
+      nim,
+      profile,
+    }),
+  ]);
 
   return {
     mahasiswa: {
