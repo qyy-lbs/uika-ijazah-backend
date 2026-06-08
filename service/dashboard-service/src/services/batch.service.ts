@@ -4,8 +4,48 @@ import {
   getBatchRepository,
 } from "../repositories/batch.repository.js";
 
-export const getBatchDashboardService = async () => {
+const normalizeStatus = (status?: string | null) => {
+  const value = String(status || "")
+    .toLowerCase()
+    .trim();
 
+  if (
+    value === "reject" ||
+    value === "rejected" ||
+    value === "ditolak"
+  ) {
+    return "rejected";
+  }
+
+  if (
+    value === "revoke" ||
+    value === "revoked" ||
+    value === "dicabut"
+  ) {
+    return "revoked";
+  }
+
+  if (
+    value === "terbit" ||
+    value === "valid" ||
+    value === "verified"
+  ) {
+    return "terbit";
+  }
+
+  if (
+    value === "approved" ||
+    value === "approve" ||
+    value === "proses" ||
+    value === "pending"
+  ) {
+    return "proses";
+  }
+
+  return value || "proses";
+};
+
+export const getBatchDashboardService = async () => {
   const rows = await getBatchDashboardRepository();
 
   return (rows as any[]).map((item) => ({
@@ -32,46 +72,42 @@ export const getDetailBatchService = async (
     return null;
   }
 
+  const requestedStatus = normalizeStatus(status);
+
   let mahasiswa = rows
     .filter((item: any) => item.id_mahasiswa)
-    .map((item: any) => ({
-      id_mahasiswa: item.id_mahasiswa,
+    .map((item: any) => {
+      const rawStatus =
+        item.status ||
+        item.status_validasi ||
+        "proses";
 
-      nama: item.nama,
-      nama_mahasiswa: item.nama,
+      const mappedStatus = normalizeStatus(rawStatus);
 
-      nim: item.nim,
+      return {
+        id_mahasiswa: item.id_mahasiswa,
 
-      prodi: item.prodi || "-",
-      program_studi: item.program_studi || item.prodi || "-",
+        nama: item.nama,
+        nama_mahasiswa: item.nama,
 
-      fakultas: item.fakultas || "-",
+        nim: item.nim,
 
-      tahun_lulus: item.tahun_lulus,
-      tahun: item.tahun_lulus,
+        prodi: item.prodi || "-",
+        program_studi: item.program_studi || item.prodi || "-",
 
-      status: item.status || item.status_validasi || "proses",
-    }));
+        fakultas: item.fakultas || "-",
+
+        tahun_lulus: item.tahun_lulus,
+        tahun: item.tahun_lulus,
+
+        status: mappedStatus,
+        status_asli: rawStatus,
+      };
+    });
 
   if (status) {
     mahasiswa = mahasiswa.filter((mhs: any) => {
-      if (status === "proses") {
-        return mhs.status === "proses";
-      }
-
-      if (status === "approved") {
-        return mhs.status === "approved";
-      }
-
-      if (status === "rejected") {
-        return mhs.status === "rejected";
-      }
-
-      if (status === "revoked") {
-        return mhs.status === "revoked";
-      }
-
-      return true;
+      return mhs.status === requestedStatus;
     });
   }
 
@@ -85,47 +121,46 @@ export const getDetailBatchService = async (
   };
 };
 
-
 export const getBatchService = async (
   page: number,
   limit: number,
   tahun_lulus?: string,
   periode?: string,
-  search?: string
+  search?: string,
+  status?: string
 ) => {
-
   const result =
     await getBatchRepository(
       page,
       limit,
       tahun_lulus,
       periode,
-      search
+      search,
+      status
     );
 
-const data = result.data as {
-  id_batch_upload: number;
-  nomor_batch_upload: string;
-  tahun_lulus: number;
-  periode: string;
-  fakultas: string;
-  total_mahasiswa: bigint;
-}[];
+  const data = result.data as {
+    id_batch_upload: number;
+    nomor_batch_upload: string;
+    tahun_lulus: number;
+    periode: string;
+    fakultas: string;
+    total_mahasiswa: bigint;
+  }[];
 
-  const totalRows:any =
+  const totalRows: any =
     result.total as {
       total: bigint;
     }[];
 
   const totalData =
-    Number(totalRows[0].total);
+    Number(totalRows[0]?.total || 0);
 
   return {
-
     data: data.map((item) => ({
       ...item,
       total_mahasiswa:
-        Number(item.total_mahasiswa)
+        Number(item.total_mahasiswa),
     })),
 
     pagination: {
@@ -133,7 +168,7 @@ const data = result.data as {
       limit,
       total_data: totalData,
       total_page:
-        Math.ceil(totalData / limit)
-    }
+        Math.ceil(totalData / limit),
+    },
   };
 };

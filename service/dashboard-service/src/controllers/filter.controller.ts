@@ -1,16 +1,16 @@
 import type { Request, Response } from "express";
 
 import {
-  getStatistikTahunanService,
-  getStatistikValidasiService,
-} from "../services/statistik.service.js";
+  getFacultiesService,
+  getYearsService,
+} from "../services/filter.service.js";
 
-export const getStatistikTahunan = async (
+export const getFaculties = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const data = await getStatistikTahunanService();
+    const data = await getFacultiesService();
 
     res.status(200).json({
       success: true,
@@ -26,16 +26,12 @@ export const getStatistikTahunan = async (
   }
 };
 
-export const getStatistikValidasi = async (
+export const getYears = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const year = req.query.year
-      ? Number(req.query.year)
-      : undefined;
-
-    const data = await getStatistikValidasiService(year);
+    const data = await getYearsService();
 
     res.status(200).json({
       success: true,

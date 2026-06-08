@@ -1,72 +1,76 @@
 import prisma from "../prisma/prisma.js";
 
-export const getStatistikValidasiRepository =
-  async (
-    year?: number
-  ) => {
+export const getStatistikTahunanRepository = async () => {
+  return await prisma.$queryRawUnsafe(`
+    SELECT
+      EXTRACT(MONTH FROM d.tanggal_terbit)::INT AS bulan,
+      EXTRACT(YEAR FROM d.tanggal_terbit)::INT AS tahun,
+      COUNT(DISTINCT d.id_mahasiswa)::INT AS total
 
-    const whereYear =
-      year
-        ? `WHERE m.tahun_lulus = ${year}`
-        : "";
+    FROM dokumen d
 
-    return await prisma.$queryRawUnsafe(`
-      SELECT
-        m.id_mahasiswa,
+    WHERE LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+      AND d.tanggal_terbit IS NOT NULL
+      AND d.is_verified = true
 
-        COALESCE(
-          v.status_validasi,
-          'proses'
-        ) AS status_validasi,
+    GROUP BY
+      bulan,
+      tahun
 
-        v.validated_by,
+    ORDER BY
+      tahun,
+      bulan
+  `);
+};
 
-        CASE
-          WHEN EXISTS (
-            SELECT 1
-            FROM dokumen d
-            WHERE d.id_mahasiswa = m.id_mahasiswa
-              AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
-              AND d.tanggal_terbit IS NOT NULL
-          )
-          THEN true
-          ELSE false
-        END AS has_dokumen,
+export const getStatistikValidasiRepository = async (
+  year?: number
+) => {
+  const yearCondition = year
+    ? `
+      AND COALESCE(m.tahun_lulus, b.tahun_lulus) = ${year}
+    `
+    : "";
 
-        CASE
-          WHEN EXISTS (
-            SELECT 1
-            FROM dokumen d
-            INNER JOIN blockchain bc
-              ON bc.id_dokumen = d.id_dokumen
-            WHERE d.id_mahasiswa = m.id_mahasiswa
-              AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
-              AND d.tanggal_terbit IS NOT NULL
-              AND bc.hash_dokumen IS NOT NULL
-              AND bc.hash_block IS NOT NULL
-          )
-          THEN true
-          ELSE false
-        END AS has_blockchain
-
-      FROM mahasiswa m
-
-      LEFT JOIN (
-        SELECT DISTINCT ON (id_mahasiswa)
-          id_mahasiswa,
-          status_validasi,
-          validated_by,
-          created_at
-        FROM validasi
-        ORDER BY
-          id_mahasiswa,
-          created_at DESC
-      ) v
-        ON v.id_mahasiswa = m.id_mahasiswa
-
-      ${whereYear}
-
+  return await prisma.$queryRawUnsafe(`
+    WITH latest_validasi AS (
+      SELECT DISTINCT ON (id_mahasiswa)
+        id_mahasiswa,
+        status_validasi,
+        created_at
+      FROM validasi
       ORDER BY
-        m.id_mahasiswa DESC
-    `);
-  };
+        id_mahasiswa,
+        created_at DESC
+    )
+
+    SELECT
+      m.id_mahasiswa,
+      COALESCE(v.status_validasi, 'proses') AS status_validasi,
+
+      COALESCE(m.tahun_lulus, b.tahun_lulus) AS tahun_lulus,
+
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM dokumen d
+          WHERE d.id_mahasiswa = m.id_mahasiswa
+            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+            AND d.is_verified = true
+        )
+        THEN true
+        ELSE false
+      END AS has_verified_document
+
+    FROM mahasiswa m
+
+    LEFT JOIN batch_upload b
+      ON b.id_batch_upload = m.id_batch_upload
+
+    LEFT JOIN latest_validasi v
+      ON v.id_mahasiswa = m.id_mahasiswa
+
+    WHERE 1=1
+    ${yearCondition}
+  `);
+};

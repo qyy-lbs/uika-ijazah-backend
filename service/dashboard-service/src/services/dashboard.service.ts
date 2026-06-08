@@ -6,118 +6,90 @@ import {
   mapDashboardStatus,
 } from "../helpers/dashboard.helper.js";
 
-type SummaryDashboard = {
-  total_mahasiswa: number;
-  proses: number;
-  rejected: number;
-  revoked: number;
-  terbit: number;
-};
-
-const getStatusDashboard = (item: any) => {
-  return mapDashboardStatus({
-    statusValidasi: item.status,
-    hasVerifiedDocument: Boolean(item.has_verified_document),
-  });
-};
-
-// ==================== SUMMARY DASHBOARD ====================
-
-export const getSummaryService = async () => {
-  const validations = (await getLatestValidationRepository(
-    1,
-    999999,
-    ""
-  )) as any;
-
-  const rows = validations.data || [];
-
-  const summary: SummaryDashboard = {
-    total_mahasiswa: rows.length,
-    proses: 0,
-    rejected: 0,
-    revoked: 0,
-    terbit: 0,
-  };
-
-  for (const item of rows) {
-    const status = getStatusDashboard(item);
-
-    if (status === "terbit") {
-      summary.terbit++;
-    } else if (status === "rejected") {
-      summary.rejected++;
-    } else if (status === "revoked") {
-      summary.revoked++;
-    } else {
-      summary.proses++;
-    }
-  }
-
-  return summary;
-};
-
-// ==================== LATEST VALIDATION / TABEL DASHBOARD ====================
-
 export const getLatestValidationService = async (
   page: number,
   limit: number,
   search: string
 ) => {
-  const result: any = await getLatestValidationRepository(
+  const result = await getLatestValidationRepository(
     page,
     limit,
     search
   );
 
+  const rows = result.data as any[];
+
+  const data = rows.map((item) => {
+    const status = mapDashboardStatus({
+      statusValidasi: item.status,
+      hasVerifiedDocument: Boolean(item.has_verified_document),
+    });
+
+    return {
+      id_mahasiswa: item.id_mahasiswa,
+      nama: item.nama,
+      nim: item.nim,
+
+      fakultas: item.fakultas || "-",
+      prodi: item.prodi || "-",
+
+      tahun_lulus: item.tahun_lulus,
+
+      id_batch_upload: item.id_batch_upload,
+      nomor_batch_upload: item.nomor_batch_upload,
+      batch: item.batch || item.nomor_batch_upload || "-",
+      periode: item.periode || "-",
+
+      status,
+      status_asli: item.status,
+
+      has_verified_document: Boolean(item.has_verified_document),
+    };
+  });
+
   return {
-    data: result.data.map((item: any) => {
-      const status = getStatusDashboard(item);
-
-      return {
-        id_mahasiswa: item.id_mahasiswa,
-
-        nama: item.nama,
-
-        nim: item.nim,
-
-        fakultas: item.fakultas,
-
-        prodi: item.prodi,
-
-        tahun_lulus: item.tahun_lulus,
-
-        // INI YANG SEBELUMNYA BELUM ADA
-        periode:
-          item.periode ||
-          item.periode_lulus ||
-          item.semester ||
-          "-",
-
-        status,
-
-        status_asli: item.status,
-
-        has_dokumen: Boolean(item.has_dokumen),
-
-        has_blockchain: Boolean(item.has_blockchain),
-
-        batch: item.nomor_batch_upload,
-
-        nomor_batch_upload: item.nomor_batch_upload,
-
-        id_batch_upload: item.id_batch_upload,
-      };
-    }),
-
+    data,
     pagination: {
       page,
-
       limit,
-
       total_data: result.total,
-
       total_page: Math.ceil(result.total / limit),
     },
   };
+};
+
+export const getDashboardSummaryService = async () => {
+  const result = await getLatestValidationRepository(
+    1,
+    100000,
+    ""
+  );
+
+  const rows = result.data as any[];
+
+  const summary = {
+    totalIjazahTerbit: 0,
+    permintaanVerifikasi: 0,
+    dataReject: 0,
+    dataRevoke: 0,
+  };
+
+  rows.forEach((item) => {
+    const status = mapDashboardStatus({
+      statusValidasi: item.status,
+      hasVerifiedDocument: Boolean(item.has_verified_document),
+    });
+
+    if (status === "terbit") {
+      summary.totalIjazahTerbit++;
+    } else if (status === "rejected") {
+      summary.dataReject++;
+    } else if (status === "revoked") {
+      summary.dataRevoke++;
+    } else {
+      summary.permintaanVerifikasi++;
+    }
+  });
+
+  return summary;
 };

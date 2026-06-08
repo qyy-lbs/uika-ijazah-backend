@@ -10,9 +10,7 @@ export const getBatches = async (
   req: Request,
   res: Response
 ) => {
-
   try {
-
     const page =
       Number(req.query.page) || 1;
 
@@ -28,13 +26,17 @@ export const getBatches = async (
     const search =
       req.query.search as string;
 
+    const status =
+      req.query.status as string;
+
     const data =
       await getBatchService(
         page,
         limit,
         tahun_lulus,
         periode,
-        search
+        search,
+        status
       );
 
     res.status(200).json({
@@ -43,14 +45,12 @@ export const getBatches = async (
     });
 
   } catch (error) {
-
     console.log(error);
 
     res.status(500).json({
       success: false,
       message: "Internal Server Error",
     });
-
   }
 };
 

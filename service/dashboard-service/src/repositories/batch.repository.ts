@@ -113,13 +113,15 @@ export const getBatchRepository = async (
   limit: number,
   tahun_lulus?: string,
   periode?: string,
-  search?: string
+  search?: string,
+  status?: string
 ) => {
   const offset = (page - 1) * limit;
 
   const safeTahun = tahun_lulus?.replace(/'/g, "''");
   const safePeriode = periode?.replace(/'/g, "''");
   const safeSearch = search?.replace(/'/g, "''");
+  const safeStatus = status?.toLowerCase().trim();
 
   let whereQuery = `WHERE 1=1`;
 
@@ -142,11 +144,95 @@ export const getBatchRepository = async (
         OR COALESCE(u.nama_unit, '') ILIKE '%${safeSearch}%'
         OR CAST(b.tahun_lulus AS TEXT) ILIKE '%${safeSearch}%'
         OR b.periode::text ILIKE '%${safeSearch}%'
+        OR COALESCE(m.nama_mahasiswa, '') ILIKE '%${safeSearch}%'
+        OR COALESCE(m.nim, '') ILIKE '%${safeSearch}%'
+        OR COALESCE(p.nama_prodi, '') ILIKE '%${safeSearch}%'
       )
     `;
   }
 
+  if (safeStatus) {
+    if (
+      safeStatus === "reject" ||
+      safeStatus === "rejected" ||
+      safeStatus === "ditolak"
+    ) {
+      whereQuery += `
+        AND LOWER(COALESCE(v.status_validasi, 'proses')) IN (
+          'reject',
+          'rejected',
+          'ditolak'
+        )
+      `;
+    }
+
+    else if (
+      safeStatus === "revoke" ||
+      safeStatus === "revoked" ||
+      safeStatus === "dicabut"
+    ) {
+      whereQuery += `
+        AND LOWER(COALESCE(v.status_validasi, 'proses')) IN (
+          'revoke',
+          'revoked',
+          'dicabut'
+        )
+      `;
+    }
+
+    else if (
+      safeStatus === "terbit" ||
+      safeStatus === "valid" ||
+      safeStatus === "verified"
+    ) {
+      whereQuery += `
+        AND EXISTS (
+          SELECT 1
+          FROM dokumen d
+          WHERE d.id_mahasiswa = m.id_mahasiswa
+            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+            AND d.is_verified = true
+        )
+      `;
+    }
+
+    else if (
+      safeStatus === "proses" ||
+      safeStatus === "pending"
+    ) {
+      whereQuery += `
+        AND LOWER(COALESCE(v.status_validasi, 'proses')) NOT IN (
+          'reject',
+          'rejected',
+          'ditolak',
+          'revoke',
+          'revoked',
+          'dicabut'
+        )
+
+        AND NOT EXISTS (
+          SELECT 1
+          FROM dokumen d
+          WHERE d.id_mahasiswa = m.id_mahasiswa
+            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+            AND d.is_verified = true
+        )
+      `;
+    }
+  }
+
   const data = await prisma.$queryRawUnsafe(`
+    WITH latest_validasi AS (
+      SELECT DISTINCT ON (id_mahasiswa)
+        id_mahasiswa,
+        status_validasi,
+        created_at
+      FROM validasi
+      ORDER BY
+        id_mahasiswa,
+        created_at DESC
+    )
+
     SELECT
       b.id_batch_upload,
       b.nomor_batch_upload,
@@ -171,6 +257,9 @@ export const getBatchRepository = async (
     LEFT JOIN unit u
       ON u.id_unit = p.id_unit
 
+    LEFT JOIN latest_validasi v
+      ON v.id_mahasiswa = m.id_mahasiswa
+
     ${whereQuery}
 
     GROUP BY
@@ -181,13 +270,25 @@ export const getBatchRepository = async (
 
     HAVING COUNT(DISTINCT m.id_mahasiswa) > 0
 
-    ORDER BY b.id_batch_upload DESC
+    ORDER BY
+      b.id_batch_upload DESC
 
     LIMIT ${limit}
     OFFSET ${offset}
   `);
 
   const total = await prisma.$queryRawUnsafe(`
+    WITH latest_validasi AS (
+      SELECT DISTINCT ON (id_mahasiswa)
+        id_mahasiswa,
+        status_validasi,
+        created_at
+      FROM validasi
+      ORDER BY
+        id_mahasiswa,
+        created_at DESC
+    )
+
     SELECT COUNT(*) AS total
     FROM (
       SELECT
@@ -203,6 +304,9 @@ export const getBatchRepository = async (
 
       LEFT JOIN unit u
         ON u.id_unit = p.id_unit
+
+      LEFT JOIN latest_validasi v
+        ON v.id_mahasiswa = m.id_mahasiswa
 
       ${whereQuery}
 
