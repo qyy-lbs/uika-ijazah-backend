@@ -1,22 +1,22 @@
 import prisma from "../prisma/prisma.js";
 
 export const getStatistikTahunanRepository = async () => {
+  const currentYear = new Date().getFullYear();
+  const startYear = currentYear - 2;
+
   return await prisma.$queryRawUnsafe(`
     SELECT
       EXTRACT(MONTH FROM d.tanggal_terbit)::INT AS bulan,
       EXTRACT(YEAR FROM d.tanggal_terbit)::INT AS tahun,
       COUNT(DISTINCT d.id_mahasiswa)::INT AS total
-
     FROM dokumen d
-
     WHERE LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
       AND d.tanggal_terbit IS NOT NULL
       AND d.is_verified = true
-
+      AND EXTRACT(YEAR FROM d.tanggal_terbit)::INT BETWEEN ${startYear} AND ${currentYear}
     GROUP BY
       bulan,
       tahun
-
     ORDER BY
       tahun,
       bulan
