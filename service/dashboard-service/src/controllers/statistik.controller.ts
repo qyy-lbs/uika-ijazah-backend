@@ -26,7 +26,7 @@ export const getStatistikTahunan = async (req: Request, res: Response) => {
 
 export const getStatistikValidasi = async (req: Request, res: Response) => {
   try {
-    const year = req.query.year ? Number(req.query.year) : undefined;
+    const year = req.query.year ? Number(req.query.year) : new Date().getFullYear();
 
     const data = await getStatistikValidasiService(year);
 
