@@ -22,7 +22,7 @@ model akademik {
 
 model batch_upload {
   id_batch_upload    Int           @id @default(autoincrement())
-  uuid               String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid              String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_template        Int?
   nomor_batch_upload String?       @db.VarChar(50)
   nama_file          String?       @db.VarChar(100)
@@ -32,7 +32,6 @@ model batch_upload {
   uploaded_by        Int?
   periode            periode_enum?
   tahun_lulus        Int?
-  status             String?       @db.VarChar(20)
   log_error          String?
   created_at         DateTime?     @default(now()) @db.Timestamp(6)
   template           template?     @relation(fields: [id_template], references: [id_template], onDelete: Cascade, onUpdate: NoAction)
@@ -86,13 +85,13 @@ model log_aktivitas {
 
 model mahasiswa {
   id_mahasiswa      Int           @id @default(autoincrement())
-  uuid              String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid              String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_prodi          Int?
   id_batch_upload   Int?
-  nim               String        @unique(map: "uq_mahasiswa_nim") @db.VarChar(20)
+  nim               String        @unique(map: "uq_mahasiswa_nim") @db.VarChar(50)
   nik               String?       @unique(map: "uq_mahasiswa_nik") @db.VarChar(50)
   nomor_seri_ijazah String?       @unique(map: "uq_mahasiswa_no_ijazah") @db.VarChar(50)
-  pisn              String?       @db.VarChar(50)
+  pisn              String?       @unique(map: "uq_mahasiswa_pisn") @db.VarChar(50)
   nama_mahasiswa    String?       @db.VarChar(100)
   tempat_lahir      String?       @db.VarChar(50)
   tanggal_lahir     DateTime?     @db.Date

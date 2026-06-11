@@ -22,7 +22,7 @@ model akademik {
 
 model batch_upload {
   id_batch_upload    Int           @id @default(autoincrement())
-  uuid               String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid              String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_template        Int?
   nomor_batch_upload String?       @db.VarChar(50)
   nama_file          String?       @db.VarChar(100)
@@ -85,7 +85,7 @@ model log_aktivitas {
 
 model mahasiswa {
   id_mahasiswa      Int           @id @default(autoincrement())
-  uuid              String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid              String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_prodi          Int?
   id_batch_upload   Int?
   nim               String        @unique(map: "uq_mahasiswa_nim") @db.VarChar(50)
@@ -125,6 +125,7 @@ model nilai {
   id_akademik  Int?
   nilai_huruf  String?    @db.VarChar(5)
   nilai_angka  Decimal?   @db.Decimal(3, 2)
+  bobot_t      Decimal?   @db.Decimal(5, 2)
   created_at   DateTime?  @default(now()) @db.Timestamp(6)
   updated_at   DateTime?  @default(now()) @db.Timestamp(6)
   akademik     akademik?  @relation(fields: [id_akademik], references: [id_akademik], onDelete: Cascade, onUpdate: NoAction)
