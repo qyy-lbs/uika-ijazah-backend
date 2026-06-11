@@ -34,7 +34,7 @@ app.get('/health', (_req, res) => {
 });
 
 // ── Routes
-app.use('/api/inbound', inboundRoutes);
+app.use('/inbound', inboundRoutes);
 
 // ── 404 handler
 app.use((_req, res) => {

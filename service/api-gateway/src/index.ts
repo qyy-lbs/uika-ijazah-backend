@@ -52,16 +52,14 @@ app.use(
 // ==========================================================
 
 // --- PROXY INBOUND SERVICE (Port 3003) ---
+app.use("/api/inbound", verifyGatewayToken);
 app.use(
-  "/api/inbound",
-  verifyGatewayToken,
   createProxyMiddleware({
+    pathFilter: "/api/inbound",
     target: process.env.INBOUND_SERVICE_URL || "http://localhost:3003",
     changeOrigin: true,
-    pathRewrite: {
-      "^/api/inbound": "",
-    },
     on: {
+      proxyReq: fixRequestBody,
       proxyRes: (proxyRes, req) => {
         console.log(
           `[Inbound-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`,
