@@ -22,7 +22,7 @@ model akademik {
 
 model batch_upload {
   id_batch_upload    Int           @id @default(autoincrement())
-  uuid               String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_template        Int?
   nomor_batch_upload String?       @db.VarChar(50)
   nama_file          String?       @db.VarChar(100)
@@ -85,7 +85,7 @@ model log_aktivitas {
 
 model mahasiswa {
   id_mahasiswa      Int           @id @default(autoincrement())
-  uuid              String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uuid String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   id_prodi          Int?
   id_batch_upload   Int?
   nim               String        @unique(map: "uq_mahasiswa_nim") @db.VarChar(20)

@@ -1,6 +1,5 @@
 import { findMahasiswaById } from "../repositories/mahasiswa.repository.js";
 import { findNilaiByMahasiswaId } from "../repositories/transkrip.repository.js";
-import { encodeId } from "../helpers/hashid.helper.js";
 
 export async function getValidasiAkademikByMahasiswaId(mahasiswaId: number) {
   const mahasiswa = await findMahasiswaById(mahasiswaId);
@@ -36,7 +35,7 @@ export async function getValidasiAkademikByMahasiswaId(mahasiswaId: number) {
   const isValid = Object.values(checks).every(Boolean);
 
   return {
-    mahasiswa_code: encodeId("mahasiswa", Number(mahasiswa.id_mahasiswa)),
+    mahasiswa_code: mahasiswa.uuid,
 
     nim: mahasiswa.nim,
     nama_mahasiswa: mahasiswa.nama_mahasiswa,

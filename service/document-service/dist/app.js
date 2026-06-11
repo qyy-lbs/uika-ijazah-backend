@@ -1,0 +1,17 @@
+import express from "express";
+import cors from "cors";
+import path from "path";
+import documentRoutes from "./routes/document.routes.js";
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use("/uploads/documents", express.static(path.join(process.cwd(), "uploads", "documents"), {
+    setHeaders: (res) => {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+    },
+}));
+app.use("/api/document", documentRoutes);
+export default app;
+//# sourceMappingURL=app.js.map

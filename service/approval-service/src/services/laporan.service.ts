@@ -6,7 +6,6 @@ import {
   REPORT_STATUS,
   VALIDATION_STATUS,
 } from "../constants/status.constant.js";
-import { encodeId } from "../helpers/hashid.helper.js";
 
 const APPROVAL_LEVEL_LABEL: Record<number, string> = {
   1: "TU Fakultas",
@@ -121,9 +120,10 @@ export async function getLaporanApprovalForUser(
     ];
   }
 
-  const mahasiswaList = await prisma.mahasiswa.findMany({
+ const mahasiswaList = await prisma.mahasiswa.findMany({
   where,
   include: {
+    batch_upload: true,
     prodi: {
       include: {
         unit: true,
@@ -171,8 +171,8 @@ export async function getLaporanApprovalForUser(
     const tanggal = statusInfo.tanggal ?? mhs.created_at;
 
     return {
-      mahasiswa_code: encodeId("mahasiswa", Number(mhs.id_mahasiswa)),
-      batch_code: mhs.id_batch_upload ? encodeId("batch", Number(mhs.id_batch_upload)) : null,
+      mahasiswa_code: mhs.uuid,
+batch_code: mhs.batch_upload?.uuid ?? null,
       nama: mhs.nama_mahasiswa,
       nim: mhs.nim,
       program_studi: mhs.prodi?.nama_prodi,

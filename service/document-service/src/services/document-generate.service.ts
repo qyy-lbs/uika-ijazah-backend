@@ -8,7 +8,6 @@ import { renderDocumentHtml } from "./document-html-renderer.service.js";
 import { renderHtmlToPdf } from "./pdf-renderer.service.js";
 import { getDocumentPageConfig } from "../utils/document-page-config.util.js";
 import { generateQrForDocument } from "../clients/qr.client.js";
-import { encodeId } from "../helpers/hashid.helper.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
@@ -152,29 +151,28 @@ export async function generateDocumentsByNim(
       nim: profile.mahasiswa?.nim,
       nama: profile.mahasiswa?.nama,
     },
+  
     generated: {
-      ijazah :  {
-          ...ijazah,
-      dokumen: {
-        dokumen_code: encodeId("dokumen", Number(ijazah.dokumen.id_dokumen)),
-        mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
+  ijazah: {
+    ...ijazah,
+    dokumen: {
+      ...ijazah.dokumen,
 
-        ...ijazah.dokumen,
-      },
+      dokumen_code: ijazah.dokumen.uuid ?? null,
+      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code ?? null,
     },
-    transkrip: {
-      ...transkrip,
-      dokumen: {
-        dokumen_code: encodeId(
-          "dokumen",
-          Number(transkrip.dokumen.id_dokumen)
-        ),
-        mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
+  },
 
-        // data lama tetap ada
-        ...transkrip.dokumen,
-      },
+  transkrip: {
+    ...transkrip,
+    dokumen: {
+      ...transkrip.dokumen,
+
+      dokumen_code: transkrip.dokumen.uuid ?? null,
+      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code ?? null,
     },
-    },
+  },
+},
+   
   };
 }

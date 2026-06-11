@@ -4,40 +4,22 @@ import {
   getBatchRepository,
 } from "../repositories/batch.repository.js";
 
-import {
-  mapDashboardStatus,
-} from "../helpers/dashboard.helper.js";
-
-import {
-  encodeId,
-} from "../helpers/hashid.helper.js";
+import { mapDashboardStatus } from "../helpers/dashboard.helper.js";
 
 const normalizeFilterStatus = (status?: string | null) => {
   const value = String(status || "")
     .toLowerCase()
     .trim();
 
-  if (
-    value === "reject" ||
-    value === "rejected" ||
-    value === "ditolak"
-  ) {
+  if (value === "reject" || value === "rejected" || value === "ditolak") {
     return "rejected";
   }
 
-  if (
-    value === "revoke" ||
-    value === "revoked" ||
-    value === "dicabut"
-  ) {
+  if (value === "revoke" || value === "revoked" || value === "dicabut") {
     return "revoked";
   }
 
-  if (
-    value === "terbit" ||
-    value === "valid" ||
-    value === "verified"
-  ) {
+  if (value === "terbit" || value === "valid" || value === "verified") {
     return "terbit";
   }
 
@@ -57,9 +39,7 @@ export const getBatchDashboardService = async () => {
   const rows = await getBatchDashboardRepository();
 
   return (rows as any[]).map((item) => ({
-    batch_code: item.id_batch_upload
-      ? encodeId("batch", Number(item.id_batch_upload))
-      : null,
+    batch_code: item.batch_uuid ?? item.uuid ?? null,
 
     nomor_batch_upload: item.nomor_batch_upload,
     tahun_lulus: item.tahun_lulus,
@@ -73,26 +53,18 @@ export const getBatchDashboardService = async () => {
   }));
 };
 
-export const getDetailBatchService = async (
-  id: number,
-  status?: string
-) => {
-const rows = (await getDetailBatchRepository(id)) as any[];
+export const getDetailBatchService = async (id: number, status?: string) => {
+  const rows = (await getDetailBatchRepository(id)) as any[];
   if (!rows.length) {
     return null;
   }
 
-  const requestedStatus = status
-    ? normalizeFilterStatus(status)
-    : "";
+  const requestedStatus = status ? normalizeFilterStatus(status) : "";
 
   let mahasiswa = rows
     .filter((item: any) => item.id_mahasiswa)
     .map((item: any) => {
-      const rawStatus =
-        item.status ||
-        item.status_validasi ||
-        "proses";
+      const rawStatus = item.status || item.status_validasi || "proses";
 
       const mappedStatus = mapDashboardStatus({
         statusValidasi: rawStatus,
@@ -100,9 +72,7 @@ const rows = (await getDetailBatchRepository(id)) as any[];
       });
 
       return {
-        mahasiswa_code: item.id_mahasiswa
-          ? encodeId("mahasiswa", Number(item.id_mahasiswa))
-          : null,
+        mahasiswa_code: item.mahasiswa_uuid ?? item.uuid ?? null,
 
         id_mahasiswa: item.id_mahasiswa,
 
@@ -133,10 +103,7 @@ const rows = (await getDetailBatchRepository(id)) as any[];
   }
 
   return {
-    batch_code: rows[0].id_batch_upload
-      ? encodeId("batch", Number(rows[0].id_batch_upload))
-      : null,
-
+    batch_code: rows[0].batch_uuid ?? rows[0].uuid ?? null,
     id_batch_upload: rows[0].id_batch_upload,
 
     nomor_batch_upload: rows[0].nomor_batch_upload,
@@ -156,56 +123,51 @@ export const getBatchService = async (
   tahun_lulus?: string,
   periode?: string,
   search?: string,
-  status?: string
+  status?: string,
 ) => {
-  const result =
-    await getBatchRepository(
-      page,
-      limit,
-      tahun_lulus,
-      periode,
-      search,
-      status
-    );
+  const result = await getBatchRepository(
+    page,
+    limit,
+    tahun_lulus,
+    periode,
+    search,
+    status,
+  );
 
   const data = result.data as {
-    id_batch_upload: number;
-    nomor_batch_upload: string;
-    tahun_lulus: number;
-    periode: string;
-    fakultas: string;
-    total_mahasiswa: bigint;
+  id_batch_upload: number;
+  batch_uuid: string | null;
+  uuid?: string | null;
+  nomor_batch_upload: string;
+  tahun_lulus: number;
+  periode: string;
+  fakultas: string;
+  total_mahasiswa: bigint;
+}[];
+
+  const totalRows: any = result.total as {
+    total: bigint;
   }[];
 
-  const totalRows: any =
-    result.total as {
-      total: bigint;
-    }[];
-
-  const totalData =
-    Number(totalRows[0]?.total || 0);
+  const totalData = Number(totalRows[0]?.total || 0);
 
   return {
     data: data.map((item) => ({
-      batch_code: item.id_batch_upload
-        ? encodeId("batch", Number(item.id_batch_upload))
-        : null,
+      batch_code: item.batch_uuid ?? item.uuid ?? null,
 
       nomor_batch_upload: item.nomor_batch_upload,
       tahun_lulus: item.tahun_lulus,
       periode: item.periode,
       fakultas: item.fakultas,
 
-      total_mahasiswa:
-        Number(item.total_mahasiswa),
+      total_mahasiswa: Number(item.total_mahasiswa),
     })),
 
     pagination: {
       page,
       limit,
       total_data: totalData,
-      total_page:
-        Math.ceil(totalData / limit),
+      total_page: Math.ceil(totalData / limit),
     },
   };
 };

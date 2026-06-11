@@ -1,0 +1,110 @@
+export declare function getProfileByMahasiswaCode(mahasiswaCode: string): Promise<{
+    mahasiswa: {
+        mahasiswa_code: string;
+        uuid: string;
+        nim: string;
+        nomor_pokok_mahasiswa: string;
+        nina: string | null;
+        nik: string | null;
+        nomor_seri_ijazah: string | null;
+        pisn: string | null;
+        nama_mahasiswa: string | null;
+        nama: string | null;
+        tempat_lahir: string | null;
+        tanggal_lahir: Date | null;
+        tanggal_lahir_formatted: string | null;
+        tempat_tanggal_lahir: string | null;
+        jenis_kelamin: string | null;
+        email: string | null;
+        telepon: string | null;
+        foto: string | null;
+        program: string | null;
+        program_en: string | null;
+        gelar: string | null;
+        gelar_en: string | null;
+        judul_skripsi: string | null;
+        tahun_masuk: number | null;
+        tahun_lulus: number | null;
+        status_kelulusan: string | null;
+        tanggal_kelulusan: Date | null;
+        tanggal_kelulusan_formatted: string | null;
+        batch_code: string | null;
+    };
+    akademik: {
+        fakultas: string | null;
+        fakultas_en: string | null;
+        program_studi: string | null;
+        program_studi_en: string | null;
+        program: string | null;
+        program_en: string | null;
+        tahun_masuk: number | null;
+        tahun_lulus: number | null;
+        tanggal_kelulusan: Date | null;
+        tanggal_kelulusan_formatted: string | null;
+        nomor_sk_akreditasi: string | null;
+        akreditasi_aipt: string | null;
+        ipk: number;
+        total_sks: number;
+        total_bobot: number;
+        predikat: string;
+        status_kelulusan: string | null;
+    };
+    pejabat: {
+        nama_rektor: string | null;
+        nidn_rektor: string | null;
+        nama_wakil_rektor_1: string | null;
+        nidn_wakil_rektor_1: string | null;
+        nama_tu_rektorat: string | null;
+        nama_dekan: string | null;
+        nidn_dekan: string | null;
+        nama_wakil_dekan_1: string | null;
+        nidn_wakil_dekan_1: string | null;
+        nama_tu_fakultas: string | null;
+        nama_kaprodi: string | null;
+        nidn_kaprodi: string | null;
+    };
+    assets: {
+        ttd_rektor: string | null;
+        paraf_warek: string | null;
+        paraf_katu_rektor: string | null;
+        stempel_rektor: string | null;
+        ttd_dekan: string | null;
+        paraf_wadek: string | null;
+        paraf_katu_fakultas: string | null;
+        stempel_dekan: string | null;
+        paraf_kaprodi: string | null;
+    };
+    dokumen_placeholder: {
+        nomor_dokumen: null;
+        tanggal_terbit: null;
+        tanggal_terbit_formatted: null;
+        qr_code: null;
+        kode_qr: null;
+        url_akses: null;
+    };
+    batch: {
+        batch_code: string | null;
+        nomor_batch_upload: string | null | undefined;
+        nama_file: string | null | undefined;
+        periode: import("@prisma/client").$Enums.periode_enum | null | undefined;
+        tahun_lulus: number | null | undefined;
+    };
+    approval: {
+        status: string;
+        keterangan: string;
+        deskripsi: string;
+        level_validasi: number;
+        catatan: string | null;
+        validated_at: Date | null;
+    };
+    transkrip: {
+        no: number;
+        kode: any;
+        nama: any;
+        hm: any;
+        am: number;
+        k: any;
+        t: number;
+    }[];
+}>;
+//# sourceMappingURL=profile.service.d.ts.map

@@ -6,7 +6,6 @@ import {
   mapDashboardStatus,
 } from "../helpers/dashboard.helper.js";
 
-import { encodeId } from "../helpers/hashid.helper.js";
 
 
 export const getLatestValidationService = async (
@@ -28,29 +27,28 @@ export const getLatestValidationService = async (
       hasVerifiedDocument: Boolean(item.has_verified_document),
     });
 
-    return {
-      mahasiswa_code: item.id_mahasiswa
-     ? encodeId("mahasiswa", Number(item.id_mahasiswa)) : null,
-      nama: item.nama,
-      nim: item.nim,
+   return {
+  mahasiswa_code: item.mahasiswa_uuid ?? null,
 
-      fakultas: item.fakultas || "-",
-      prodi: item.prodi || "-",
+  nama: item.nama,
+  nim: item.nim,
 
-      tahun_lulus: item.tahun_lulus,
+  fakultas: item.fakultas || "-",
+  prodi: item.prodi || "-",
 
-      batch_code: item.id_batch_upload
-      ? encodeId("batch", Number(item.id_batch_upload)) : null,
-      nomor_batch_upload: item.nomor_batch_upload || "-",
-      batch: item.batch || item.nomor_batch_upload || "-",
-      periode: item.periode || "-",
+  tahun_lulus: item.tahun_lulus,
 
-      status,
-      status_asli: item.status,
+  batch_code: item.batch_uuid ?? null,
+  nomor_batch_upload: item.nomor_batch_upload || "-",
+  batch: item.batch || item.nomor_batch_upload || "-",
+  periode: item.periode || "-",
 
-      has_verified_document: Boolean(item.has_verified_document),
-      tanggal_proses: item.tanggal_proses,
-    };
+  status,
+  status_asli: item.status,
+
+  has_verified_document: Boolean(item.has_verified_document),
+  tanggal_proses: item.tanggal_proses,
+};
   });
 
   return {

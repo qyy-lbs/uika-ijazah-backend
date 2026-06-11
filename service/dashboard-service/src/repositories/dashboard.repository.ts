@@ -50,20 +50,21 @@ const query = `
   )
 
   SELECT
-    m.id_mahasiswa,
-    m.nama_mahasiswa AS nama,
-    m.nim,
+  m.id_mahasiswa,
+  m.uuid AS mahasiswa_uuid,
+  m.nama_mahasiswa AS nama,
+  m.nim,
 
-    u.nama_unit AS fakultas,
-    p.nama_prodi AS prodi,
+  u.nama_unit AS fakultas,
+  p.nama_prodi AS prodi,
 
-    COALESCE(m.tahun_lulus, b.tahun_lulus) AS tahun_lulus,
+  COALESCE(m.tahun_lulus, b.tahun_lulus) AS tahun_lulus,
 
-    b.id_batch_upload,
-    b.nomor_batch_upload,
-    b.nomor_batch_upload AS batch,
-    b.periode::text AS periode,
-
+  b.id_batch_upload,
+  b.uuid AS batch_uuid,
+  b.nomor_batch_upload,
+  b.nomor_batch_upload AS batch,
+  b.periode::text AS periode,
     COALESCE(v.status_validasi, 'proses') AS status,
     v.validated_by,
 

@@ -3,8 +3,39 @@ import {
   getBatchDashboardService,
   getBatchService,getDetailBatchService
 } from "../services/batch.service.js";
+import prisma from "../prisma/prisma.js";
 
-import { decodeId } from "../helpers/hashid.helper.js";
+
+const isUuid = (value: string) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+};
+
+const getBatchIdFromCode = async (batchCode?: string) => {
+  if (!batchCode) {
+    throw new Error("Kode batch wajib diisi");
+  }
+
+  if (!isUuid(batchCode)) {
+    throw new Error("Kode batch tidak valid");
+  }
+
+  const batch = await prisma.batch_upload.findFirst({
+    where: {
+      uuid: batchCode,
+    },
+    select: {
+      id_batch_upload: true,
+    },
+  });
+
+  if (!batch) {
+    throw new Error("Batch tidak ditemukan");
+  }
+
+  return batch.id_batch_upload;
+};
 
 export const getBatches = async (
   req: Request,
@@ -83,30 +114,23 @@ export const getDashboardBatch = async (
 
 export const getDetailBatch = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   try {
-   const batchCodeParam = req.params.batchCode || req.params.id;
+    const batchCodeParam = req.params.batchCode || req.params.id;
 
-const batchCode = Array.isArray(batchCodeParam)
-  ? batchCodeParam[0]
-  : batchCodeParam;
+    const batchCode = Array.isArray(batchCodeParam)
+      ? batchCodeParam[0]
+      : batchCodeParam;
 
-if (!batchCode || typeof batchCode !== "string") {
-  return res.status(400).json({
-    success: false,
-    message: "Kode batch wajib diisi",
-  });
-}
-
-const batchId = decodeId("batch", batchCode);
-
-    if (!batchId) {
+    if (!batchCode || typeof batchCode !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Kode batch tidak valid",
+        message: "Kode batch wajib diisi",
       });
     }
+
+    const batchId = await getBatchIdFromCode(batchCode);
 
     const status =
       typeof req.query.status === "string"
@@ -115,7 +139,7 @@ const batchId = decodeId("batch", batchCode);
 
     const data = await getDetailBatchService(
       Number(batchId),
-      status
+      status,
     );
 
     if (!data) {
@@ -134,7 +158,7 @@ const batchId = decodeId("batch", batchCode);
 
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };

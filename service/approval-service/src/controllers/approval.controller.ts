@@ -5,7 +5,7 @@ import { approveBatchForUser } from "../services/approve-batch.service.js";
 import { rejectBatchForUser } from "../services/reject-batch.service.js";
 import { revokeMahasiswaForUser } from "../services/revoke-mahasiswa.service.js";
 import { getLaporanApprovalForUser } from "../services/laporan.service.js";
-import { decodeId } from "../helpers/hashid.helper.js";
+import prisma from "../prisma/prisma.js";
 
 type MahasiswaParams = {
   mahasiswaCode: string;
@@ -15,32 +15,60 @@ type BatchParams = {
   batchCode: string;
 };
 
-const getBatchIdFromCode = (batchCode?: string) => {
+const isUuid = (value: string) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+};
+
+const getBatchIdFromCode = async (batchCode?: string) => {
   if (!batchCode) {
     throw new Error("Kode batch wajib diisi");
   }
 
-  const batchId = decodeId("batch", batchCode);
-
-  if (!batchId || Number.isNaN(Number(batchId))) {
+  if (!isUuid(batchCode)) {
     throw new Error("Kode batch tidak valid");
   }
 
-  return Number(batchId);
+  const batch = await prisma.batch_upload.findFirst({
+    where: {
+      uuid: batchCode,
+    },
+    select: {
+      id_batch_upload: true,
+    },
+  });
+
+  if (!batch) {
+    throw new Error("Batch tidak ditemukan");
+  }
+
+  return batch.id_batch_upload;
 };
 
-const getMahasiswaIdFromCode = (mahasiswaCode?: string) => {
+const getMahasiswaIdFromCode = async (mahasiswaCode?: string) => {
   if (!mahasiswaCode) {
     throw new Error("Kode mahasiswa wajib diisi");
   }
 
-  const mahasiswaId = decodeId("mahasiswa", mahasiswaCode);
-
-  if (!mahasiswaId || Number.isNaN(Number(mahasiswaId))) {
+  if (!isUuid(mahasiswaCode)) {
     throw new Error("Kode mahasiswa tidak valid");
   }
 
-  return Number(mahasiswaId);
+  const mahasiswa = await prisma.mahasiswa.findFirst({
+    where: {
+      uuid: mahasiswaCode,
+    },
+    select: {
+      id_mahasiswa: true,
+    },
+  });
+
+  if (!mahasiswa) {
+    throw new Error("Mahasiswa tidak ditemukan");
+  }
+
+  return mahasiswa.id_mahasiswa;
 };
 
 export async function getPendingBatches(req: Request, res: Response) {
@@ -78,8 +106,8 @@ export async function getBatchDetail(req: Request<BatchParams>, res: Response) {
         message: "User belum terautentikasi",
       });
     }
-
-    const batchId = getBatchIdFromCode(req.params.batchCode);
+   
+    const batchId = await getBatchIdFromCode(req.params.batchCode);
     
     const data = await getBatchDetailForUser(batchId, user);
 
@@ -107,8 +135,8 @@ export async function approveBatch(req: Request<BatchParams>, res: Response) {
       });
     }
 
-  const batchId = getBatchIdFromCode(req.params.batchCode);
-  const data = await approveBatchForUser(batchId, user);
+  const batchId = await getBatchIdFromCode(req.params.batchCode);
+const data = await approveBatchForUser(batchId, user);
 
     return res.json({
       success: true,
@@ -133,7 +161,7 @@ export async function rejectBatch(req: Request<BatchParams>, res: Response) {
       });
     }
 
-    const batchId = getBatchIdFromCode(req.params.batchCode);
+    const batchId = await getBatchIdFromCode(req.params.batchCode);
     const body = req.body as { catatan?: string } | undefined;
     const catatan = body?.catatan;
 
@@ -172,8 +200,7 @@ export async function revokeMahasiswa(
       });
     }
 
-   const mahasiswaId = getMahasiswaIdFromCode(req.params.mahasiswaCode);
-
+    const mahasiswaId = await getMahasiswaIdFromCode(req.params.mahasiswaCode);
     const body = req.body as { catatan?: string } | undefined;
     const catatan = body?.catatan;
 

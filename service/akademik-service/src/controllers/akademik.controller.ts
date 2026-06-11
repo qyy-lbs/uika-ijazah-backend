@@ -1,35 +1,42 @@
 import type { Request, Response } from "express";
-import { getProfileByMahasiswaId } from "../services/profile.service.js";
+import { getProfileByMahasiswaCode } from "../services/profile.service.js";
 import { getTranskripByMahasiswaId } from "../services/transkrip.service.js";
 import { getValidasiAkademikByMahasiswaId } from "../services/validasi-akademik.service.js";
-import { decodeId } from "../helpers/hashid.helper.js";
+import { findMahasiswaByUuid } from "../repositories/mahasiswa.repository.js";
 
 type MahasiswaParams = {
   mahasiswaCode: string;
 };
 
-const getMahasiswaIdFromCode = (mahasiswaCode?: string) => {
+const getMahasiswaIdFromUuid = async (mahasiswaCode?: string) => {
   if (!mahasiswaCode) {
     throw new Error("Kode mahasiswa wajib diisi");
   }
 
-  const mahasiswaId = decodeId("mahasiswa", mahasiswaCode);
+  const mahasiswa = await findMahasiswaByUuid(mahasiswaCode);
 
-  if (!mahasiswaId || Number.isNaN(Number(mahasiswaId))) {
-    throw new Error("Kode mahasiswa tidak valid");
+  if (!mahasiswa) {
+    throw new Error("Mahasiswa tidak ditemukan");
   }
 
-  return Number(mahasiswaId);
+  return mahasiswa.id_mahasiswa;
 };
 
 export async function getProfile(
   req: Request<MahasiswaParams>,
-  res: Response
+  res: Response,
 ) {
   try {
-    const mahasiswaId = getMahasiswaIdFromCode(req.params.mahasiswaCode);
+    const { mahasiswaCode } = req.params;
 
-    const data = await getProfileByMahasiswaId(mahasiswaId);
+    if (!mahasiswaCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Kode mahasiswa wajib diisi",
+      });
+    }
+
+    const data = await getProfileByMahasiswaCode(mahasiswaCode);
 
     return res.json({
       success: true,
@@ -46,10 +53,12 @@ export async function getProfile(
 
 export async function getTranskrip(
   req: Request<MahasiswaParams>,
-  res: Response
+  res: Response,
 ) {
   try {
-    const mahasiswaId = getMahasiswaIdFromCode(req.params.mahasiswaCode);
+    const mahasiswaId = await getMahasiswaIdFromUuid(
+      req.params.mahasiswaCode,
+    );
 
     const data = await getTranskripByMahasiswaId(mahasiswaId);
 
@@ -68,10 +77,12 @@ export async function getTranskrip(
 
 export async function getValidasiAkademik(
   req: Request<MahasiswaParams>,
-  res: Response
+  res: Response,
 ) {
   try {
-    const mahasiswaId = getMahasiswaIdFromCode(req.params.mahasiswaCode);
+    const mahasiswaId = await getMahasiswaIdFromUuid(
+      req.params.mahasiswaCode,
+    );
 
     const data = await getValidasiAkademikByMahasiswaId(mahasiswaId);
 

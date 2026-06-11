@@ -11,7 +11,6 @@ import {
 } from "../repositories/validasi.repository.js";
 import { VALIDATION_STATUS } from "../constants/status.constant.js";
 import { createLogAktivitas } from "../repositories/log.repository.js";
-import { encodeId } from "../helpers/hashid.helper.js";
 
 function hasStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
@@ -145,14 +144,12 @@ export async function revokeMahasiswaForUser(
 
   return {
     mahasiswa: {
-      mahasiswa_code: encodeId("mahasiswa", Number(mahasiswa.id_mahasiswa)),
+      mahasiswa_code: mahasiswa.uuid,
       nim: mahasiswa.nim,
       nama_mahasiswa: mahasiswa.nama_mahasiswa,
       program_studi: mahasiswa.prodi?.nama_prodi,
       fakultas: mahasiswa.prodi?.unit?.nama_unit,
-      batch_code: mahasiswa.id_batch_upload
-        ? encodeId("batch", Number(mahasiswa.id_batch_upload))
-        : null,
+      batch_code: mahasiswa.batch_upload?.uuid ?? null,
       nomor_batch_upload: mahasiswa.batch_upload?.nomor_batch_upload,
     },
     approval: {

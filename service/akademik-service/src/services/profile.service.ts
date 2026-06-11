@@ -1,6 +1,5 @@
-import { findMahasiswaById } from "../repositories/mahasiswa.repository.js";
+import { findMahasiswaByUuid } from "../repositories/mahasiswa.repository.js";
 import { getTranskripByMahasiswaId } from "./transkrip.service.js";
-import { encodeId } from "../helpers/hashid.helper.js";
 
 const APPROVAL_LEVEL_LABEL: Record<number, string> = {
   1: "TU Fakultas",
@@ -124,8 +123,10 @@ type ValidasiProfileItem = {
   catatan: string | null;
   validated_at: Date | null;
 };
-export async function getProfileByMahasiswaId(mahasiswaId: number) {
-  const mahasiswa = await findMahasiswaById(mahasiswaId);
+
+
+export async function getProfileByMahasiswaCode(mahasiswaCode: string) {
+  const mahasiswa = await findMahasiswaByUuid(mahasiswaCode);
 
   if (!mahasiswa) {
     throw new Error("Mahasiswa tidak ditemukan");
@@ -153,7 +154,7 @@ export async function getProfileByMahasiswaId(mahasiswaId: number) {
 
   return {
     mahasiswa: {
-      mahasiswa_code: encodeId("mahasiswa", Number(mahasiswa.id_mahasiswa)),
+      mahasiswa_code: mahasiswa.uuid,
       uuid: mahasiswa.uuid,
 
       nim: mahasiswa.nim,
@@ -197,7 +198,8 @@ export async function getProfileByMahasiswaId(mahasiswaId: number) {
         mahasiswa.tanggal_kelulusan,
       ),
 
-   batch_code: mahasiswa.id_batch_upload ? encodeId("batch", Number(mahasiswa.id_batch_upload))  : null,
+      batch_code: mahasiswa.batch_upload?.uuid ?? null,
+
 
 },
 
@@ -279,13 +281,13 @@ export async function getProfileByMahasiswaId(mahasiswaId: number) {
       url_akses: null,
     },
 
-    batch: {
-      batch_code: mahasiswa.batch_upload?.id_batch_upload ? encodeId("batch", Number(mahasiswa.batch_upload.id_batch_upload)) : null,
-      nomor_batch_upload: mahasiswa.batch_upload?.nomor_batch_upload,
-      nama_file: mahasiswa.batch_upload?.nama_file,
-      periode: mahasiswa.batch_upload?.periode,
-      tahun_lulus: mahasiswa.batch_upload?.tahun_lulus,
-    },
+   batch: {
+  batch_code: mahasiswa.batch_upload?.uuid ?? null,
+  nomor_batch_upload: mahasiswa.batch_upload?.nomor_batch_upload,
+  nama_file: mahasiswa.batch_upload?.nama_file,
+  periode: mahasiswa.batch_upload?.periode,
+  tahun_lulus: mahasiswa.batch_upload?.tahun_lulus,
+},
 
     approval,
 

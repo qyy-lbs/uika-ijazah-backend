@@ -14,11 +14,13 @@ export const getBatchDashboardRepository = async () => {
     mahasiswa_status AS (
       SELECT
         b.id_batch_upload,
+        b.uuid AS batch_uuid,
         b.nomor_batch_upload,
         b.tahun_lulus,
         b.periode,
 
         m.id_mahasiswa,
+        b.uuid AS batch_uuid,
 
         COALESCE(v.status_validasi, 'proses') AS status_validasi,
 
@@ -40,10 +42,11 @@ export const getBatchDashboardRepository = async () => {
     )
 
     SELECT
-      id_batch_upload,
-      nomor_batch_upload,
-      tahun_lulus,
-      periode,
+  id_batch_upload,
+  batch_uuid,
+  nomor_batch_upload,
+  tahun_lulus,
+  periode,
 
       COUNT(DISTINCT id_mahasiswa) AS total_mahasiswa,
 
@@ -95,10 +98,11 @@ export const getBatchDashboardRepository = async () => {
     FROM mahasiswa_status
 
     GROUP BY
-      id_batch_upload,
-      nomor_batch_upload,
-      tahun_lulus,
-      periode
+  id_batch_upload,
+  batch_uuid,
+  nomor_batch_upload,
+  tahun_lulus,
+  periode
 
     ORDER BY id_batch_upload DESC;
   `);
@@ -116,14 +120,16 @@ export const getDetailBatchRepository = async (id_batch_upload: number) => {
     )
 
     SELECT
-      b.id_batch_upload,
-      b.nomor_batch_upload,
-      b.tahun_lulus,
-      b.periode::text AS periode,
+  b.id_batch_upload,
+  b.uuid AS batch_uuid,
+  b.nomor_batch_upload,
+  b.tahun_lulus,
+  b.periode::text AS periode,
 
-      m.id_mahasiswa,
-      m.nama_mahasiswa AS nama,
-      m.nim,
+  m.id_mahasiswa,
+  m.uuid AS mahasiswa_uuid,
+  m.nama_mahasiswa AS nama,
+  m.nim,
 
       p.nama_prodi AS prodi,
       p.nama_prodi AS program_studi,
@@ -286,10 +292,11 @@ export const getBatchRepository = async (
     )
 
     SELECT
-      b.id_batch_upload,
-      b.nomor_batch_upload,
-      b.tahun_lulus,
-      b.periode::text AS periode,
+  b.id_batch_upload,
+  b.uuid AS batch_uuid,
+  b.nomor_batch_upload,
+  b.tahun_lulus,
+  b.periode::text AS periode,
 
       COALESCE(
         STRING_AGG(DISTINCT u.nama_unit, ', '),
@@ -315,10 +322,11 @@ export const getBatchRepository = async (
     ${whereQuery}
 
     GROUP BY
-      b.id_batch_upload,
-      b.nomor_batch_upload,
-      b.tahun_lulus,
-      b.periode
+  b.id_batch_upload,
+  b.uuid,
+  b.nomor_batch_upload,
+  b.tahun_lulus,
+  b.periode
 
     HAVING COUNT(DISTINCT m.id_mahasiswa) > 0
 

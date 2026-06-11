@@ -2,7 +2,6 @@ import { findMahasiswaById } from "../repositories/mahasiswa.repository.js";
 import { findNilaiByMahasiswaId } from "../repositories/transkrip.repository.js";
 import { hitungPredikat } from "../utils/predikat.util.js";
 import { generateNilaiDummyIfNeeded } from "./generate-nilai-dummy.service.js";
-import { encodeId } from "../helpers/hashid.helper.js";
 
 export async function getTranskripByMahasiswaId(mahasiswaId: number) {
   const mahasiswa = await findMahasiswaById(mahasiswaId);
@@ -54,7 +53,7 @@ export async function getTranskripByMahasiswaId(mahasiswaId: number) {
     : hitungPredikat(ipkFinal);
 
   return {
-    mahasiswa_code: encodeId("mahasiswa", Number(mahasiswa.id_mahasiswa)),
+    mahasiswa_code: mahasiswa.uuid,
 
     nim: mahasiswa.nim,
     nama_mahasiswa: mahasiswa.nama_mahasiswa,
