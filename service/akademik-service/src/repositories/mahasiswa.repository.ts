@@ -24,3 +24,28 @@ export async function findMahasiswaByNim(nim: string) {
     },
   });
 }
+
+export async function findMahasiswaById(id_mahasiswa: number) {
+  return prisma.mahasiswa.findUnique({
+    where: {
+      id_mahasiswa,
+    },
+    include: {
+      prodi: {
+        include: {
+          unit: {
+            include: {
+              unit: true,
+            },
+          },
+        },
+      },
+      batch_upload: true,
+      validasi: {
+        orderBy: {
+          level_validasi: "asc",
+        },
+      },
+    },
+  });
+}

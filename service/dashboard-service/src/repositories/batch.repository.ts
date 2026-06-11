@@ -2,75 +2,124 @@ import prisma from "../prisma/prisma.js";
 
 export const getBatchDashboardRepository = async () => {
   return await prisma.$queryRawUnsafe(`
-    SELECT
+    WITH latest_validasi AS (
+      SELECT DISTINCT ON (id_mahasiswa)
+        id_mahasiswa,
+        status_validasi,
+        created_at
+      FROM validasi
+      ORDER BY id_mahasiswa, created_at DESC
+    ),
+
+    mahasiswa_status AS (
+      SELECT
         b.id_batch_upload,
         b.nomor_batch_upload,
         b.tahun_lulus,
         b.periode,
 
-        COUNT(DISTINCT m.id_mahasiswa) AS total_mahasiswa,
+        m.id_mahasiswa,
 
-        COUNT(
-            CASE
-                WHEN m.id_mahasiswa IS NOT NULL
-                AND v.status_validasi IS NULL
-                THEN 1
-            END
-        ) AS proses,
+        COALESCE(v.status_validasi, 'proses') AS status_validasi,
 
-        COUNT(
-            CASE
-                WHEN v.status_validasi = 'rejected'
-                THEN 1
-            END
-        ) AS rejected,
+        EXISTS (
+          SELECT 1
+          FROM dokumen d
+          WHERE d.id_mahasiswa = m.id_mahasiswa
+            AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+            AND d.is_verified = true
+        ) AS has_verified_document
 
-        COUNT(
-            CASE
-                WHEN v.status_validasi = 'revoked'
-                THEN 1
-            END
-        ) AS revoked,
+      FROM batch_upload b
 
-        COUNT(
-            CASE
-                WHEN v.status_validasi = 'approved'
-                THEN 1
-            END
-        ) AS terbit
-
-    FROM batch_upload b
-
-    LEFT JOIN mahasiswa m
+      LEFT JOIN mahasiswa m
         ON m.id_batch_upload = b.id_batch_upload
 
-    LEFT JOIN (
-        SELECT DISTINCT ON (id_mahasiswa)
-            id_mahasiswa,
-            status_validasi,
-            created_at
-        FROM validasi
-        ORDER BY id_mahasiswa, created_at DESC
-    ) v
+      LEFT JOIN latest_validasi v
         ON v.id_mahasiswa = m.id_mahasiswa
+    )
+
+    SELECT
+      id_batch_upload,
+      nomor_batch_upload,
+      tahun_lulus,
+      periode,
+
+      COUNT(DISTINCT id_mahasiswa) AS total_mahasiswa,
+
+      COUNT(
+        CASE
+          WHEN id_mahasiswa IS NOT NULL
+            AND LOWER(TRIM(status_validasi)) NOT IN (
+              'reject',
+              'rejected',
+              'ditolak',
+              'revoke',
+              'revoked',
+              'dicabut'
+            )
+            AND has_verified_document = false
+          THEN 1
+        END
+      ) AS proses,
+
+      COUNT(
+        CASE
+          WHEN LOWER(TRIM(status_validasi)) IN (
+            'reject',
+            'rejected',
+            'ditolak'
+          )
+          THEN 1
+        END
+      ) AS rejected,
+
+      COUNT(
+        CASE
+          WHEN LOWER(TRIM(status_validasi)) IN (
+            'revoke',
+            'revoked',
+            'dicabut'
+          )
+          THEN 1
+        END
+      ) AS revoked,
+
+      COUNT(
+        CASE
+          WHEN has_verified_document = true
+          THEN 1
+        END
+      ) AS terbit
+
+    FROM mahasiswa_status
 
     GROUP BY
-        b.id_batch_upload,
-        b.nomor_batch_upload,
-        b.tahun_lulus,
-        b.periode
+      id_batch_upload,
+      nomor_batch_upload,
+      tahun_lulus,
+      periode
 
-    ORDER BY b.id_batch_upload DESC;
+    ORDER BY id_batch_upload DESC;
   `);
 };
 
 export const getDetailBatchRepository = async (id_batch_upload: number) => {
   return await prisma.$queryRawUnsafe(`
+    WITH latest_validasi AS (
+      SELECT DISTINCT ON (id_mahasiswa)
+        id_mahasiswa,
+        status_validasi,
+        created_at
+      FROM validasi
+      ORDER BY id_mahasiswa, created_at DESC
+    )
+
     SELECT
       b.id_batch_upload,
       b.nomor_batch_upload,
       b.tahun_lulus,
-      b.periode,
+      b.periode::text AS periode,
 
       m.id_mahasiswa,
       m.nama_mahasiswa AS nama,
@@ -81,7 +130,15 @@ export const getDetailBatchRepository = async (id_batch_upload: number) => {
 
       u.nama_unit AS fakultas,
 
-      COALESCE(v.status_validasi, 'proses') AS status
+      COALESCE(v.status_validasi, 'proses') AS status,
+
+      EXISTS (
+        SELECT 1
+        FROM dokumen d
+        WHERE d.id_mahasiswa = m.id_mahasiswa
+          AND LOWER(TRIM(d.jenis_dokumen::text)) = 'ijazah'
+          AND d.is_verified = true
+      ) AS has_verified_document
 
     FROM batch_upload b
 
@@ -94,17 +151,12 @@ export const getDetailBatchRepository = async (id_batch_upload: number) => {
     LEFT JOIN unit u
       ON u.id_unit = p.id_unit
 
-    LEFT JOIN (
-      SELECT DISTINCT ON (id_mahasiswa)
-        id_mahasiswa,
-        status_validasi,
-        created_at
-      FROM validasi
-      ORDER BY id_mahasiswa, created_at DESC
-    ) v
+    LEFT JOIN latest_validasi v
       ON v.id_mahasiswa = m.id_mahasiswa
 
     WHERE b.id_batch_upload = ${id_batch_upload}
+
+    ORDER BY m.nama_mahasiswa ASC
   `);
 };
 

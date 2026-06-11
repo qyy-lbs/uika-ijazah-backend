@@ -2,6 +2,7 @@ import { findAllBatchesWithMahasiswa } from "../repositories/batch.repository.js
 import {getApprovalLevelByRole,isFacultyValidator,} from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
 import { VALIDATION_STATUS } from "../constants/status.constant.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
 function hasStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
@@ -92,8 +93,7 @@ export async function getPendingBatchesForUser(user: AuthUser) {
       );
 
       return {
-        id_batch_upload: batch.id_batch_upload,
-        uuid: batch.uuid,
+        batch_code: batch.id_batch_upload ? encodeId("batch", Number(batch.id_batch_upload)) : null,
         nomor_batch_upload: batch.nomor_batch_upload,
         nama_file: batch.nama_file,
         periode: batch.periode,

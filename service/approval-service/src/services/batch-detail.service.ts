@@ -5,6 +5,7 @@ import {
 } from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
 import { VALIDATION_STATUS } from "../constants/status.constant.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
 function getStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
@@ -88,7 +89,7 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
     }));
 
     return {
-      id_mahasiswa: mhs.id_mahasiswa,
+      mahasiswa_code: encodeId("mahasiswa", Number(mhs.id_mahasiswa)),
       nim: mhs.nim,
       nama_mahasiswa: mhs.nama_mahasiswa,
       program_studi: mhs.prodi?.nama_prodi,
@@ -101,7 +102,7 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
       can_validate: canValidateAtLevel(validasiList, approvalLevel),
 
       validasi: mhs.validasi.map((v) => ({
-        id_validasi: v.id_validasi,
+        validasi_code: encodeId("validasi", Number(v.id_validasi)),
         level_validasi: v.level_validasi,
         status_validasi: v.status_validasi,
         catatan: v.catatan,
@@ -115,7 +116,7 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
 
   return {
     batch: {
-      id_batch_upload: batch.id_batch_upload,
+      batch_code: encodeId("batch", Number(batch.id_batch_upload)),
       uuid: batch.uuid,
       nomor_batch_upload: batch.nomor_batch_upload,
       nama_file: batch.nama_file,

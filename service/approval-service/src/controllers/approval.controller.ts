@@ -5,14 +5,44 @@ import { approveBatchForUser } from "../services/approve-batch.service.js";
 import { rejectBatchForUser } from "../services/reject-batch.service.js";
 import { revokeMahasiswaForUser } from "../services/revoke-mahasiswa.service.js";
 import { getLaporanApprovalForUser } from "../services/laporan.service.js";
+import { decodeId } from "../helpers/hashid.helper.js";
 
-type NimParams = {
-  nim: string;
+type MahasiswaParams = {
+  mahasiswaCode: string;
 };
 
 type BatchParams = {
-  batchId: string;
+  batchCode: string;
 };
+
+const getBatchIdFromCode = (batchCode?: string) => {
+  if (!batchCode) {
+    throw new Error("Kode batch wajib diisi");
+  }
+
+  const batchId = decodeId("batch", batchCode);
+
+  if (!batchId || Number.isNaN(Number(batchId))) {
+    throw new Error("Kode batch tidak valid");
+  }
+
+  return Number(batchId);
+};
+
+const getMahasiswaIdFromCode = (mahasiswaCode?: string) => {
+  if (!mahasiswaCode) {
+    throw new Error("Kode mahasiswa wajib diisi");
+  }
+
+  const mahasiswaId = decodeId("mahasiswa", mahasiswaCode);
+
+  if (!mahasiswaId || Number.isNaN(Number(mahasiswaId))) {
+    throw new Error("Kode mahasiswa tidak valid");
+  }
+
+  return Number(mahasiswaId);
+};
+
 export async function getPendingBatches(req: Request, res: Response) {
   try {
     const user = req.user;
@@ -38,7 +68,7 @@ export async function getPendingBatches(req: Request, res: Response) {
     });
   }
 }
-export async function getBatchDetail(req: Request, res: Response) {
+export async function getBatchDetail(req: Request<BatchParams>, res: Response) {
   try {
     const user = req.user;
 
@@ -49,15 +79,8 @@ export async function getBatchDetail(req: Request, res: Response) {
       });
     }
 
-    const batchId = Number(req.params.batchId);
-
-    if (!batchId || Number.isNaN(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID batch tidak valid",
-      });
-    }
-
+    const batchId = getBatchIdFromCode(req.params.batchCode);
+    
     const data = await getBatchDetailForUser(batchId, user);
 
     return res.json({
@@ -73,7 +96,7 @@ export async function getBatchDetail(req: Request, res: Response) {
   }
 }
 
-export async function approveBatch(req: Request, res: Response) {
+export async function approveBatch(req: Request<BatchParams>, res: Response) {
   try {
     const user = req.user;
 
@@ -84,16 +107,8 @@ export async function approveBatch(req: Request, res: Response) {
       });
     }
 
-    const batchId = Number(req.params.batchId);
-
-    if (!batchId || Number.isNaN(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID batch tidak valid",
-      });
-    }
-
-    const data = await approveBatchForUser(batchId, user);
+  const batchId = getBatchIdFromCode(req.params.batchCode);
+  const data = await approveBatchForUser(batchId, user);
 
     return res.json({
       success: true,
@@ -107,7 +122,7 @@ export async function approveBatch(req: Request, res: Response) {
     });
   }
 }
-export async function rejectBatch(req: Request, res: Response) {
+export async function rejectBatch(req: Request<BatchParams>, res: Response) {
   try {
     const user = req.user;
 
@@ -118,15 +133,7 @@ export async function rejectBatch(req: Request, res: Response) {
       });
     }
 
-    const batchId = Number(req.params.batchId);
-
-    if (!batchId || Number.isNaN(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID batch tidak valid",
-      });
-    }
-
+    const batchId = getBatchIdFromCode(req.params.batchCode);
     const body = req.body as { catatan?: string } | undefined;
     const catatan = body?.catatan;
 
@@ -152,7 +159,7 @@ export async function rejectBatch(req: Request, res: Response) {
   }
 }
 export async function revokeMahasiswa(
-  req: Request<NimParams>,
+  req: Request<MahasiswaParams>,
   res: Response
 ) {
   try {
@@ -165,14 +172,7 @@ export async function revokeMahasiswa(
       });
     }
 
-    const nim = req.params.nim;
-
-    if (!nim) {
-      return res.status(400).json({
-        success: false,
-        message: "NIM wajib diisi",
-      });
-    }
+   const mahasiswaId = getMahasiswaIdFromCode(req.params.mahasiswaCode);
 
     const body = req.body as { catatan?: string } | undefined;
     const catatan = body?.catatan;
@@ -184,7 +184,7 @@ export async function revokeMahasiswa(
       });
     }
 
-    const data = await revokeMahasiswaForUser(nim, user, catatan);
+    const data = await revokeMahasiswaForUser(mahasiswaId, user, catatan);
 
     return res.json({
       success: true,

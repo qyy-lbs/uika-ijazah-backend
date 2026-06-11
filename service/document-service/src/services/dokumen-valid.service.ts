@@ -2,6 +2,7 @@ import {
   findBatchesWithValidDocuments,
   findBatchWithValidDocumentsById,
 } from "../repositories/dokumen-valid.repository.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
 type MahasiswaWithDokumen = Awaited<
   ReturnType<typeof findBatchesWithValidDocuments>
@@ -85,6 +86,7 @@ export async function getValidDocumentBatches(query: {
         null;
 
       return {
+        batch_code: encodeId("batch", Number(batch.id_batch_upload)),
         id: batch.id_batch_upload,
         id_batch_upload: batch.id_batch_upload,
         batch:
@@ -155,6 +157,7 @@ export async function getValidDocumentBatchDetail(
       const { ijazah, transkrip } = getPublishedDocuments(mhs);
 
       return {
+        mahasiswa_code: encodeId("mahasiswa", Number(mhs.id_mahasiswa)),
         id_mahasiswa: mhs.id_mahasiswa,
         nama: mhs.nama_mahasiswa,
         nama_mahasiswa: mhs.nama_mahasiswa,
@@ -168,6 +171,7 @@ export async function getValidDocumentBatchDetail(
 
         ijazah: ijazah
           ? {
+              dokumen_code: encodeId("dokumen", Number(ijazah.id_dokumen)),
               id_dokumen: ijazah.id_dokumen,
               nomor_dokumen: ijazah.nomor_dokumen,
               tanggal_terbit: ijazah.tanggal_terbit,
@@ -183,6 +187,7 @@ export async function getValidDocumentBatchDetail(
 
         transkrip: transkrip
           ? {
+              dokumen_code: encodeId("dokumen", Number(transkrip.id_dokumen)),
               id_dokumen: transkrip.id_dokumen,
               nomor_dokumen: transkrip.nomor_dokumen,
               tanggal_terbit: transkrip.tanggal_terbit,
@@ -215,6 +220,7 @@ export async function getValidDocumentBatchDetail(
 
   return {
     batch: {
+      batch_code: encodeId("batch", Number(batch.id_batch_upload)),
       id: batch.id_batch_upload,
       id_batch_upload: batch.id_batch_upload,
       batch:

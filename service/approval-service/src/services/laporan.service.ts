@@ -6,6 +6,7 @@ import {
   REPORT_STATUS,
   VALIDATION_STATUS,
 } from "../constants/status.constant.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
 const APPROVAL_LEVEL_LABEL: Record<number, string> = {
   1: "TU Fakultas",
@@ -170,7 +171,8 @@ export async function getLaporanApprovalForUser(
     const tanggal = statusInfo.tanggal ?? mhs.created_at;
 
     return {
-      id_mahasiswa: mhs.id_mahasiswa,
+      mahasiswa_code: encodeId("mahasiswa", Number(mhs.id_mahasiswa)),
+      batch_code: mhs.id_batch_upload ? encodeId("batch", Number(mhs.id_batch_upload)) : null,
       nama: mhs.nama_mahasiswa,
       nim: mhs.nim,
       program_studi: mhs.prodi?.nama_prodi,

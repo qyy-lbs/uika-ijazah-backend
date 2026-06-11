@@ -1,5 +1,6 @@
-import { findMahasiswaByNim } from "../repositories/mahasiswa.repository.js";
-import { getTranskripByNim } from "./transkrip.service.js";
+import { findMahasiswaById } from "../repositories/mahasiswa.repository.js";
+import { getTranskripByMahasiswaId } from "./transkrip.service.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
 const APPROVAL_LEVEL_LABEL: Record<number, string> = {
   1: "TU Fakultas",
@@ -123,14 +124,14 @@ type ValidasiProfileItem = {
   catatan: string | null;
   validated_at: Date | null;
 };
-export async function getProfileByNim(nim: string) {
-  const mahasiswa = await findMahasiswaByNim(nim);
+export async function getProfileByMahasiswaId(mahasiswaId: number) {
+  const mahasiswa = await findMahasiswaById(mahasiswaId);
 
   if (!mahasiswa) {
     throw new Error("Mahasiswa tidak ditemukan");
   }
 
-  const transkrip = await getTranskripByNim(nim);
+  const transkrip = await getTranskripByMahasiswaId(mahasiswa.id_mahasiswa);
 
   const fakultasUnit = mahasiswa.prodi?.unit ?? null;
   const universitasUnit = fakultasUnit?.unit ?? null;
@@ -152,7 +153,7 @@ export async function getProfileByNim(nim: string) {
 
   return {
     mahasiswa: {
-      id_mahasiswa: mahasiswa.id_mahasiswa,
+      mahasiswa_code: encodeId("mahasiswa", Number(mahasiswa.id_mahasiswa)),
       uuid: mahasiswa.uuid,
 
       nim: mahasiswa.nim,
@@ -196,8 +197,9 @@ export async function getProfileByNim(nim: string) {
         mahasiswa.tanggal_kelulusan,
       ),
 
-      id_batch_upload: mahasiswa.id_batch_upload,
-    },
+   batch_code: mahasiswa.id_batch_upload ? encodeId("batch", Number(mahasiswa.id_batch_upload))  : null,
+
+},
 
     akademik: {
       fakultas: fakultasUnit?.nama_unit ?? null,
@@ -278,7 +280,7 @@ export async function getProfileByNim(nim: string) {
     },
 
     batch: {
-      id_batch_upload: mahasiswa.batch_upload?.id_batch_upload,
+      batch_code: mahasiswa.batch_upload?.id_batch_upload ? encodeId("batch", Number(mahasiswa.batch_upload.id_batch_upload)) : null,
       nomor_batch_upload: mahasiswa.batch_upload?.nomor_batch_upload,
       nama_file: mahasiswa.batch_upload?.nama_file,
       periode: mahasiswa.batch_upload?.periode,

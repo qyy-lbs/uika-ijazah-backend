@@ -4,7 +4,15 @@ import {
   getBatchRepository,
 } from "../repositories/batch.repository.js";
 
-const normalizeStatus = (status?: string | null) => {
+import {
+  mapDashboardStatus,
+} from "../helpers/dashboard.helper.js";
+
+import {
+  encodeId,
+} from "../helpers/hashid.helper.js";
+
+const normalizeFilterStatus = (status?: string | null) => {
   const value = String(status || "")
     .toLowerCase()
     .trim();
@@ -34,10 +42,10 @@ const normalizeStatus = (status?: string | null) => {
   }
 
   if (
-    value === "approved" ||
-    value === "approve" ||
     value === "proses" ||
-    value === "pending"
+    value === "pending" ||
+    value === "approved" ||
+    value === "approve"
   ) {
     return "proses";
   }
@@ -49,7 +57,10 @@ export const getBatchDashboardService = async () => {
   const rows = await getBatchDashboardRepository();
 
   return (rows as any[]).map((item) => ({
-    id_batch_upload: item.id_batch_upload,
+    batch_code: item.id_batch_upload
+      ? encodeId("batch", Number(item.id_batch_upload))
+      : null,
+
     nomor_batch_upload: item.nomor_batch_upload,
     tahun_lulus: item.tahun_lulus,
     periode: item.periode,
@@ -66,13 +77,14 @@ export const getDetailBatchService = async (
   id: number,
   status?: string
 ) => {
-  const rows: any = await getDetailBatchRepository(id);
-
+const rows = (await getDetailBatchRepository(id)) as any[];
   if (!rows.length) {
     return null;
   }
 
-  const requestedStatus = normalizeStatus(status);
+  const requestedStatus = status
+    ? normalizeFilterStatus(status)
+    : "";
 
   let mahasiswa = rows
     .filter((item: any) => item.id_mahasiswa)
@@ -82,9 +94,16 @@ export const getDetailBatchService = async (
         item.status_validasi ||
         "proses";
 
-      const mappedStatus = normalizeStatus(rawStatus);
+      const mappedStatus = mapDashboardStatus({
+        statusValidasi: rawStatus,
+        hasVerifiedDocument: Boolean(item.has_verified_document),
+      });
 
       return {
+        mahasiswa_code: item.id_mahasiswa
+          ? encodeId("mahasiswa", Number(item.id_mahasiswa))
+          : null,
+
         id_mahasiswa: item.id_mahasiswa,
 
         nama: item.nama,
@@ -102,21 +121,31 @@ export const getDetailBatchService = async (
 
         status: mappedStatus,
         status_asli: rawStatus,
+
+        has_verified_document: Boolean(item.has_verified_document),
       };
     });
 
-  if (status) {
+  if (requestedStatus) {
     mahasiswa = mahasiswa.filter((mhs: any) => {
-      return mhs.status === requestedStatus;
+      return normalizeFilterStatus(mhs.status) === requestedStatus;
     });
   }
 
   return {
+    batch_code: rows[0].id_batch_upload
+      ? encodeId("batch", Number(rows[0].id_batch_upload))
+      : null,
+
     id_batch_upload: rows[0].id_batch_upload,
+
     nomor_batch_upload: rows[0].nomor_batch_upload,
     tahun_lulus: rows[0].tahun_lulus,
     periode: rows[0].periode,
     fakultas: rows[0].fakultas || "-",
+
+    total_mahasiswa: mahasiswa.length,
+
     mahasiswa,
   };
 };
@@ -158,7 +187,15 @@ export const getBatchService = async (
 
   return {
     data: data.map((item) => ({
-      ...item,
+      batch_code: item.id_batch_upload
+        ? encodeId("batch", Number(item.id_batch_upload))
+        : null,
+
+      nomor_batch_upload: item.nomor_batch_upload,
+      tahun_lulus: item.tahun_lulus,
+      periode: item.periode,
+      fakultas: item.fakultas,
+
       total_mahasiswa:
         Number(item.total_mahasiswa),
     })),

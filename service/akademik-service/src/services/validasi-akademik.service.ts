@@ -1,8 +1,9 @@
-import { findMahasiswaByNim } from "../repositories/mahasiswa.repository.js";
+import { findMahasiswaById } from "../repositories/mahasiswa.repository.js";
 import { findNilaiByMahasiswaId } from "../repositories/transkrip.repository.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
-export async function getValidasiAkademikByNim(nim: string) {
-  const mahasiswa = await findMahasiswaByNim(nim);
+export async function getValidasiAkademikByMahasiswaId(mahasiswaId: number) {
+  const mahasiswa = await findMahasiswaById(mahasiswaId);
 
   if (!mahasiswa) {
     throw new Error("Mahasiswa tidak ditemukan");
@@ -35,6 +36,8 @@ export async function getValidasiAkademikByNim(nim: string) {
   const isValid = Object.values(checks).every(Boolean);
 
   return {
+    mahasiswa_code: encodeId("mahasiswa", Number(mahasiswa.id_mahasiswa)),
+
     nim: mahasiswa.nim,
     nama_mahasiswa: mahasiswa.nama_mahasiswa,
     is_valid: isValid,

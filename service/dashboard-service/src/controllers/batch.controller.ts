@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-
 import {
   getBatchDashboardService,
   getBatchService,getDetailBatchService
 } from "../services/batch.service.js";
 
+import { decodeId } from "../helpers/hashid.helper.js";
 
 export const getBatches = async (
   req: Request,
@@ -85,33 +85,56 @@ export const getDetailBatch = async (
   req: Request,
   res: Response
 ) => {
-
   try {
+   const batchCodeParam = req.params.batchCode || req.params.id;
 
-    const id = Number(req.params.id);
+const batchCode = Array.isArray(batchCodeParam)
+  ? batchCodeParam[0]
+  : batchCodeParam;
+
+if (!batchCode || typeof batchCode !== "string") {
+  return res.status(400).json({
+    success: false,
+    message: "Kode batch wajib diisi",
+  });
+}
+
+const batchId = decodeId("batch", batchCode);
+
+    if (!batchId) {
+      return res.status(400).json({
+        success: false,
+        message: "Kode batch tidak valid",
+      });
+    }
 
     const status =
-      req.query.status as string;
+      typeof req.query.status === "string"
+        ? req.query.status
+        : "";
 
-    const data =
-      await getDetailBatchService(
-        id,
-        status
-      );
+    const data = await getDetailBatchService(
+      Number(batchId),
+      status
+    );
 
-    res.status(200).json({
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Batch tidak ditemukan",
+      });
+    }
+
+    return res.status(200).json({
       success: true,
       data,
     });
-
   } catch (error) {
-
     console.log(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal Server Error",
     });
-
   }
 };

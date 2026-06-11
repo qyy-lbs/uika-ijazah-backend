@@ -6,6 +6,9 @@ import {
   mapDashboardStatus,
 } from "../helpers/dashboard.helper.js";
 
+import { encodeId } from "../helpers/hashid.helper.js";
+
+
 export const getLatestValidationService = async (
   page: number,
   limit: number,
@@ -26,7 +29,8 @@ export const getLatestValidationService = async (
     });
 
     return {
-      id_mahasiswa: item.id_mahasiswa,
+      mahasiswa_code: item.id_mahasiswa
+     ? encodeId("mahasiswa", Number(item.id_mahasiswa)) : null,
       nama: item.nama,
       nim: item.nim,
 
@@ -35,8 +39,9 @@ export const getLatestValidationService = async (
 
       tahun_lulus: item.tahun_lulus,
 
-      id_batch_upload: item.id_batch_upload,
-      nomor_batch_upload: item.nomor_batch_upload,
+      batch_code: item.id_batch_upload
+      ? encodeId("batch", Number(item.id_batch_upload)) : null,
+      nomor_batch_upload: item.nomor_batch_upload || "-",
       batch: item.batch || item.nomor_batch_upload || "-",
       periode: item.periode || "-",
 
@@ -44,6 +49,7 @@ export const getLatestValidationService = async (
       status_asli: item.status,
 
       has_verified_document: Boolean(item.has_verified_document),
+      tanggal_proses: item.tanggal_proses,
     };
   });
 

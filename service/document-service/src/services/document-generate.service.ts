@@ -8,6 +8,7 @@ import { renderDocumentHtml } from "./document-html-renderer.service.js";
 import { renderHtmlToPdf } from "./pdf-renderer.service.js";
 import { getDocumentPageConfig } from "../utils/document-page-config.util.js";
 import { generateQrForDocument } from "../clients/qr.client.js";
+import { encodeId } from "../helpers/hashid.helper.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
@@ -113,13 +114,20 @@ async function generateSingleDocument(params: {
   };
 }
 
-export async function generateDocumentsByNim(nim: string) {
-  const profile = await getAkademikProfileByNim(nim);
+export async function generateDocumentsByNim(
+  nim: string,
+  mahasiswaCode?: string,
+  mahasiswaId?: number
+) {
+  const profile = await getAkademikProfileByNim(nim, mahasiswaCode);
 
-  const idMahasiswaRaw = profile.mahasiswa?.id_mahasiswa;
+  const idMahasiswaRaw =
+    typeof mahasiswaId === "number"
+      ? mahasiswaId
+      : profile.mahasiswa?.id_mahasiswa;
 
   if (typeof idMahasiswaRaw !== "number") {
-    throw new Error("id_mahasiswa tidak ditemukan dari akademik-service");
+    throw new Error("id_mahasiswa tidak ditemukan dari document-service");
   }
 
   const [ijazah, transkrip] = await Promise.all([
@@ -139,13 +147,34 @@ export async function generateDocumentsByNim(nim: string) {
 
   return {
     mahasiswa: {
+      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
       id_mahasiswa: idMahasiswaRaw,
       nim: profile.mahasiswa?.nim,
       nama: profile.mahasiswa?.nama,
     },
     generated: {
-      ijazah,
-      transkrip,
+      ijazah :  {
+          ...ijazah,
+      dokumen: {
+        dokumen_code: encodeId("dokumen", Number(ijazah.dokumen.id_dokumen)),
+        mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
+
+        ...ijazah.dokumen,
+      },
+    },
+    transkrip: {
+      ...transkrip,
+      dokumen: {
+        dokumen_code: encodeId(
+          "dokumen",
+          Number(transkrip.dokumen.id_dokumen)
+        ),
+        mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
+
+        // data lama tetap ada
+        ...transkrip.dokumen,
+      },
+    },
     },
   };
 }
