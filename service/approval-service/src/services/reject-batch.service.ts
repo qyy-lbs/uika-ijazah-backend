@@ -1,40 +1,53 @@
 import { findBatchByIdWithMahasiswa } from "../repositories/batch.repository.js";
-import { getApprovalLevelByRole,isFacultyValidator,} from "../constants/approval-level.constant.js";
+import {
+  getApprovalLevelByRole,
+  isFacultyValidator,
+} from "../constants/approval-level.constant.js";
 import type { AuthUser } from "../types/auth.type.js";
-import {createValidasi,findValidasiByMahasiswaAndLevel,updateValidasi,} from "../repositories/validasi.repository.js";
+import {
+  createValidasi,
+  findValidasiByMahasiswaAndLevel,
+  updateValidasi,
+} from "../repositories/validasi.repository.js";
 import { VALIDATION_STATUS } from "../constants/status.constant.js";
 import { createLogAktivitas } from "../repositories/log.repository.js";
+import { archiveMahasiswaUniqueFields } from "../repositories/mahasiswa-archive.repository.js";
 
 function isAlreadyFinalStatus(
-  validasiList: { status_validasi: string | null }[]
+  validasiList: { status_validasi: string | null }[],
 ) {
   return validasiList.some((item) => {
     const status = item.status_validasi?.toLowerCase();
-    return status === VALIDATION_STATUS.REJECTED || status === VALIDATION_STATUS.REVOKED;
+    return (
+      status === VALIDATION_STATUS.REJECTED ||
+      status === VALIDATION_STATUS.REVOKED
+    );
   });
 }
 
 function hasStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
   level: number,
-  status: string
+  status: string,
 ) {
   return validasiList.some(
     (item) =>
       item.level_validasi === level &&
-      item.status_validasi?.toLowerCase() === status
+      item.status_validasi?.toLowerCase() === status,
   );
 }
 
 function canRejectAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
-  currentLevel: number
+  currentLevel: number,
 ) {
   if (isAlreadyFinalStatus(validasiList)) {
     return false;
   }
 
-  if (hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)) {
+  if (
+    hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)
+  ) {
     return false;
   }
 
@@ -42,13 +55,17 @@ function canRejectAtLevel(
     return true;
   }
 
-  return hasStatusAtLevel(validasiList, currentLevel - 1, VALIDATION_STATUS.APPROVED);
+  return hasStatusAtLevel(
+    validasiList,
+    currentLevel - 1,
+    VALIDATION_STATUS.APPROVED,
+  );
 }
 
 export async function rejectBatchForUser(
   batchId: number,
   user: AuthUser,
-  catatan: string
+  catatan: string,
 ) {
   const approvalLevel = getApprovalLevelByRole(user.role);
 
@@ -95,7 +112,7 @@ export async function rejectBatchForUser(
   for (const mhs of mahasiswaEligible) {
     const existing = await findValidasiByMahasiswaAndLevel(
       mhs.id_mahasiswa,
-      approvalLevel
+      approvalLevel,
     );
 
     if (existing) {
@@ -117,6 +134,10 @@ export async function rejectBatchForUser(
 
       results.push(created);
     }
+    await archiveMahasiswaUniqueFields({
+      id_mahasiswa: mhs.id_mahasiswa,
+      type: "RJ",
+    });
   }
 
   await createLogAktivitas({

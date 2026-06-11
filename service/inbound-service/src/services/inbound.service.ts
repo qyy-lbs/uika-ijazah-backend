@@ -218,23 +218,32 @@ export async function processUpload(params: {
   const insertedMahasiswaIds: number[] = [];
 
   for (const [index, chunk] of chunks.entries()) {
-    const batch = await prisma.batch_upload.create({
-      data: {
-        nomor_batch_upload: generateNomorBatch(),
-        nama_file:
-          chunks.length > 1
-            ? `${namaFile} (batch ${index + 1}/${chunks.length})`
-            : namaFile,
-        total_record: chunk.length,
-        record_berhasil: chunk.length,
-        record_gagal: 0,
-        uploaded_by: uploadedBy,
-        periode: periodeEnum,
-        tahun_lulus: tahunLulus,
-        log_error: null,
-        ...(idTemplate ? { id_template: idTemplate } : {}),
-      },
-    });
+    const firstRow = chunk[0] as
+  | (MahasiswaRow & { _resolved_nama_fakultas?: string | null })
+  | undefined;
+
+const namaFakultas = firstRow?._resolved_nama_fakultas ?? null;
+
+const batch = await prisma.batch_upload.create({
+  data: {
+    nomor_batch_upload: generateNomorBatch({
+      batchKe: index + 1,
+      namaFakultas,
+    }),
+    nama_file:
+      chunks.length > 1
+        ? `${namaFile} (batch ${index + 1}/${chunks.length})`
+        : namaFile,
+    total_record: chunk.length,
+    record_berhasil: chunk.length,
+    record_gagal: 0,
+    uploaded_by: uploadedBy,
+    periode: periodeEnum,
+    tahun_lulus: tahunLulus,
+    log_error: null,
+    ...(idTemplate ? { id_template: idTemplate } : {}),
+  },
+});
 
     const insertResults = await insertMahasiswaBatch(
       chunk,
@@ -292,7 +301,7 @@ export async function processUpload(params: {
 }
 
 // ─────────────────────────────────────────────
-// HELPER — Validasi duplikat NIM, NIK, Nomor Seri Ijazah
+// HELPER — Validasi duplikat NIM, NIK, Nomor Seri Ijazah, PISN
 // ─────────────────────────────────────────────
 async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   uniqueRows: MahasiswaRow[];
@@ -302,6 +311,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 
   const nimCount: Record<string, number[]> = {};
   const nikCount: Record<string, number[]> = {};
+  const pisnCount: Record<string, number[]> = {};
   const nomorIjazahCount: Record<string, number[]> = {};
 
   const getNamaMahasiswa = (row?: MahasiswaRow) => {
@@ -326,6 +336,16 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
       }
 
       nikCount[nik].push(rowNum);
+    }
+
+    if (row.pisn) {
+      const pisn = String(row.pisn).trim();
+
+      if (!pisnCount[pisn]) {
+        pisnCount[pisn] = [];
+      }
+
+      pisnCount[pisn].push(rowNum);
     }
 
     if (row.nomor_seri_ijazah) {
@@ -387,6 +407,30 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
     }
   }
 
+  const pisnDuplikatDalamFile = new Set<string>();
+
+  for (const [pisn, baris] of Object.entries(pisnCount)) {
+    if (baris.length > 1) {
+      pisnDuplikatDalamFile.add(pisn);
+
+      for (const rowNum of baris) {
+        const row = rows[rowNum - 2];
+
+        duplikatErrors.push(
+          buildImportError({
+            row: rowNum,
+            nim: row ? String(row.nim).trim() : null,
+            nama_mahasiswa: getNamaMahasiswa(row),
+            field: "pisn",
+            message: `PISN '${pisn}' muncul ${baris.length}x dalam file (baris ${baris.join(
+              ", ",
+            )}). Semua baris dengan PISN ini ditolak.`,
+          }),
+        );
+      }
+    }
+  }
+
   const nomorIjazahDuplikatDalamFile = new Set<string>();
 
   for (const [nomorIjazah, baris] of Object.entries(nomorIjazahCount)) {
@@ -416,12 +460,14 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 
     const nim = String(row.nim).trim();
     const nik = row.nik ? String(row.nik).trim() : null;
+    const pisn = row.pisn ? String(row.pisn).trim() : null;
     const nomorIjazah = row.nomor_seri_ijazah
       ? String(row.nomor_seri_ijazah).trim()
       : null;
 
     if (nimDuplikatDalamFile.has(nim)) return false;
     if (nik && nikDuplikatDalamFile.has(nik)) return false;
+    if (pisn && pisnDuplikatDalamFile.has(pisn)) return false;
     if (nomorIjazah && nomorIjazahDuplikatDalamFile.has(nomorIjazah)) {
       return false;
     }
@@ -437,6 +483,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 
     const nim = String(row.nim).trim();
     const nik = row.nik ? String(row.nik).trim() : null;
+    const pisn = row.pisn ? String(row.pisn).trim() : null;
     const nomorIjazah = row.nomor_seri_ijazah
       ? String(row.nomor_seri_ijazah).trim()
       : null;
@@ -488,6 +535,31 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
       }
     }
 
+    if (pisn) {
+      const existingPisn = await prisma.mahasiswa.findFirst({
+        where: {
+          pisn,
+        },
+        select: {
+          nim: true,
+          pisn: true,
+        },
+      });
+
+      if (existingPisn) {
+        duplikatErrors.push(
+          buildImportError({
+            row: rowNum,
+            nim,
+            nama_mahasiswa: getNamaMahasiswa(row),
+            field: "pisn",
+            message: `PISN '${pisn}' sudah terdaftar di database (milik NIM '${existingPisn.nim}') dan tidak dapat diimport ulang.`,
+          }),
+        );
+        continue;
+      }
+    }
+
     if (nomorIjazah) {
       const existingIjazah = await prisma.mahasiswa.findFirst({
         where: {
@@ -521,6 +593,7 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
     duplikatErrors,
   };
 }
+
 // ─────────────────────────────────────────────
 // HELPER — Validasi nama_prodi ke DB
 // ─────────────────────────────────────────────
@@ -528,7 +601,10 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
   validatedRows: MahasiswaRow[];
   prodiErrors: ImportError[];
 }> {
-  const prodiCache: Record<string, number | null> = {};
+  const prodiCache: Record<
+    string,
+    { id_prodi: number; nama_fakultas: string | null } | null
+  > = {};
   const validatedRows: MahasiswaRow[] = [];
   const prodiErrors: ImportError[] = [];
 
@@ -552,15 +628,25 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
         },
         select: {
           id_prodi: true,
+          unit: {
+            select: {
+              nama_unit: true,
+            },
+          },
         },
       });
 
-      prodiCache[namaProdi] = prodi ? prodi.id_prodi : null;
+      prodiCache[namaProdi] = prodi
+        ? {
+            id_prodi: prodi.id_prodi,
+            nama_fakultas: prodi.unit?.nama_unit ?? null,
+          }
+        : null;
     }
 
-    const idProdi = prodiCache[namaProdi];
+    const prodiData = prodiCache[namaProdi];
 
-    if (idProdi === null) {
+    if (prodiData === null) {
       prodiErrors.push(
         buildImportError({
           row: rowNum,
@@ -574,8 +660,18 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
       );
     } else {
       (
-        row as MahasiswaRow & { _resolved_id_prodi?: number }
-      )._resolved_id_prodi = idProdi;
+  row as MahasiswaRow & {
+    _resolved_id_prodi?: number;
+    _resolved_nama_fakultas?: string | null;
+  }
+)._resolved_id_prodi = prodiData.id_prodi;
+
+(
+  row as MahasiswaRow & {
+    _resolved_id_prodi?: number;
+    _resolved_nama_fakultas?: string | null;
+  }
+)._resolved_nama_fakultas = prodiData.nama_fakultas;
 
       validatedRows.push(row);
     }
@@ -696,6 +792,9 @@ async function insertMahasiswaBatch(
       if (errMsg.includes("nomor_seri_ijazah")) {
         field = "nomor_seri_ijazah";
         pesanError = `Nomor seri ijazah '${row.nomor_seri_ijazah}' sudah terdaftar di database.`;
+      } else if (errMsg.includes("pisn")) {
+        field = "pisn";
+        pesanError = `PISN '${row.pisn}' sudah terdaftar di database.`;
       } else if (errMsg.includes("nik")) {
         field = "nik";
         pesanError = `NIK '${row.nik}' sudah terdaftar di database.`;
@@ -708,7 +807,9 @@ async function insertMahasiswaBatch(
         buildImportError({
           row: rowNum,
           nim,
-          nama_mahasiswa: row.nama_mahasiswa ? String(row.nama_mahasiswa).trim() : null,
+          nama_mahasiswa: row.nama_mahasiswa
+            ? String(row.nama_mahasiswa).trim()
+            : null,
           field,
           message: pesanError,
         }),
@@ -914,7 +1015,7 @@ export function generateTemplateExcel(): Buffer {
     ["6. Jangan tambah atau ubah nama kolom di baris pertama."],
     ["7. Kolom yang tidak ada di template akan menyebabkan upload ditolak."],
     [
-      "8. NIM atau NIK yang duplikat dalam file maupun di database tidak akan diimport.",
+      "8. NIM, NIK, PISN, atau Nomor Seri Ijazah yang duplikat dalam file maupun di database tidak akan diimport.",
     ],
     [
       "9. Kolom foto diisi dengan URL atau base64 dari gambar profil mahasiswa.",
@@ -1077,33 +1178,33 @@ export async function getMahasiswaByBatchIds(params: {
   }
 
   if (search && search.trim() !== "") {
-  const keyword = search.trim();
+    const keyword = search.trim();
 
-  where.OR = [
-    {
-      nama_mahasiswa: {
-        contains: keyword,
-        mode: "insensitive",
+    where.OR = [
+      {
+        nama_mahasiswa: {
+          contains: keyword,
+          mode: "insensitive",
+        },
       },
-    },
-    {
-      nim: {
-        contains: keyword,
-        mode: "insensitive",
+      {
+        nim: {
+          contains: keyword,
+          mode: "insensitive",
+        },
       },
-    },
-    {
-      prodi: {
-        is: {
-          nama_prodi: {
-            contains: keyword,
-            mode: "insensitive",
+      {
+        prodi: {
+          is: {
+            nama_prodi: {
+              contains: keyword,
+              mode: "insensitive",
+            },
           },
         },
       },
-    },
-  ];
-}
+    ];
+  }
   const [mahasiswaData, total] = await Promise.all([
     prisma.mahasiswa.findMany({
       where,

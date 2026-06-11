@@ -11,6 +11,7 @@ import {
 } from "../repositories/validasi.repository.js";
 import { VALIDATION_STATUS } from "../constants/status.constant.js";
 import { createLogAktivitas } from "../repositories/log.repository.js";
+import { archiveMahasiswaUniqueFields } from "../repositories/mahasiswa-archive.repository.js";
 
 function hasStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
@@ -134,6 +135,12 @@ export async function revokeMahasiswaForUser(
         status_validasi: VALIDATION_STATUS.REVOKED,
         catatan,
       });
+
+  await archiveMahasiswaUniqueFields({
+    id_mahasiswa: mahasiswa.id_mahasiswa,
+    type: "RV",
+  });
+
   await createLogAktivitas({
     id_user: user.id_user,
     aktivitas: "REVOKE_MAHASISWA",
@@ -161,5 +168,4 @@ export async function revokeMahasiswaForUser(
       validated_at: result.validated_at,
     },
   };
-
 }

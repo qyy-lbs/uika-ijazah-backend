@@ -1,11 +1,42 @@
 /**
  * Generate nomor batch unik: BATCH-YYYYMMDD-XXXX
  */
-export function generateNomorBatch(): string {
-  const now = new Date();
-  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const randPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `BATCH-${datePart}-${randPart}`;
+const FAKULTAS_CODE_MAP: Record<string, string> = {
+  "fakultas agama islam": "FAI",
+  "fakultas keguruan dan ilmu pendidikan": "FKIP",
+  "fakultas ekonomi dan bisnis": "FEB",
+  "fakultas teknik dan sains": "FTS",
+  "fakultas hukum": "FH",
+  "fakultas ilmu kesehatan": "FIKES",
+};
+
+export function getSingkatanFakultas(namaFakultas?: string | null) {
+  if (!namaFakultas) return "UNKNOWN";
+
+  const normalized = namaFakultas.trim().toLowerCase();
+
+  if (FAKULTAS_CODE_MAP[normalized]) {
+    return FAKULTAS_CODE_MAP[normalized];
+  }
+
+  return namaFakultas
+    .split(" ")
+    .filter((word) => {
+      const lower = word.toLowerCase();
+      return !["fakultas", "dan", "ilmu", "program"].includes(lower);
+    })
+    .map((word) => word[0]?.toUpperCase())
+    .join("")
+    .slice(0, 6) || "UNKNOWN";
+}
+
+export function generateNomorBatch(params: {
+  batchKe: number;
+  namaFakultas?: string | null;
+}): string {
+  const kodeFakultas = getSingkatanFakultas(params.namaFakultas);
+
+  return `Batch-${params.batchKe}-${kodeFakultas}`;
 }
 
 /**
