@@ -30,16 +30,16 @@ router.get(
   "/batches/pending", verifyToken, verifyApprovalRole, getPendingBatches,
 );
 router.get(
-  "/batches/:batchId", verifyToken, verifyApprovalRole, getBatchDetail,
+  "/batches/:batchCode", verifyToken, verifyApprovalRole, getBatchDetail,
 );
 router.post(
-  "/batches/:batchId/approve", verifyToken, verifyApprovalRole, approveBatch
+  "/batches/:batchCode/approve", verifyToken, verifyApprovalRole, approveBatch
 );
 router.post(
-  "/batches/:batchId/reject", verifyToken, verifyApprovalRole, rejectBatch
+  "/batches/:batchCode/reject", verifyToken, verifyApprovalRole, rejectBatch
 );
 router.post(
-  "/mahasiswa/:nim/revoke", verifyToken, verifyApprovalRole, revokeMahasiswa
+  "/mahasiswa/:mahasiswaCode/revoke", verifyToken, verifyApprovalRole, revokeMahasiswa
 );
 router.get(
   "/laporan", verifyToken, verifyReportAccess, getLaporanApproval

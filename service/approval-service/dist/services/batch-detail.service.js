@@ -1,0 +1,95 @@
+import { findBatchByIdWithMahasiswa } from "../repositories/batch.repository.js";
+import { getApprovalLevelByRole, isFacultyValidator, } from "../constants/approval-level.constant.js";
+import { VALIDATION_STATUS } from "../constants/status.constant.js";
+function getStatusAtLevel(validasiList, level) {
+    return (validasiList.find((item) => item.level_validasi === level)
+        ?.status_validasi ?? null);
+}
+function hasStatusAtLevel(validasiList, level, status) {
+    return validasiList.some((item) => item.level_validasi === level &&
+        item.status_validasi?.toLowerCase() === status);
+}
+function isRevokedOrRejected(validasiList) {
+    return validasiList.some((item) => {
+        const status = item.status_validasi?.toLowerCase();
+        return status === VALIDATION_STATUS.REVOKED || status === VALIDATION_STATUS.REJECTED;
+    });
+}
+function canValidateAtLevel(validasiList, currentLevel) {
+    if (isRevokedOrRejected(validasiList)) {
+        return false;
+    }
+    if (hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)) {
+        return false;
+    }
+    if (currentLevel === 1) {
+        return true;
+    }
+    return hasStatusAtLevel(validasiList, currentLevel - 1, VALIDATION_STATUS.APPROVED);
+}
+export async function getBatchDetailForUser(batchId, user) {
+    const approvalLevel = getApprovalLevelByRole(user.role);
+    if (!approvalLevel) {
+        throw new Error("Role tidak memiliki level approval");
+    }
+    const batch = await findBatchByIdWithMahasiswa(batchId);
+    if (!batch) {
+        throw new Error("Batch tidak ditemukan");
+    }
+    let mahasiswa = batch.mahasiswa;
+    // 1. Filter berdasarkan Fakultas
+    if (isFacultyValidator(user.role)) {
+        mahasiswa = mahasiswa.filter((mhs) => mhs.prodi?.id_unit === user.id_unit);
+    }
+    mahasiswa = mahasiswa.filter((mhs) => {
+        return !isRevokedOrRejected(mhs.validasi);
+    });
+    const mahasiswaList = mahasiswa.map((mhs) => {
+        const validasiList = mhs.validasi.map((v) => ({
+            level_validasi: v.level_validasi,
+            status_validasi: v.status_validasi,
+        }));
+        return {
+            mahasiswa_code: mhs.uuid,
+            nim: mhs.nim,
+            nama_mahasiswa: mhs.nama_mahasiswa,
+            program_studi: mhs.prodi?.nama_prodi,
+            fakultas: mhs.prodi?.unit?.nama_unit,
+            tahun_lulus: mhs.tahun_lulus,
+            status_kelulusan: mhs.status_kelulusan,
+            current_approval_level: approvalLevel,
+            current_level_status: getStatusAtLevel(validasiList, approvalLevel),
+            can_validate: canValidateAtLevel(validasiList, approvalLevel),
+            validasi: mhs.validasi.map((v) => ({
+                validasi_code: v.uuid,
+                level_validasi: v.level_validasi,
+                status_validasi: v.status_validasi,
+                catatan: v.catatan,
+                validated_by: v.validated_by,
+                validated_at: v.validated_at,
+            })),
+        };
+    });
+    const canValidateCount = mahasiswaList.filter((mhs) => mhs.can_validate).length;
+    return {
+        batch: {
+            batch_code: batch.uuid,
+            uuid: batch.uuid,
+            nomor_batch_upload: batch.nomor_batch_upload,
+            nama_file: batch.nama_file,
+            periode: batch.periode,
+            tahun_lulus: batch.tahun_lulus,
+            total_record: mahasiswaList.length,
+            record_berhasil: batch.record_berhasil,
+            record_gagal: batch.record_gagal,
+            created_at: batch.created_at,
+        },
+        approval: {
+            role: user.role,
+            level: approvalLevel,
+            can_validate_count: canValidateCount,
+        },
+        mahasiswa: mahasiswaList,
+    };
+}
+//# sourceMappingURL=batch-detail.service.js.map

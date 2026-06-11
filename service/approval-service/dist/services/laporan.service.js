@@ -1,0 +1,158 @@
+import prisma from "../prisma/prisma.js";
+import { isFacultyValidator } from "../constants/approval-level.constant.js";
+import { REPORT_STATUS, VALIDATION_STATUS, } from "../constants/status.constant.js";
+const APPROVAL_LEVEL_LABEL = {
+    1: "TU Fakultas",
+    2: "Wakil Dekan",
+    3: "Dekan",
+    4: "TU Rektorat",
+    5: "Wakil Rektor",
+    6: "Rektor",
+};
+function getNextLevelLabel(lastApprovedLevel) {
+    const nextLevel = lastApprovedLevel + 1;
+    return APPROVAL_LEVEL_LABEL[nextLevel] ?? "Selesai";
+}
+function getLaporanStatus(validasiList) {
+    const rejected = validasiList.find((item) => item.status_validasi?.toLowerCase() === VALIDATION_STATUS.REJECTED);
+    if (rejected) {
+        return {
+            status: VALIDATION_STATUS.REJECTED,
+            keterangan: `Di Reject oleh ${APPROVAL_LEVEL_LABEL[rejected.level_validasi]}`,
+            tanggal: rejected.validated_at,
+        };
+    }
+    const revoked = validasiList.find((item) => item.status_validasi?.toLowerCase() === VALIDATION_STATUS.REVOKED);
+    if (revoked) {
+        return {
+            status: VALIDATION_STATUS.REVOKED,
+            keterangan: `Di Revoke oleh ${APPROVAL_LEVEL_LABEL[revoked.level_validasi]}`,
+            tanggal: revoked.validated_at,
+        };
+    }
+    const approvedList = validasiList
+        .filter((item) => item.status_validasi?.toLowerCase() === VALIDATION_STATUS.APPROVED)
+        .sort((a, b) => a.level_validasi - b.level_validasi);
+    const lastApproved = approvedList[approvedList.length - 1];
+    if (lastApproved?.level_validasi === 6) {
+        return {
+            status: REPORT_STATUS.TERBIT,
+            keterangan: "Dokumen ijazah dan transkrip sudah terbit",
+            tanggal: lastApproved.validated_at,
+        };
+    }
+    const lastApprovedLevel = lastApproved?.level_validasi ?? 0;
+    const nextValidator = getNextLevelLabel(lastApprovedLevel);
+    return {
+        status: REPORT_STATUS.PROSES,
+        keterangan: `Di Proses Validasi oleh ${nextValidator}`,
+        tanggal: lastApproved?.validated_at ?? null,
+    };
+}
+export async function getLaporanApprovalForUser(user, query) {
+    const where = {};
+    if (query?.search && query.search.trim() !== "") {
+        const search = query.search.trim();
+        where.OR = [
+            {
+                nama_mahasiswa: {
+                    contains: search,
+                    mode: "insensitive",
+                },
+            },
+            {
+                nim: {
+                    contains: search,
+                    mode: "insensitive",
+                },
+            },
+            {
+                prodi: {
+                    is: {
+                        nama_prodi: {
+                            contains: search,
+                            mode: "insensitive",
+                        },
+                    },
+                },
+            },
+        ];
+    }
+    const mahasiswaList = await prisma.mahasiswa.findMany({
+        where,
+        include: {
+            batch_upload: true,
+            prodi: {
+                include: {
+                    unit: true,
+                },
+            },
+            validasi: {
+                orderBy: [
+                    {
+                        validated_at: "desc",
+                    },
+                    {
+                        created_at: "desc",
+                    },
+                ],
+            },
+        },
+        orderBy: {
+            id_mahasiswa: "desc",
+        },
+    });
+    let filteredMahasiswa = mahasiswaList;
+    if (isFacultyValidator(user.role)) {
+        filteredMahasiswa = filteredMahasiswa.filter((mhs) => mhs.prodi?.id_unit === user.id_unit);
+    }
+    const laporan = filteredMahasiswa
+        .map((mhs) => {
+        const statusInfo = getLaporanStatus(mhs.validasi.map((v) => ({
+            level_validasi: v.level_validasi,
+            status_validasi: v.status_validasi,
+            validated_at: v.validated_at,
+        })));
+        /**
+         * tanggal utama laporan diambil dari validated_at.
+         * Jika belum pernah divalidasi sama sekali, fallback ke created_at
+         * agar data tetap punya tanggal.
+         */
+        const tanggal = statusInfo.tanggal ?? mhs.created_at;
+        return {
+            mahasiswa_code: mhs.uuid,
+            batch_code: mhs.batch_upload?.uuid ?? null,
+            nama: mhs.nama_mahasiswa,
+            nim: mhs.nim,
+            program_studi: mhs.prodi?.nama_prodi,
+            fakultas: mhs.prodi?.unit?.nama_unit,
+            tanggal,
+            waktu: tanggal,
+            status: statusInfo.status,
+            keterangan: statusInfo.keterangan,
+        };
+    })
+        .sort((a, b) => {
+        const timeA = a.tanggal ? new Date(a.tanggal).getTime() : 0;
+        const timeB = b.tanggal ? new Date(b.tanggal).getTime() : 0;
+        return timeB - timeA;
+    });
+    const filteredByStatus = query.status
+        ? laporan.filter((item) => item.status.toLowerCase() === query.status?.toLowerCase())
+        : laporan;
+    const totalData = filteredByStatus.length;
+    const totalPage = Math.ceil(totalData / query.limit);
+    const startIndex = (query.page - 1) * query.limit;
+    const endIndex = startIndex + query.limit;
+    const paginatedData = filteredByStatus.slice(startIndex, endIndex);
+    return {
+        data: paginatedData,
+        pagination: {
+            page: query.page,
+            limit: query.limit,
+            total_data: totalData,
+            total_page: totalPage,
+        },
+    };
+}
+//# sourceMappingURL=laporan.service.js.map

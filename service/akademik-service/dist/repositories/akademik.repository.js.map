@@ -1,0 +1,1 @@
+{"version":3,"file":"akademik.repository.js","sourceRoot":"","sources":["../../src/repositories/akademik.repository.ts"],"names":[],"mappings":"AAAA,OAAO,MAAM,MAAM,qBAAqB,CAAC;AAEzC,MAAM,CAAC,KAAK,UAAU,mBAAmB,CAAC,QAAgB;IACxD,OAAO,MAAM,CAAC,QAAQ,CAAC,QAAQ,CAAC;QAC9B,KAAK,EAAE;YACL,QAAQ;SACT;QACD,OAAO,EAAE;YACP,WAAW,EAAE,KAAK;SACnB;KACF,CAAC,CAAC;AACL,CAAC"}

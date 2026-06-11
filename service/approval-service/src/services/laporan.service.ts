@@ -120,9 +120,10 @@ export async function getLaporanApprovalForUser(
     ];
   }
 
-  const mahasiswaList = await prisma.mahasiswa.findMany({
+ const mahasiswaList = await prisma.mahasiswa.findMany({
   where,
   include: {
+    batch_upload: true,
     prodi: {
       include: {
         unit: true,
@@ -170,7 +171,8 @@ export async function getLaporanApprovalForUser(
     const tanggal = statusInfo.tanggal ?? mhs.created_at;
 
     return {
-      id_mahasiswa: mhs.id_mahasiswa,
+      mahasiswa_code: mhs.uuid,
+batch_code: mhs.batch_upload?.uuid ?? null,
       nama: mhs.nama_mahasiswa,
       nim: mhs.nim,
       program_studi: mhs.prodi?.nama_prodi,

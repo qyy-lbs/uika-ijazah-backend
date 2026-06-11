@@ -15,8 +15,8 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.get("/profile/:nim", getProfile);
-router.get("/transkrip/:nim", getTranskrip);
-router.get("/validasi/:nim", getValidasiAkademik);
+router.get("/profile/:mahasiswaCode", getProfile);
+router.get("/transkrip/:mahasiswaCode", getTranskrip);
+router.get("/validasi/:mahasiswaCode", getValidasiAkademik);
 
 export default router;

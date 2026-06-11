@@ -13,6 +13,10 @@ type ImportError = {
   field: string;
   message: string;
 };
+type ResolvedMahasiswaRow = MahasiswaRow & {
+  _resolved_id_prodi?: number;
+  _resolved_nama_fakultas?: string | null;
+};
 
 function buildImportError(data: {
   row: number;
@@ -195,18 +199,50 @@ export async function processUpload(params: {
       ? ("semester_ganjil" as const)
       : ("semester_genap" as const);
 
-  const { validatedRows: prodiValidated, prodiErrors } =
-    await validateProdi(valid);
+const { validatedRows: prodiValidated, prodiErrors } =
+  await validateProdi(valid);
 
-  const { uniqueRows, duplikatErrors } = await validateDuplikat(prodiValidated);
+const fakultasValidation = validateSatuFakultasDalamFile(prodiValidated);
 
+if (!fakultasValidation.valid) {
   const allErrors: ImportError[] = [
     ...errors,
     ...prodiErrors,
-    ...duplikatErrors,
+    ...fakultasValidation.fakultasErrors,
   ];
 
-  const chunks = chunkArray(uniqueRows, BATCH_SIZE);
+  return {
+    ditolak: true,
+    alasan:
+      "File Excel ditolak karena berisi lebih dari 1 fakultas. Dalam 1 file Excel hanya boleh ada 1 fakultas.",
+    fakultas_utama: fakultasValidation.fakultasUtama,
+    total_data_excel: valid.length + errors.length,
+    total_valid: 0,
+    total_gagal: allErrors.length,
+    total_batch: 0,
+    errors: allErrors.sort((a, b) => a.row - b.row),
+    batches: [],
+    mahasiswa: {
+      data: [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        total_pages: 0,
+      },
+    },
+  };
+}
+
+const { uniqueRows, duplikatErrors } = await validateDuplikat(prodiValidated);
+
+const allErrors: ImportError[] = [
+  ...errors,
+  ...prodiErrors,
+  ...duplikatErrors,
+];
+
+const chunks = chunkArray(uniqueRows, BATCH_SIZE);
   const batchResults: {
     batch_ke: number;
     id_batch_upload: number;
@@ -217,38 +253,35 @@ export async function processUpload(params: {
 
   const insertedMahasiswaIds: number[] = [];
 
-  for (const [index, chunk] of chunks.entries()) {
-    const firstRow = chunk[0] as
-  | (MahasiswaRow & { _resolved_nama_fakultas?: string | null })
-  | undefined;
+for (const [index, chunk] of chunks.entries()) {
+  const firstRow = chunk[0] as ResolvedMahasiswaRow | undefined;
+  const namaFakultas = firstRow?._resolved_nama_fakultas ?? null;
 
-const namaFakultas = firstRow?._resolved_nama_fakultas ?? null;
+  const batch = await prisma.batch_upload.create({
+    data: {
+      nomor_batch_upload: generateNomorBatch({
+        batchKe: index + 1,
+        namaFakultas,
+      }),
+      nama_file:
+        chunks.length > 1
+          ? `${namaFile} (batch ${index + 1}/${chunks.length})`
+          : namaFile,
+      total_record: chunk.length,
+      record_berhasil: chunk.length,
+      record_gagal: 0,
+      uploaded_by: uploadedBy,
+      periode: periodeEnum,
+      tahun_lulus: tahunLulus,
+      log_error: null,
+      ...(idTemplate ? { id_template: idTemplate } : {}),
+    },
+  });
 
-const batch = await prisma.batch_upload.create({
-  data: {
-    nomor_batch_upload: generateNomorBatch({
-      batchKe: index + 1,
-      namaFakultas,
-    }),
-    nama_file:
-      chunks.length > 1
-        ? `${namaFile} (batch ${index + 1}/${chunks.length})`
-        : namaFile,
-    total_record: chunk.length,
-    record_berhasil: chunk.length,
-    record_gagal: 0,
-    uploaded_by: uploadedBy,
-    periode: periodeEnum,
-    tahun_lulus: tahunLulus,
-    log_error: null,
-    ...(idTemplate ? { id_template: idTemplate } : {}),
-  },
-});
-
-    const insertResults = await insertMahasiswaBatch(
-      chunk,
-      batch.id_batch_upload,
-    );
+  const insertResults = await insertMahasiswaBatch(
+    chunk,
+    batch.id_batch_upload,
+  );
 
     insertedMahasiswaIds.push(...insertResults.insertedIds);
 
@@ -598,21 +631,22 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 // HELPER — Validasi nama_prodi ke DB
 // ─────────────────────────────────────────────
 async function validateProdi(rows: MahasiswaRow[]): Promise<{
-  validatedRows: MahasiswaRow[];
+  validatedRows: ResolvedMahasiswaRow[];
   prodiErrors: ImportError[];
 }> {
   const prodiCache: Record<
     string,
     { id_prodi: number; nama_fakultas: string | null } | null
   > = {};
-  const validatedRows: MahasiswaRow[] = [];
+
+  const validatedRows: ResolvedMahasiswaRow[] = [];
   const prodiErrors: ImportError[] = [];
 
   for (const [index, row] of rows.entries()) {
     const rowNum = index + 2;
 
     if (!row.nama_prodi) {
-      validatedRows.push(row);
+      validatedRows.push(row as ResolvedMahasiswaRow);
       continue;
     }
 
@@ -658,28 +692,107 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
           message: `Prodi '${namaProdi}' tidak ditemukan di database. Periksa penulisan nama prodi.`,
         }),
       );
-    } else {
-      (
-  row as MahasiswaRow & {
-    _resolved_id_prodi?: number;
-    _resolved_nama_fakultas?: string | null;
-  }
-)._resolved_id_prodi = prodiData.id_prodi;
 
-(
-  row as MahasiswaRow & {
-    _resolved_id_prodi?: number;
-    _resolved_nama_fakultas?: string | null;
-  }
-)._resolved_nama_fakultas = prodiData.nama_fakultas;
-
-      validatedRows.push(row);
+      continue;
     }
+
+    const resolvedRow = row as ResolvedMahasiswaRow;
+
+    resolvedRow._resolved_id_prodi = prodiData.id_prodi;
+    resolvedRow._resolved_nama_fakultas = prodiData.nama_fakultas;
+
+    validatedRows.push(resolvedRow);
   }
 
   return {
     validatedRows,
     prodiErrors,
+  };
+}
+
+function validateSatuFakultasDalamFile(rows: ResolvedMahasiswaRow[]): {
+  valid: boolean;
+  fakultasUtama: string | null;
+  fakultasErrors: ImportError[];
+} {
+  const fakultasErrors: ImportError[] = [];
+
+  const fakultasGroups: Record<
+    string,
+    {
+      nama_fakultas: string;
+      rows: {
+        row: number;
+        nim: string | null;
+        nama_mahasiswa: string | null;
+        nama_prodi: string | null;
+      }[];
+    }
+  > = {};
+
+  for (const [index, row] of rows.entries()) {
+    const rowNum = index + 2;
+    const namaFakultas = row._resolved_nama_fakultas?.trim();
+
+    if (!namaFakultas) {
+      continue;
+    }
+
+    const key = namaFakultas.toLowerCase();
+
+    if (!fakultasGroups[key]) {
+      fakultasGroups[key] = {
+        nama_fakultas: namaFakultas,
+        rows: [],
+      };
+    }
+
+    fakultasGroups[key].rows.push({
+      row: rowNum,
+      nim: row.nim ? String(row.nim).trim() : null,
+      nama_mahasiswa: row.nama_mahasiswa
+        ? String(row.nama_mahasiswa).trim()
+        : null,
+      nama_prodi: row.nama_prodi ? String(row.nama_prodi).trim() : null,
+    });
+  }
+
+  const groups = Object.values(fakultasGroups);
+
+  if (groups.length <= 1) {
+    return {
+      valid: true,
+      fakultasUtama: groups[0]?.nama_fakultas ?? null,
+      fakultasErrors: [],
+    };
+  }
+
+  const sortedGroups = [...groups].sort((a, b) => b.rows.length - a.rows.length);
+  const fakultasUtamaGroup = sortedGroups[0];
+  const fakultasUtama = fakultasUtamaGroup?.nama_fakultas ?? null;
+
+  for (const group of groups) {
+    if (group.nama_fakultas === fakultasUtama) {
+      continue;
+    }
+
+    for (const item of group.rows) {
+      fakultasErrors.push(
+        buildImportError({
+          row: item.row,
+          nim: item.nim,
+          nama_mahasiswa: item.nama_mahasiswa,
+          field: "fakultas",
+          message: `Data berbeda fakultas. Fakultas utama file adalah '${fakultasUtama}', tetapi baris ini berasal dari '${group.nama_fakultas}' melalui prodi '${item.nama_prodi ?? "-"}'. Dalam 1 file Excel hanya boleh ada 1 fakultas.`,
+        }),
+      );
+    }
+  }
+
+  return {
+    valid: false,
+    fakultasUtama,
+    fakultasErrors,
   };
 }
 

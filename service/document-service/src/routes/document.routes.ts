@@ -17,15 +17,15 @@ const router = Router();
 
 router.get("/health", healthDocument);
 router.get("/valid-batches", getValidBatches);
-router.get("/valid-batches/:batchId/mahasiswa", getValidBatchDetail);
-router.get("/test-dependencies/:nim", testDependencies);
-router.post("/internal/generate/:nim", verifyInternalService, generateDocuments);
+router.get("/valid-batches/:batchCode/mahasiswa", getValidBatchDetail);
+router.get("/test-dependencies/:mahasiswaCode", testDependencies);
+router.post("/internal/generate/:mahasiswaCode", verifyInternalService, generateDocuments);
 
-router.post("/generate/:nim", generateDocuments);
+router.post("/generate/:mahasiswaCode", generateDocuments);
 
-router.get("/mahasiswa/:nim", getDocumentsByMahasiswa);
+router.get("/mahasiswa/:mahasiswaCode", getDocumentsByMahasiswa);
 router.get("/verify/:kodeQr", verifyDocument);
 
-router.get("/:id", getDocumentDetail);
+router.get("/:dokumenCode", getDocumentDetail);
 
 export default router;

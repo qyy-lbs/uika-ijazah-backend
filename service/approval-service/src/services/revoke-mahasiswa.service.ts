@@ -16,20 +16,21 @@ import { archiveMahasiswaUniqueFields } from "../repositories/mahasiswa-archive.
 function hasStatusAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
   level: number,
-  status: string,
+  status: string
 ) {
   return validasiList.some(
     (item) =>
       item.level_validasi === level &&
-      item.status_validasi?.toLowerCase() === status,
+      item.status_validasi?.toLowerCase() === status
   );
 }
 
 function isAlreadyRejectedOrRevoked(
-  validasiList: { status_validasi: string | null }[],
+  validasiList: { status_validasi: string | null }[]
 ) {
   return validasiList.some((item) => {
     const status = item.status_validasi?.toLowerCase();
+
     return (
       status === VALIDATION_STATUS.REJECTED ||
       status === VALIDATION_STATUS.REVOKED
@@ -39,15 +40,13 @@ function isAlreadyRejectedOrRevoked(
 
 function canRevokeAtLevel(
   validasiList: { level_validasi: number; status_validasi: string | null }[],
-  currentLevel: number,
+  currentLevel: number
 ) {
   if (isAlreadyRejectedOrRevoked(validasiList)) {
     return false;
   }
 
-  if (
-    hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)
-  ) {
+  if (hasStatusAtLevel(validasiList, currentLevel, VALIDATION_STATUS.APPROVED)) {
     return false;
   }
 
@@ -58,14 +57,14 @@ function canRevokeAtLevel(
   return hasStatusAtLevel(
     validasiList,
     currentLevel - 1,
-    VALIDATION_STATUS.APPROVED,
+    VALIDATION_STATUS.APPROVED
   );
 }
 
 export async function revokeMahasiswaForUser(
-  nim: string,
+  mahasiswaId: number,
   user: AuthUser,
-  catatan: string,
+  catatan: string
 ) {
   const approvalLevel = getApprovalLevelByRole(user.role);
 
@@ -79,7 +78,7 @@ export async function revokeMahasiswaForUser(
 
   const mahasiswa = await prisma.mahasiswa.findUnique({
     where: {
-      nim,
+      id_mahasiswa: mahasiswaId,
     },
     include: {
       prodi: {
@@ -103,7 +102,7 @@ export async function revokeMahasiswaForUser(
   if (isFacultyValidator(user.role)) {
     if (mahasiswa.prodi?.id_unit !== user.id_unit) {
       throw new Error(
-        "Anda tidak memiliki akses untuk revoke mahasiswa dari fakultas ini",
+        "Anda tidak memiliki akses untuk revoke mahasiswa dari fakultas ini"
       );
     }
   }
@@ -119,7 +118,7 @@ export async function revokeMahasiswaForUser(
 
   const existing = await findValidasiByMahasiswaAndLevel(
     mahasiswa.id_mahasiswa,
-    approvalLevel,
+    approvalLevel
   );
 
   const result = existing
@@ -151,12 +150,12 @@ export async function revokeMahasiswaForUser(
 
   return {
     mahasiswa: {
-      id_mahasiswa: mahasiswa.id_mahasiswa,
+      mahasiswa_code: mahasiswa.uuid,
       nim: mahasiswa.nim,
       nama_mahasiswa: mahasiswa.nama_mahasiswa,
       program_studi: mahasiswa.prodi?.nama_prodi,
       fakultas: mahasiswa.prodi?.unit?.nama_unit,
-      id_batch_upload: mahasiswa.id_batch_upload,
+      batch_code: mahasiswa.batch_upload?.uuid ?? null,
       nomor_batch_upload: mahasiswa.batch_upload?.nomor_batch_upload,
     },
     approval: {

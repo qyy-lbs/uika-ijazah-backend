@@ -1,17 +1,42 @@
 import type { Request, Response } from "express";
-import { getProfileByNim } from "../services/profile.service.js";
-import { getTranskripByNim } from "../services/transkrip.service.js";
-import { getValidasiAkademikByNim } from "../services/validasi-akademik.service.js";
+import { getProfileByMahasiswaCode } from "../services/profile.service.js";
+import { getTranskripByMahasiswaId } from "../services/transkrip.service.js";
+import { getValidasiAkademikByMahasiswaId } from "../services/validasi-akademik.service.js";
+import { findMahasiswaByUuid } from "../repositories/mahasiswa.repository.js";
 
-type NimParams = {
-  nim: string;
+type MahasiswaParams = {
+  mahasiswaCode: string;
 };
 
-export async function getProfile(req: Request<NimParams>, res: Response) {
-  try {
-    const nim = req.params.nim;
+const getMahasiswaIdFromUuid = async (mahasiswaCode?: string) => {
+  if (!mahasiswaCode) {
+    throw new Error("Kode mahasiswa wajib diisi");
+  }
 
-    const data = await getProfileByNim(nim);
+  const mahasiswa = await findMahasiswaByUuid(mahasiswaCode);
+
+  if (!mahasiswa) {
+    throw new Error("Mahasiswa tidak ditemukan");
+  }
+
+  return mahasiswa.id_mahasiswa;
+};
+
+export async function getProfile(
+  req: Request<MahasiswaParams>,
+  res: Response,
+) {
+  try {
+    const { mahasiswaCode } = req.params;
+
+    if (!mahasiswaCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Kode mahasiswa wajib diisi",
+      });
+    }
+
+    const data = await getProfileByMahasiswaCode(mahasiswaCode);
 
     return res.json({
       success: true,
@@ -26,11 +51,16 @@ export async function getProfile(req: Request<NimParams>, res: Response) {
   }
 }
 
-export async function getTranskrip(req: Request<NimParams>, res: Response) {
+export async function getTranskrip(
+  req: Request<MahasiswaParams>,
+  res: Response,
+) {
   try {
-    const nim = req.params.nim;
+    const mahasiswaId = await getMahasiswaIdFromUuid(
+      req.params.mahasiswaCode,
+    );
 
-    const data = await getTranskripByNim(nim);
+    const data = await getTranskripByMahasiswaId(mahasiswaId);
 
     return res.json({
       success: true,
@@ -45,11 +75,16 @@ export async function getTranskrip(req: Request<NimParams>, res: Response) {
   }
 }
 
-export async function getValidasiAkademik(req: Request<NimParams>, res: Response) {
+export async function getValidasiAkademik(
+  req: Request<MahasiswaParams>,
+  res: Response,
+) {
   try {
-    const nim = req.params.nim;
+    const mahasiswaId = await getMahasiswaIdFromUuid(
+      req.params.mahasiswaCode,
+    );
 
-    const data = await getValidasiAkademikByNim(nim);
+    const data = await getValidasiAkademikByMahasiswaId(mahasiswaId);
 
     return res.json({
       success: true,

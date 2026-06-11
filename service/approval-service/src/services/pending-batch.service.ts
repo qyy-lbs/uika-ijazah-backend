@@ -92,8 +92,7 @@ export async function getPendingBatchesForUser(user: AuthUser) {
       );
 
       return {
-        id_batch_upload: batch.id_batch_upload,
-        uuid: batch.uuid,
+        batch_code: batch.uuid ?? null,
         nomor_batch_upload: batch.nomor_batch_upload,
         nama_file: batch.nama_file,
         periode: batch.periode,

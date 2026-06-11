@@ -1,4 +1,6 @@
 import type { Request, Response } from "express";
+import prisma from "../prisma/prisma.js";
+
 import { testDocumentDependencies } from "../services/document-test.service.js";
 import { generateDocumentsByNim } from "../services/document-generate.service.js";
 import {
@@ -11,13 +13,138 @@ import {
   getValidDocumentBatches,
 } from "../services/dokumen-valid.service.js";
 
-type NimParams = {
-  nim: string;
+type MahasiswaParams = {
+  mahasiswaCode: string;
 };
 
-type IdParams = {
-  id: string;
+type DokumenParams = {
+  dokumenCode: string;
 };
+
+type BatchParams = {
+  batchCode: string;
+};
+
+type VerifyParams = {
+  kodeQr: string;
+};
+
+const isUuid = (value: string) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+};
+
+const getMahasiswaFromCode = async (mahasiswaCode?: string) => {
+  if (!mahasiswaCode) {
+    throw new Error("Kode mahasiswa wajib diisi");
+  }
+
+  if (!isUuid(mahasiswaCode)) {
+    throw new Error("Kode mahasiswa tidak valid");
+  }
+
+  const mahasiswa = await prisma.mahasiswa.findFirst({
+    where: {
+      uuid: mahasiswaCode,
+    },
+    select: {
+      id_mahasiswa: true,
+      uuid: true,
+      nim: true,
+    },
+  });
+
+  if (!mahasiswa?.nim) {
+    throw new Error("Mahasiswa tidak ditemukan");
+  }
+
+  if (!mahasiswa.uuid) {
+    throw new Error("UUID mahasiswa tidak ditemukan");
+  }
+
+  return {
+    id_mahasiswa: mahasiswa.id_mahasiswa,
+    uuid: mahasiswa.uuid,
+    nim: mahasiswa.nim,
+  };
+};
+
+const getBatchIdFromCode = async (batchCode?: string) => {
+  if (!batchCode) {
+    throw new Error("Kode batch wajib diisi");
+  }
+
+  if (!isUuid(batchCode)) {
+    throw new Error("Kode batch tidak valid");
+  }
+
+  const batch = await prisma.batch_upload.findFirst({
+    where: {
+      uuid: batchCode,
+    },
+    select: {
+      id_batch_upload: true,
+    },
+  });
+
+  if (!batch) {
+    throw new Error("Batch tidak ditemukan");
+  }
+
+  return batch.id_batch_upload;
+};
+
+const getDokumenIdFromCode = async (dokumenCode?: string) => {
+  if (!dokumenCode) {
+    throw new Error("Kode dokumen wajib diisi");
+  }
+
+  if (!isUuid(dokumenCode)) {
+    throw new Error("Kode dokumen tidak valid");
+  }
+
+  const dokumen = await prisma.dokumen.findFirst({
+    where: {
+      uuid: dokumenCode,
+    },
+    select: {
+      id_dokumen: true,
+    },
+  });
+
+  if (!dokumen) {
+    throw new Error("Dokumen tidak ditemukan");
+  }
+
+  return dokumen.id_dokumen;
+};
+
+const getNimFromMahasiswaCode = async (mahasiswaCode?: string) => {
+  const mahasiswa = await getMahasiswaFromCode(mahasiswaCode);
+  return mahasiswa.nim;
+};
+
+const mapDokumenResponse = (dokumen: any) => {
+  return {
+    ...dokumen,
+
+    dokumen_code: dokumen.uuid ?? dokumen.dokumen_uuid ?? null,
+
+    mahasiswa_code:
+      dokumen.mahasiswa?.uuid ??
+      dokumen.mahasiswa_uuid ??
+      null,
+
+    mahasiswa: dokumen.mahasiswa
+      ? {
+          ...dokumen.mahasiswa,
+          mahasiswa_code: dokumen.mahasiswa.uuid ?? null,
+        }
+      : dokumen.mahasiswa,
+  };
+};
+
 
 export async function healthDocument(_req: Request, res: Response) {
   return res.json({
@@ -28,11 +155,11 @@ export async function healthDocument(_req: Request, res: Response) {
 }
 
 export async function testDependencies(
-  req: Request<NimParams>,
+  req: Request<MahasiswaParams>,
   res: Response
 ) {
   try {
-    const { nim } = req.params;
+    const nim = await getNimFromMahasiswaCode(req.params.mahasiswaCode);
 
     const data = await testDocumentDependencies(nim);
 
@@ -53,13 +180,19 @@ export async function testDependencies(
 }
 
 export async function generateDocuments(
-  req: Request<NimParams>,
+  req: Request<MahasiswaParams>,
   res: Response
 ) {
   try {
-    const { nim } = req.params;
+    const mahasiswaCode = req.params.mahasiswaCode;
 
-    const data = await generateDocumentsByNim(nim);
+    const mahasiswa = await getMahasiswaFromCode(mahasiswaCode);
+
+    const data = await generateDocumentsByNim(
+      mahasiswa.nim,
+      mahasiswa.uuid,
+      mahasiswa.id_mahasiswa,
+    );
 
     return res.json({
       success: true,
@@ -76,18 +209,19 @@ export async function generateDocuments(
 }
 
 export async function getDocumentsByMahasiswa(
-  req: Request<NimParams>,
+  req: Request<MahasiswaParams>,
   res: Response
 ) {
   try {
-    const { nim } = req.params;
+    const nim = await getNimFromMahasiswaCode(req.params.mahasiswaCode);
 
     const data = await findDokumenByNim(nim);
 
     return res.json({
       success: true,
       message: "Dokumen mahasiswa berhasil diambil",
-      data,
+      data: data.map(mapDokumenResponse),
+
     });
   } catch (error) {
     return res.status(500).json({
@@ -100,18 +234,14 @@ export async function getDocumentsByMahasiswa(
   }
 }
 
-export async function getDocumentDetail(req: Request<IdParams>, res: Response) {
+export async function getDocumentDetail(
+  req: Request<DokumenParams>,
+  res: Response
+) {
   try {
-    const id = Number(req.params.id);
+    const dokumenId = await getDokumenIdFromCode(req.params.dokumenCode);
 
-    if (Number.isNaN(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID dokumen tidak valid",
-      });
-    }
-
-    const data = await findDokumenById(id);
+    const data = await findDokumenById(dokumenId);
 
     if (!data) {
       return res.status(404).json({
@@ -123,7 +253,7 @@ export async function getDocumentDetail(req: Request<IdParams>, res: Response) {
     return res.json({
       success: true,
       message: "Detail dokumen berhasil diambil",
-      data,
+      data: mapDokumenResponse(data),
     });
   } catch (error) {
     return res.status(500).json({
@@ -133,9 +263,6 @@ export async function getDocumentDetail(req: Request<IdParams>, res: Response) {
     });
   }
 }
-type VerifyParams = {
-  kodeQr: string;
-};
 
 export async function verifyDocument(req: Request<VerifyParams>, res: Response) {
   try {
@@ -164,6 +291,7 @@ export async function verifyDocument(req: Request<VerifyParams>, res: Response) 
     });
   }
 }
+
 export async function getValidBatches(req: Request, res: Response) {
   try {
     const page = Number(req.query.page ?? 1);
@@ -194,16 +322,12 @@ export async function getValidBatches(req: Request, res: Response) {
   }
 }
 
-export async function getValidBatchDetail(req: Request, res: Response) {
+export async function getValidBatchDetail(
+  req: Request<BatchParams>,
+  res: Response
+) {
   try {
-    const batchId = Number(req.params.batchId);
-
-    if (!Number.isFinite(batchId)) {
-      return res.status(400).json({
-        success: false,
-        message: "ID batch tidak valid",
-      });
-    }
+    const batchId = await getBatchIdFromCode(req.params.batchCode);
 
     const data = await getValidDocumentBatchDetail(batchId, {
       search: typeof req.query.search === "string" ? req.query.search : "",

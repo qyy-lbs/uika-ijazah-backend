@@ -113,13 +113,20 @@ async function generateSingleDocument(params: {
   };
 }
 
-export async function generateDocumentsByNim(nim: string) {
-  const profile = await getAkademikProfileByNim(nim);
+export async function generateDocumentsByNim(
+  nim: string,
+  mahasiswaCode?: string,
+  mahasiswaId?: number
+) {
+  const profile = await getAkademikProfileByNim(nim, mahasiswaCode);
 
-  const idMahasiswaRaw = profile.mahasiswa?.id_mahasiswa;
+  const idMahasiswaRaw =
+    typeof mahasiswaId === "number"
+      ? mahasiswaId
+      : profile.mahasiswa?.id_mahasiswa;
 
   if (typeof idMahasiswaRaw !== "number") {
-    throw new Error("id_mahasiswa tidak ditemukan dari akademik-service");
+    throw new Error("id_mahasiswa tidak ditemukan dari document-service");
   }
 
   const [ijazah, transkrip] = await Promise.all([
@@ -139,13 +146,33 @@ export async function generateDocumentsByNim(nim: string) {
 
   return {
     mahasiswa: {
+      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
       id_mahasiswa: idMahasiswaRaw,
       nim: profile.mahasiswa?.nim,
       nama: profile.mahasiswa?.nama,
     },
+  
     generated: {
-      ijazah,
-      transkrip,
+  ijazah: {
+    ...ijazah,
+    dokumen: {
+      ...ijazah.dokumen,
+
+      dokumen_code: ijazah.dokumen.uuid ?? null,
+      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code ?? null,
     },
+  },
+
+  transkrip: {
+    ...transkrip,
+    dokumen: {
+      ...transkrip.dokumen,
+
+      dokumen_code: transkrip.dokumen.uuid ?? null,
+      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code ?? null,
+    },
+  },
+},
+   
   };
 }

@@ -88,7 +88,8 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
     }));
 
     return {
-      id_mahasiswa: mhs.id_mahasiswa,
+      
+      mahasiswa_code: mhs.uuid,
       nim: mhs.nim,
       nama_mahasiswa: mhs.nama_mahasiswa,
       program_studi: mhs.prodi?.nama_prodi,
@@ -101,7 +102,7 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
       can_validate: canValidateAtLevel(validasiList, approvalLevel),
 
       validasi: mhs.validasi.map((v) => ({
-        id_validasi: v.id_validasi,
+        validasi_code: v.uuid,
         level_validasi: v.level_validasi,
         status_validasi: v.status_validasi,
         catatan: v.catatan,
@@ -115,7 +116,7 @@ export async function getBatchDetailForUser(batchId: number, user: AuthUser) {
 
   return {
     batch: {
-      id_batch_upload: batch.id_batch_upload,
+      batch_code: batch.uuid,
       uuid: batch.uuid,
       nomor_batch_upload: batch.nomor_batch_upload,
       nama_file: batch.nama_file,
