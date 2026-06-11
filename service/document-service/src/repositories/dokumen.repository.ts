@@ -14,9 +14,15 @@ type CreateOrUpdateDokumenInput = {
   is_verified?: boolean;
 };
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 export async function findDokumenByMahasiswaAndJenis(
   id_mahasiswa: number,
-  jenis_dokumen: jenis_dokumen_enum
+  jenis_dokumen: jenis_dokumen_enum,
 ) {
   return prisma.dokumen.findFirst({
     where: {
@@ -48,7 +54,7 @@ export async function createDokumen(data: CreateOrUpdateDokumenInput) {
 
 export async function updateDokumen(
   id_dokumen: number,
-  data: Partial<CreateOrUpdateDokumenInput>
+  data: Partial<CreateOrUpdateDokumenInput>,
 ) {
   return prisma.dokumen.update({
     where: {
@@ -69,11 +75,11 @@ export async function updateDokumen(
 }
 
 export async function upsertDokumenByMahasiswaAndJenis(
-  data: CreateOrUpdateDokumenInput
+  data: CreateOrUpdateDokumenInput,
 ) {
   const existing = await findDokumenByMahasiswaAndJenis(
     data.id_mahasiswa,
-    data.jenis_dokumen
+    data.jenis_dokumen,
   );
 
   if (existing) {
@@ -83,17 +89,24 @@ export async function upsertDokumenByMahasiswaAndJenis(
   return createDokumen(data);
 }
 
-export async function findDokumenByNim(nim: string) {
+export async function findDokumenByMahasiswaCode(mahasiswaCode: string) {
+  const code = mahasiswaCode.trim();
+
   return prisma.dokumen.findMany({
     where: {
-      mahasiswa: {
-        nim,
-      },
+      mahasiswa: isUuid(code)
+        ? {
+            uuid: code,
+          }
+        : {
+            nim: code,
+          },
     },
     include: {
       mahasiswa: {
         select: {
           id_mahasiswa: true,
+          uuid: true,
           nim: true,
           nama_mahasiswa: true,
         },
@@ -111,6 +124,8 @@ export async function findDokumenByNim(nim: string) {
   });
 }
 
+export const findDokumenByNim = findDokumenByMahasiswaCode;
+
 export async function findDokumenById(id_dokumen: number) {
   return prisma.dokumen.findUnique({
     where: {
@@ -120,6 +135,7 @@ export async function findDokumenById(id_dokumen: number) {
       mahasiswa: {
         select: {
           id_mahasiswa: true,
+          uuid: true,
           nim: true,
           nama_mahasiswa: true,
         },
@@ -133,6 +149,7 @@ export async function findDokumenById(id_dokumen: number) {
     },
   });
 }
+
 export async function findDokumenByKodeQr(kode_qr: string) {
   return prisma.dokumen.findFirst({
     where: {
@@ -142,6 +159,7 @@ export async function findDokumenByKodeQr(kode_qr: string) {
       mahasiswa: {
         select: {
           id_mahasiswa: true,
+          uuid: true,
           nim: true,
           nama_mahasiswa: true,
           nik: true,

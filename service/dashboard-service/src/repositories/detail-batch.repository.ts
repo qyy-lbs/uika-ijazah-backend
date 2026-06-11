@@ -2,32 +2,33 @@ import prisma from "../prisma/prisma.js";
 
 export const getDetailBatchRepository = async (
   id_batch_upload: number,
-  status?: string
+  status?: string,
 ) => {
+  const safeStatus = status?.replace(/'/g, "''").toLowerCase().trim();
   let whereStatus = "";
 
-  if (status) {
-
-    if (status === "proses") {
+  if (safeStatus) {
+    if (safeStatus === "proses") {
       whereStatus = `
         AND v.status_validasi IS NULL
       `;
     } else {
       whereStatus = `
-        AND v.status_validasi = '${status}'
+        AND LOWER(v.status_validasi) = '${safeStatus}'
       `;
     }
-
   }
 
   return await prisma.$queryRawUnsafe(`
     SELECT
       b.id_batch_upload,
+      b.uuid AS batch_uuid,
       b.nomor_batch_upload,
       b.tahun_lulus,
       b.periode,
 
       m.id_mahasiswa,
+      m.uuid AS mahasiswa_uuid,
       m.nama_mahasiswa AS nama,
       m.nim,
 

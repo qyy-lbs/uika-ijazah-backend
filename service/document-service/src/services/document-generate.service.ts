@@ -1,5 +1,5 @@
 import type { jenis_dokumen_enum } from "@prisma/client";
-import { getAkademikProfileByNim } from "../clients/akademik.client.js";
+import { getAkademikProfileByMahasiswaCode } from "../clients/akademik.client.js";
 import { getTemplateForDocument } from "../clients/template.client.js";
 import { upsertDokumenByMahasiswaAndJenis } from "../repositories/dokumen.repository.js";
 import { generateNomorDokumen } from "../utils/document-number.util.js";
@@ -11,6 +11,14 @@ import { generateQrForDocument } from "../clients/qr.client.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
+}
+
+function getNumberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getStringValue(value: unknown) {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
 async function generateSingleDocument(params: {
@@ -28,16 +36,17 @@ async function generateSingleDocument(params: {
 
   const publicUrl = `${getPublicBaseUrl()}${output.relativePath}`;
 
-  // Fix Bug 2: generate sekali, pakai ulang di dua tempat
   const nomorDokumen = generateNomorDokumen({
     jenis: params.jenis,
     nim: params.nim,
   });
+
   const qr = await generateQrForDocument({
     nim: params.nim,
     jenis_dokumen: params.jenis,
     nomor_dokumen: nomorDokumen,
   });
+
   const tanggalTerbit = new Date();
   const tanggalTerbitFormatted = tanggalTerbit.toLocaleDateString("id-ID", {
     day: "2-digit",
@@ -54,10 +63,7 @@ async function generateSingleDocument(params: {
             nomor_dokumen: nomorDokumen,
             tanggal_terbit: tanggalTerbit,
             tanggal_terbit_formatted: tanggalTerbitFormatted,
-
-            // Pakai relative path supaya resolvePublicAssetUrl mengarah ke qr-service internal
             qr_code: qr.qr_image,
-
             kode_qr: qr.kode_qr,
             url_akses: qr.url_akses,
             file_pdf_url: publicUrl,
@@ -70,7 +76,6 @@ async function generateSingleDocument(params: {
     profile: profileForRender,
   });
 
-  // Fix Bug 1: pakai dimensi gambar dari layout yang sama dengan renderer
   const layout = template.konfigurasi_layout;
   const pageConfig = getDocumentPageConfig(
     params.jenis,
@@ -89,8 +94,8 @@ async function generateSingleDocument(params: {
     id_mahasiswa: params.id_mahasiswa,
     id_template: template.id_template,
     jenis_dokumen: params.jenis as jenis_dokumen_enum,
-    nomor_dokumen: nomorDokumen, // Fix Bug 2: pakai yang sama
-    tanggal_terbit: tanggalTerbit, // Fix Bug 2: pakai yang sama
+    nomor_dokumen: nomorDokumen,
+    tanggal_terbit: tanggalTerbit,
     file_pdf: output.relativePath,
     file_pdf_final: output.relativePath,
     kode_qr: qr.kode_qr,
@@ -113,32 +118,31 @@ async function generateSingleDocument(params: {
   };
 }
 
-export async function generateDocumentsByNim(
-  nim: string,
-  mahasiswaCode?: string,
-  mahasiswaId?: number
-) {
-  const profile = await getAkademikProfileByNim(nim, mahasiswaCode);
+export async function generateDocumentsByMahasiswaCode(mahasiswaCode: string) {
+  const profile = await getAkademikProfileByMahasiswaCode(mahasiswaCode);
 
-  const idMahasiswaRaw =
-    typeof mahasiswaId === "number"
-      ? mahasiswaId
-      : profile.mahasiswa?.id_mahasiswa;
+  const idMahasiswa = getNumberValue(profile.mahasiswa?.id_mahasiswa);
 
-  if (typeof idMahasiswaRaw !== "number") {
-    throw new Error("id_mahasiswa tidak ditemukan dari document-service");
+  if (!idMahasiswa) {
+    throw new Error("id_mahasiswa tidak ditemukan dari akademik-service");
+  }
+
+  const nim = getStringValue(profile.mahasiswa?.nim);
+
+  if (!nim) {
+    throw new Error("NIM tidak ditemukan dari akademik-service");
   }
 
   const [ijazah, transkrip] = await Promise.all([
     generateSingleDocument({
       jenis: "ijazah",
-      id_mahasiswa: idMahasiswaRaw,
+      id_mahasiswa: idMahasiswa,
       nim,
       profile,
     }),
     generateSingleDocument({
       jenis: "transkrip",
-      id_mahasiswa: idMahasiswaRaw,
+      id_mahasiswa: idMahasiswa,
       nim,
       profile,
     }),
@@ -146,33 +150,21 @@ export async function generateDocumentsByNim(
 
   return {
     mahasiswa: {
-      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code,
-      id_mahasiswa: idMahasiswaRaw,
-      nim: profile.mahasiswa?.nim,
+      id_mahasiswa: idMahasiswa,
+      mahasiswa_code: profile.mahasiswa?.uuid ?? profile.mahasiswa?.mahasiswa_code,
+      nim,
       nama: profile.mahasiswa?.nama,
+      nama_mahasiswa: profile.mahasiswa?.nama_mahasiswa,
     },
-  
     generated: {
-  ijazah: {
-    ...ijazah,
-    dokumen: {
-      ...ijazah.dokumen,
-
-      dokumen_code: ijazah.dokumen.uuid ?? null,
-      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code ?? null,
+      ijazah,
+      transkrip,
     },
-  },
-
-  transkrip: {
-    ...transkrip,
-    dokumen: {
-      ...transkrip.dokumen,
-
-      dokumen_code: transkrip.dokumen.uuid ?? null,
-      mahasiswa_code: mahasiswaCode ?? profile.mahasiswa?.mahasiswa_code ?? null,
-    },
-  },
-},
-   
   };
 }
+
+/**
+ * Alias sementara supaya final approval lama yang masih menyebut NIM tetap aman.
+ * Function ini sekarang bisa menerima NIM ataupun UUID mahasiswa.
+ */
+export const generateDocumentsByNim = generateDocumentsByMahasiswaCode;

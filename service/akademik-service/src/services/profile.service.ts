@@ -154,6 +154,7 @@ export async function getProfileByMahasiswaCode(mahasiswaCode: string) {
 
   return {
     mahasiswa: {
+      id_mahasiswa: mahasiswa.id_mahasiswa,
       mahasiswa_code: mahasiswa.uuid,
       uuid: mahasiswa.uuid,
 

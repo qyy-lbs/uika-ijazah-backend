@@ -53,13 +53,20 @@ app.use(
 
 // --- PROXY INBOUND SERVICE (Port 3003) ---
 app.use("/api/inbound", verifyGatewayToken);
+
 app.use(
   createProxyMiddleware({
     pathFilter: "/api/inbound",
     target: process.env.INBOUND_SERVICE_URL || "http://localhost:3003",
     changeOrigin: true,
     on: {
-      proxyReq: fixRequestBody,
+      proxyReq: (proxyReq, req) => {
+        const contentType = req.headers["content-type"] || "";
+
+        if (!contentType.includes("multipart/form-data")) {
+          fixRequestBody(proxyReq, req);
+        }
+      },
       proxyRes: (proxyRes, req) => {
         console.log(
           `[Inbound-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`,

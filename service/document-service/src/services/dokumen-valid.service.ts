@@ -1,6 +1,6 @@
 import {
   findBatchesWithValidDocuments,
-  findBatchWithValidDocumentsById,
+  findBatchWithValidDocumentsByCode,
 } from "../repositories/dokumen-valid.repository.js";
 
 type MahasiswaWithDokumen = Awaited<
@@ -47,10 +47,6 @@ function getPublishedDocuments(mahasiswa: MahasiswaWithDokumen) {
 function hasValidPublishedDocuments(mahasiswa: MahasiswaWithDokumen) {
   const { ijazah, transkrip } = getPublishedDocuments(mahasiswa);
 
-  /**
-   * Syarat dokumen valid/terbit:
-   * mahasiswa harus punya ijazah dan transkrip yang is_verified = true.
-   */
   return Boolean(ijazah && transkrip);
 }
 
@@ -60,6 +56,22 @@ function formatPeriode(periode: string | null | undefined) {
   return periode
     .replaceAll("_", " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function mapDocument(doc: ReturnType<typeof getPublishedDocuments>["ijazah"]) {
+  if (!doc) return null;
+
+  return {
+    id_dokumen: doc.id_dokumen,
+    document_code: doc.kode_qr,
+    nomor_dokumen: doc.nomor_dokumen,
+    tanggal_terbit: doc.tanggal_terbit,
+    kode_qr: doc.kode_qr,
+    url_akses: doc.url_akses,
+    file_pdf: doc.file_pdf,
+    file_pdf_final: doc.file_pdf_final,
+    file_pdf_url: buildFileUrl(doc.file_pdf_final || doc.file_pdf),
+  };
 }
 
 export async function getValidDocumentBatches(query: {
@@ -74,23 +86,17 @@ export async function getValidDocumentBatches(query: {
   const mapped = batches
     .map((batch) => {
       const validMahasiswa = batch.mahasiswa.filter(hasValidPublishedDocuments);
-
       const firstMahasiswa = validMahasiswa[0] ?? batch.mahasiswa[0];
 
       const fakultas = firstMahasiswa?.prodi?.unit?.nama_unit ?? "-";
-
-      const tahun =
-        batch.tahun_lulus ??
-        firstMahasiswa?.tahun_lulus ??
-        null;
+      const tahun = batch.tahun_lulus ?? firstMahasiswa?.tahun_lulus ?? null;
 
       return {
-        batch_code: batch.uuid ?? null,
         id: batch.id_batch_upload,
         id_batch_upload: batch.id_batch_upload,
-        batch:
-          batch.nomor_batch_upload ||
-          `Batch ${batch.id_batch_upload}`,
+        batch_code: batch.uuid,
+        uuid: batch.uuid,
+        batch: batch.nomor_batch_upload || `Batch ${batch.id_batch_upload}`,
         nomor_batch_upload: batch.nomor_batch_upload,
         nama_file: batch.nama_file,
         fakultas,
@@ -139,12 +145,12 @@ export async function getValidDocumentBatches(query: {
 }
 
 export async function getValidDocumentBatchDetail(
-  batchId: number,
+  batchCode: string,
   query: {
     search?: string;
   },
 ) {
-  const batch = await findBatchWithValidDocumentsById(batchId);
+  const batch = await findBatchWithValidDocumentsByCode(batchCode);
 
   if (!batch) {
     throw new Error("Batch tidak ditemukan");
@@ -156,8 +162,9 @@ export async function getValidDocumentBatchDetail(
       const { ijazah, transkrip } = getPublishedDocuments(mhs);
 
       return {
-        mahasiswa_code: mhs.uuid ?? null,
         id_mahasiswa: mhs.id_mahasiswa,
+        mahasiswa_code: mhs.uuid,
+        uuid: mhs.uuid,
         nama: mhs.nama_mahasiswa,
         nama_mahasiswa: mhs.nama_mahasiswa,
         nim: mhs.nim,
@@ -167,38 +174,8 @@ export async function getValidDocumentBatchDetail(
         tahun: mhs.tahun_lulus ?? batch.tahun_lulus ?? "-",
         tahun_lulus: mhs.tahun_lulus ?? batch.tahun_lulus ?? null,
         status: "Terbit",
-
-        ijazah: ijazah
-          ? {
-              dokumen_code: ijazah.uuid ?? null,
-              id_dokumen: ijazah.id_dokumen,
-              nomor_dokumen: ijazah.nomor_dokumen,
-              tanggal_terbit: ijazah.tanggal_terbit,
-              kode_qr: ijazah.kode_qr,
-              url_akses: ijazah.url_akses,
-              file_pdf: ijazah.file_pdf,
-              file_pdf_final: ijazah.file_pdf_final,
-              file_pdf_url: buildFileUrl(
-                ijazah.file_pdf_final || ijazah.file_pdf,
-              ),
-            }
-          : null,
-
-        transkrip: transkrip
-          ? {
-            dokumen_code: transkrip.uuid ?? null,
-              id_dokumen: transkrip.id_dokumen,
-              nomor_dokumen: transkrip.nomor_dokumen,
-              tanggal_terbit: transkrip.tanggal_terbit,
-              kode_qr: transkrip.kode_qr,
-              url_akses: transkrip.url_akses,
-              file_pdf: transkrip.file_pdf,
-              file_pdf_final: transkrip.file_pdf_final,
-              file_pdf_url: buildFileUrl(
-                transkrip.file_pdf_final || transkrip.file_pdf,
-              ),
-            }
-          : null,
+        ijazah: mapDocument(ijazah),
+        transkrip: mapDocument(transkrip),
       };
     });
 
@@ -219,12 +196,11 @@ export async function getValidDocumentBatchDetail(
 
   return {
     batch: {
-      batch_code: batch.uuid ?? null,
       id: batch.id_batch_upload,
       id_batch_upload: batch.id_batch_upload,
-      batch:
-        batch.nomor_batch_upload ||
-        `Batch ${batch.id_batch_upload}`,
+      batch_code: batch.uuid,
+      uuid: batch.uuid,
+      batch: batch.nomor_batch_upload || `Batch ${batch.id_batch_upload}`,
       nomor_batch_upload: batch.nomor_batch_upload,
       nama_file: batch.nama_file,
       fakultas: firstMahasiswa?.fakultas ?? "-",

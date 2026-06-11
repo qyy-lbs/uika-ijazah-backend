@@ -1,6 +1,10 @@
 import prisma from "../config/prisma";
 import { parseExcelFile } from "./excel.service";
-import { generateNomorBatch, parseDate } from "../utils/helpers";
+import {
+  generateNomorBatch,
+  getSingkatanFakultas,
+  parseDate,
+} from "../utils/helpers";
 import type { MahasiswaRow } from "../types";
 import * as XLSX from "xlsx";
 
@@ -13,6 +17,7 @@ type ImportError = {
   field: string;
   message: string;
 };
+
 type ResolvedMahasiswaRow = MahasiswaRow & {
   _resolved_id_prodi?: number;
   _resolved_nama_fakultas?: string | null;
@@ -45,6 +50,8 @@ function mapMahasiswaResponse(mhs: any) {
   return {
     id: mhs.id_mahasiswa,
     id_mahasiswa: mhs.id_mahasiswa,
+    mahasiswa_code: mhs.uuid ?? null,
+    uuid: mhs.uuid ?? null,
     nim: mhs.nim,
     nik: mhs.nik,
     nomor_seri_ijazah: mhs.nomor_seri_ijazah,
@@ -61,6 +68,7 @@ function mapMahasiswaResponse(mhs: any) {
 
     batch: mhs.batch_upload?.nomor_batch_upload ?? "-",
     id_batch_upload: mhs.id_batch_upload,
+    batch_code: mhs.batch_upload?.uuid ?? null,
 
     tempatLahir: mhs.tempat_lahir,
     tempat_lahir: mhs.tempat_lahir,
@@ -134,6 +142,7 @@ async function getUploadedMahasiswaPaginated(params: {
       batch_upload: {
         select: {
           id_batch_upload: true,
+          uuid: true,
           nomor_batch_upload: true,
           periode: true,
           tahun_lulus: true,
@@ -199,53 +208,54 @@ export async function processUpload(params: {
       ? ("semester_ganjil" as const)
       : ("semester_genap" as const);
 
-const { validatedRows: prodiValidated, prodiErrors } =
-  await validateProdi(valid);
+  const { validatedRows: prodiValidated, prodiErrors } =
+    await validateProdi(valid);
 
-const fakultasValidation = validateSatuFakultasDalamFile(prodiValidated);
+  const fakultasValidation = validateSatuFakultasDalamFile(prodiValidated);
 
-if (!fakultasValidation.valid) {
+  if (!fakultasValidation.valid) {
+    const allErrors: ImportError[] = [
+      ...errors,
+      ...prodiErrors,
+      ...fakultasValidation.fakultasErrors,
+    ];
+
+    return {
+      ditolak: true,
+      alasan:
+        "File Excel ditolak karena berisi lebih dari 1 fakultas. Dalam 1 file Excel hanya boleh ada 1 fakultas.",
+      fakultas_utama: fakultasValidation.fakultasUtama,
+      total_data_excel: valid.length + errors.length,
+      total_valid: 0,
+      total_gagal: allErrors.length,
+      total_batch: 0,
+      errors: allErrors.sort((a, b) => a.row - b.row),
+      batches: [],
+      mahasiswa: {
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          total_pages: 0,
+        },
+      },
+    };
+  }
+
+  const { uniqueRows, duplikatErrors } = await validateDuplikat(prodiValidated);
+
   const allErrors: ImportError[] = [
     ...errors,
     ...prodiErrors,
-    ...fakultasValidation.fakultasErrors,
+    ...duplikatErrors,
   ];
 
-  return {
-    ditolak: true,
-    alasan:
-      "File Excel ditolak karena berisi lebih dari 1 fakultas. Dalam 1 file Excel hanya boleh ada 1 fakultas.",
-    fakultas_utama: fakultasValidation.fakultasUtama,
-    total_data_excel: valid.length + errors.length,
-    total_valid: 0,
-    total_gagal: allErrors.length,
-    total_batch: 0,
-    errors: allErrors.sort((a, b) => a.row - b.row),
-    batches: [],
-    mahasiswa: {
-      data: [],
-      pagination: {
-        page,
-        limit,
-        total: 0,
-        total_pages: 0,
-      },
-    },
-  };
-}
-
-const { uniqueRows, duplikatErrors } = await validateDuplikat(prodiValidated);
-
-const allErrors: ImportError[] = [
-  ...errors,
-  ...prodiErrors,
-  ...duplikatErrors,
-];
-
-const chunks = chunkArray(uniqueRows, BATCH_SIZE);
+  const chunks = chunkArray(uniqueRows, BATCH_SIZE);
   const batchResults: {
     batch_ke: number;
     id_batch_upload: number;
+    batch_code?: string | null;
     nomor_batch_upload: string | null;
     record_berhasil: number;
     record_gagal: number;
@@ -253,35 +263,38 @@ const chunks = chunkArray(uniqueRows, BATCH_SIZE);
 
   const insertedMahasiswaIds: number[] = [];
 
-for (const [index, chunk] of chunks.entries()) {
-  const firstRow = chunk[0] as ResolvedMahasiswaRow | undefined;
-  const namaFakultas = firstRow?._resolved_nama_fakultas ?? null;
+  const firstResolvedRow = uniqueRows[0] as ResolvedMahasiswaRow | undefined;
+  const namaFakultasUpload = firstResolvedRow?._resolved_nama_fakultas ?? null;
+  const nextBatchNumber = await getNextBatchNumberByFakultas(namaFakultasUpload);
 
-  const batch = await prisma.batch_upload.create({
-    data: {
-      nomor_batch_upload: generateNomorBatch({
-        batchKe: index + 1,
-        namaFakultas,
-      }),
-      nama_file:
-        chunks.length > 1
-          ? `${namaFile} (batch ${index + 1}/${chunks.length})`
-          : namaFile,
-      total_record: chunk.length,
-      record_berhasil: chunk.length,
-      record_gagal: 0,
-      uploaded_by: uploadedBy,
-      periode: periodeEnum,
-      tahun_lulus: tahunLulus,
-      log_error: null,
-      ...(idTemplate ? { id_template: idTemplate } : {}),
-    },
-  });
+  for (const [index, chunk] of chunks.entries()) {
+    const batchNumber = nextBatchNumber + index;
 
-  const insertResults = await insertMahasiswaBatch(
-    chunk,
-    batch.id_batch_upload,
-  );
+    const batch = await prisma.batch_upload.create({
+      data: {
+        nomor_batch_upload: generateNomorBatch({
+          batchKe: batchNumber,
+          namaFakultas: namaFakultasUpload,
+        }),
+        nama_file:
+          chunks.length > 1
+            ? `${namaFile} (batch ${index + 1}/${chunks.length})`
+            : namaFile,
+        total_record: chunk.length,
+        record_berhasil: chunk.length,
+        record_gagal: 0,
+        uploaded_by: uploadedBy,
+        periode: periodeEnum,
+        tahun_lulus: tahunLulus,
+        log_error: null,
+        ...(idTemplate ? { id_template: idTemplate } : {}),
+      },
+    });
+
+    const insertResults = await insertMahasiswaBatch(
+      chunk,
+      batch.id_batch_upload,
+    );
 
     insertedMahasiswaIds.push(...insertResults.insertedIds);
 
@@ -302,8 +315,9 @@ for (const [index, chunk] of chunks.entries()) {
     allErrors.push(...insertResults.insertErrors);
 
     batchResults.push({
-      batch_ke: index + 1,
+      batch_ke: batchNumber,
       id_batch_upload: batch.id_batch_upload,
+      batch_code: (batch as { uuid?: string | null }).uuid ?? null,
       nomor_batch_upload: batch.nomor_batch_upload,
       record_berhasil: insertResults.berhasil,
       record_gagal: insertResults.gagal,
@@ -334,7 +348,7 @@ for (const [index, chunk] of chunks.entries()) {
 }
 
 // ─────────────────────────────────────────────
-// HELPER — Validasi duplikat NIM, NIK, Nomor Seri Ijazah, PISN
+// HELPER — Validasi duplikat NIM, NIK, Nomor Seri Ijazah
 // ─────────────────────────────────────────────
 async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
   uniqueRows: MahasiswaRow[];
@@ -344,7 +358,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 
   const nimCount: Record<string, number[]> = {};
   const nikCount: Record<string, number[]> = {};
-  const pisnCount: Record<string, number[]> = {};
   const nomorIjazahCount: Record<string, number[]> = {};
 
   const getNamaMahasiswa = (row?: MahasiswaRow) => {
@@ -369,16 +382,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
       }
 
       nikCount[nik].push(rowNum);
-    }
-
-    if (row.pisn) {
-      const pisn = String(row.pisn).trim();
-
-      if (!pisnCount[pisn]) {
-        pisnCount[pisn] = [];
-      }
-
-      pisnCount[pisn].push(rowNum);
     }
 
     if (row.nomor_seri_ijazah) {
@@ -440,30 +443,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
     }
   }
 
-  const pisnDuplikatDalamFile = new Set<string>();
-
-  for (const [pisn, baris] of Object.entries(pisnCount)) {
-    if (baris.length > 1) {
-      pisnDuplikatDalamFile.add(pisn);
-
-      for (const rowNum of baris) {
-        const row = rows[rowNum - 2];
-
-        duplikatErrors.push(
-          buildImportError({
-            row: rowNum,
-            nim: row ? String(row.nim).trim() : null,
-            nama_mahasiswa: getNamaMahasiswa(row),
-            field: "pisn",
-            message: `PISN '${pisn}' muncul ${baris.length}x dalam file (baris ${baris.join(
-              ", ",
-            )}). Semua baris dengan PISN ini ditolak.`,
-          }),
-        );
-      }
-    }
-  }
-
   const nomorIjazahDuplikatDalamFile = new Set<string>();
 
   for (const [nomorIjazah, baris] of Object.entries(nomorIjazahCount)) {
@@ -493,14 +472,12 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 
     const nim = String(row.nim).trim();
     const nik = row.nik ? String(row.nik).trim() : null;
-    const pisn = row.pisn ? String(row.pisn).trim() : null;
     const nomorIjazah = row.nomor_seri_ijazah
       ? String(row.nomor_seri_ijazah).trim()
       : null;
 
     if (nimDuplikatDalamFile.has(nim)) return false;
     if (nik && nikDuplikatDalamFile.has(nik)) return false;
-    if (pisn && pisnDuplikatDalamFile.has(pisn)) return false;
     if (nomorIjazah && nomorIjazahDuplikatDalamFile.has(nomorIjazah)) {
       return false;
     }
@@ -516,7 +493,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
 
     const nim = String(row.nim).trim();
     const nik = row.nik ? String(row.nik).trim() : null;
-    const pisn = row.pisn ? String(row.pisn).trim() : null;
     const nomorIjazah = row.nomor_seri_ijazah
       ? String(row.nomor_seri_ijazah).trim()
       : null;
@@ -568,31 +544,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
       }
     }
 
-    if (pisn) {
-      const existingPisn = await prisma.mahasiswa.findFirst({
-        where: {
-          pisn,
-        },
-        select: {
-          nim: true,
-          pisn: true,
-        },
-      });
-
-      if (existingPisn) {
-        duplikatErrors.push(
-          buildImportError({
-            row: rowNum,
-            nim,
-            nama_mahasiswa: getNamaMahasiswa(row),
-            field: "pisn",
-            message: `PISN '${pisn}' sudah terdaftar di database (milik NIM '${existingPisn.nim}') dan tidak dapat diimport ulang.`,
-          }),
-        );
-        continue;
-      }
-    }
-
     if (nomorIjazah) {
       const existingIjazah = await prisma.mahasiswa.findFirst({
         where: {
@@ -626,7 +577,6 @@ async function validateDuplikat(rows: MahasiswaRow[]): Promise<{
     duplikatErrors,
   };
 }
-
 // ─────────────────────────────────────────────
 // HELPER — Validasi nama_prodi ke DB
 // ─────────────────────────────────────────────
@@ -697,7 +647,6 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
     }
 
     const resolvedRow = row as ResolvedMahasiswaRow;
-
     resolvedRow._resolved_id_prodi = prodiData.id_prodi;
     resolvedRow._resolved_nama_fakultas = prodiData.nama_fakultas;
 
@@ -768,8 +717,7 @@ function validateSatuFakultasDalamFile(rows: ResolvedMahasiswaRow[]): {
   }
 
   const sortedGroups = [...groups].sort((a, b) => b.rows.length - a.rows.length);
-  const fakultasUtamaGroup = sortedGroups[0];
-  const fakultasUtama = fakultasUtamaGroup?.nama_fakultas ?? null;
+  const fakultasUtama = sortedGroups[0]?.nama_fakultas ?? null;
 
   for (const group of groups) {
     if (group.nama_fakultas === fakultasUtama) {
@@ -796,6 +744,55 @@ function validateSatuFakultasDalamFile(rows: ResolvedMahasiswaRow[]): {
   };
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+type BatchUploadNumberRow = {
+  nomor_batch_upload: string | null;
+};
+
+async function getNextBatchNumberByFakultas(
+  namaFakultas?: string | null,
+): Promise<number> {
+  const kodeFakultas = getSingkatanFakultas(namaFakultas);
+
+  const batches: BatchUploadNumberRow[] = await prisma.batch_upload.findMany({
+    where: {
+      nomor_batch_upload: {
+        endsWith: `-${kodeFakultas}`,
+        mode: "insensitive",
+      },
+    },
+    select: {
+      nomor_batch_upload: true,
+    },
+  });
+
+  const regex = new RegExp(`^Batch-(\\d+)-${kodeFakultas}$`, "i");
+
+  const lastNumber = batches.reduce<number>(
+    (max: number, batch: BatchUploadNumberRow) => {
+      const nomorBatch = batch.nomor_batch_upload ?? "";
+      const match = nomorBatch.match(regex);
+
+      if (!match) {
+        return max;
+      }
+
+      const batchNumber = Number(match[1]);
+
+      if (Number.isNaN(batchNumber)) {
+        return max;
+      }
+
+      return Math.max(max, batchNumber);
+    },
+    0,
+  );
+
+  return lastNumber + 1;
+}
 // ─────────────────────────────────────────────
 // HELPER — Pecah array menjadi chunks
 // ─────────────────────────────────────────────
@@ -905,12 +902,12 @@ async function insertMahasiswaBatch(
       if (errMsg.includes("nomor_seri_ijazah")) {
         field = "nomor_seri_ijazah";
         pesanError = `Nomor seri ijazah '${row.nomor_seri_ijazah}' sudah terdaftar di database.`;
-      } else if (errMsg.includes("pisn")) {
-        field = "pisn";
-        pesanError = `PISN '${row.pisn}' sudah terdaftar di database.`;
       } else if (errMsg.includes("nik")) {
         field = "nik";
         pesanError = `NIK '${row.nik}' sudah terdaftar di database.`;
+      } else if (errMsg.includes("pisn")) {
+        field = "pisn";
+        pesanError = `PISN '${row.pisn}' sudah terdaftar di database.`;
       } else if (errMsg.includes("nim")) {
         field = "nim";
         pesanError = `NIM '${nim}' sudah terdaftar di database.`;
@@ -920,9 +917,7 @@ async function insertMahasiswaBatch(
         buildImportError({
           row: rowNum,
           nim,
-          nama_mahasiswa: row.nama_mahasiswa
-            ? String(row.nama_mahasiswa).trim()
-            : null,
+          nama_mahasiswa: row.nama_mahasiswa ? String(row.nama_mahasiswa).trim() : null,
           field,
           message: pesanError,
         }),
@@ -1098,11 +1093,11 @@ export function generateTemplateExcel(): Buffer {
     "08123456789",
     "budi@email.com",
     "https://example.com/foto/budi.jpg",
-    "",
-    "",
+    "3.75",
+    "Sangat Memuaskan",
     "Analisis Sistem Informasi Berbasis AI",
     "2021",
-    "2026",
+    "2025",
     "Lulus",
     "2025-02-10",
     "Teknik Informatika",
@@ -1122,7 +1117,7 @@ export function generateTemplateExcel(): Buffer {
     [""],
     ["1. Kolom nim dan nama_mahasiswa wajib diisi."],
     ["2. Format tanggal: YYYY-MM-DD atau DD/MM/YYYY."],
-    ["3. IPK dan Predikat dikosongkan karena nanti nilainya akan dihitung otomatis berdasarkan data yang diinput."],
+    ["3. IPK diisi dengan angka desimal, contoh: 3.75"],
     ["4. nama_prodi diisi sesuai nama prodi yang terdaftar di sistem."],
     ["5. Jenis kelamin: Laki-laki / Perempuan"],
     ["6. Jangan tambah atau ubah nama kolom di baris pertama."],
@@ -1132,6 +1127,9 @@ export function generateTemplateExcel(): Buffer {
     ],
     [
       "9. Kolom foto diisi dengan URL atau base64 dari gambar profil mahasiswa.",
+    ],
+    [
+      "10. Dalam 1 file Excel hanya boleh berisi mahasiswa dari 1 fakultas. Jika terdapat lebih dari 1 fakultas, seluruh file akan ditolak.",
     ],
   ];
 
@@ -1291,33 +1289,33 @@ export async function getMahasiswaByBatchIds(params: {
   }
 
   if (search && search.trim() !== "") {
-    const keyword = search.trim();
+  const keyword = search.trim();
 
-    where.OR = [
-      {
-        nama_mahasiswa: {
-          contains: keyword,
-          mode: "insensitive",
-        },
+  where.OR = [
+    {
+      nama_mahasiswa: {
+        contains: keyword,
+        mode: "insensitive",
       },
-      {
-        nim: {
-          contains: keyword,
-          mode: "insensitive",
-        },
+    },
+    {
+      nim: {
+        contains: keyword,
+        mode: "insensitive",
       },
-      {
-        prodi: {
-          is: {
-            nama_prodi: {
-              contains: keyword,
-              mode: "insensitive",
-            },
+    },
+    {
+      prodi: {
+        is: {
+          nama_prodi: {
+            contains: keyword,
+            mode: "insensitive",
           },
         },
       },
-    ];
-  }
+    },
+  ];
+}
   const [mahasiswaData, total] = await Promise.all([
     prisma.mahasiswa.findMany({
       where,

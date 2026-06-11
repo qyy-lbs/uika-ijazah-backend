@@ -103,7 +103,8 @@ export async function getPendingBatchesForUser(user: AuthUser) {
         pending_count: mahasiswaPending.length,
         fakultas: Array.from(fakultasSet),
         mahasiswa: mahasiswaPending.map((mhs) => ({
-          id_mahasiswa: mhs.id_mahasiswa,
+          mahasiswa_code: mhs.uuid,
+          uuid: mhs.uuid,
           nim: mhs.nim,
           nama_mahasiswa: mhs.nama_mahasiswa,
           program_studi: mhs.prodi?.nama_prodi,
