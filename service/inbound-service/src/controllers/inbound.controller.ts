@@ -12,6 +12,27 @@ import {
   getMahasiswaByBatchIds,
 } from "../services/inbound.service";
 
+type ImportErrorResponse = {
+  row: number;
+  nim?: string | null;
+  nama_mahasiswa?: string | null;
+  field: string;
+  message: string;
+};
+
+type RejectedUploadResult = {
+  ditolak?: boolean;
+  alasan?: string;
+  fakultas_utama?: string | null;
+  total_data_excel?: number;
+  total_valid?: number;
+  total_gagal?: number;
+  total_batch?: number;
+  errors?: ImportErrorResponse[];
+  unknown_columns?: string[];
+  batches?: unknown[];
+  mahasiswa?: unknown;
+};
 // ─────────────────────────────────────────────
 // POST /api/inbound/upload
 // Upload file Excel + proses data mahasiswa
@@ -53,9 +74,10 @@ export async function uploadFile(
     }
 
     const tahunLulusNum = parseInt(tahun_lulus, 10);
+
     if (
       !tahun_lulus ||
-      isNaN(tahunLulusNum) ||
+      Number.isNaN(tahunLulusNum) ||
       tahunLulusNum < 2000 ||
       tahunLulusNum > 2100
     ) {
@@ -72,10 +94,13 @@ export async function uploadFile(
     const namaFile = req.file.originalname;
     const uploadedBy = req.user!.id_user;
 
-    // Validasi format kolom
     const formatCheck = validateExcelFormat(filePath);
+
     if (!formatCheck.valid) {
-      fs.unlinkSync(filePath);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
       sendError(
         res,
         "Format file Excel tidak sesuai.",
@@ -99,20 +124,55 @@ export async function uploadFile(
       limit: safeLimit,
     });
 
-    // File ditolak karena kolom tidak dikenal (double check dari service)
     if (result.ditolak) {
-      sendError(
-        res,
-        result.alasan as string,
-        {
-          kolom_tidak_dikenal: result.unknown_columns,
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+
+  const rejectedResult = result as RejectedUploadResult;
+
+  const resultErrors: ImportErrorResponse[] = Array.isArray(
+    rejectedResult.errors,
+  )
+    ? rejectedResult.errors
+    : [];
+
+  res.status(422).json({
+    success: false,
+    message:
+      rejectedResult.alasan ||
+      "File Excel ditolak karena format atau isi data tidak valid.",
+    ditolak: true,
+
+    fakultas_utama: rejectedResult.fakultas_utama ?? null,
+
+    total_data_excel: rejectedResult.total_data_excel ?? 0,
+    total_valid: rejectedResult.total_valid ?? 0,
+    total_gagal: rejectedResult.total_gagal ?? resultErrors.length,
+    total_batch: rejectedResult.total_batch ?? 0,
+
+    errors: resultErrors,
+
+    unknown_columns: rejectedResult.unknown_columns ?? [],
+
+    batches: rejectedResult.batches ?? [],
+    mahasiswa:
+      rejectedResult.mahasiswa ?? {
+        data: [],
+        pagination: {
+          page: safePage,
+          limit: safeLimit,
+          total: 0,
+          total_pages: 0,
         },
-        422,
-      );
-      return;
-    }
+      },
+  });
+
+  return;
+}
 
     const statusCode = (result.total_gagal ?? 0) > 0 ? 207 : 201;
+
     const message =
       result.total_batch === 1
         ? `${result.total_valid} mahasiswa diimport dalam 1 batch.`

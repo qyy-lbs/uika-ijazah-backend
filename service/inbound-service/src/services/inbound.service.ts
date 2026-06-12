@@ -642,15 +642,14 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
           message: `Prodi '${namaProdi}' tidak ditemukan di database. Periksa penulisan nama prodi.`,
         }),
       );
+    } else {
+      const resolvedRow = row as ResolvedMahasiswaRow;
 
-      continue;
+      resolvedRow._resolved_id_prodi = prodiData.id_prodi;
+      resolvedRow._resolved_nama_fakultas = prodiData.nama_fakultas;
+
+      validatedRows.push(resolvedRow);
     }
-
-    const resolvedRow = row as ResolvedMahasiswaRow;
-    resolvedRow._resolved_id_prodi = prodiData.id_prodi;
-    resolvedRow._resolved_nama_fakultas = prodiData.nama_fakultas;
-
-    validatedRows.push(resolvedRow);
   }
 
   return {
@@ -658,7 +657,6 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
     prodiErrors,
   };
 }
-
 function validateSatuFakultasDalamFile(rows: ResolvedMahasiswaRow[]): {
   valid: boolean;
   fakultasUtama: string | null;
