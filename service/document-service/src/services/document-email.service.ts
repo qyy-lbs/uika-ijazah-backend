@@ -51,7 +51,7 @@ function getFrontendBaseUrl() {
 }
 
 function buildStudentDownloadUrl(token: string) {
-  return `${getFrontendBaseUrl()}/#/download/${encodeURIComponent(token)}`;
+  return `${getPublicGatewayUrl()}/api/document/public/download/${encodeURIComponent(token)}`;
 }
 
 function resolveDocumentFile(filePath: string | null | undefined) {
