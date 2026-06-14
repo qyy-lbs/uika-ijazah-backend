@@ -248,6 +248,24 @@ app.use(
   }),
 );
 
+
+// PUBLIC STUDENT DOCUMENT DOWNLOAD
+app.use(
+  createProxyMiddleware({
+    pathFilter: "/api/document/public/download",
+    target: process.env.DOCUMENT_SERVICE_URL || "http://localhost:3009",
+    changeOrigin: true,
+    on: {
+      proxyReq: fixRequestBody,
+      proxyRes: (proxyRes, req) => {
+        console.log(
+          `[Document-Student-Download] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`,
+        );
+      },
+    },
+  }),
+);
+
 // PROTECTED DOCUMENT ROUTES
 app.use("/api/document", verifyGatewayToken);
 

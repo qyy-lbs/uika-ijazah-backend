@@ -2,6 +2,7 @@ import {
   findBatchesWithValidDocuments,
   findBatchWithValidDocumentsByCode,
 } from "../repositories/dokumen-valid.repository.js";
+import prisma from "../prisma/prisma.js";
 
 type MahasiswaWithDokumen = Awaited<
   ReturnType<typeof findBatchesWithValidDocuments>
@@ -82,6 +83,34 @@ export async function getValidDocumentBatches(query: {
   limit: number;
 }) {
   const batches = await findBatchesWithValidDocuments();
+  const emailLogs = await prisma.log_aktivitas.findMany({
+  where: {
+    aktivitas: "SEND_EMAIL_BATCH",
+  },
+  orderBy: {
+    created_at: "desc",
+  },
+});
+
+const sentBatchMap = new Map<string, string>();
+
+for (const log of emailLogs) {
+  try {
+    const parsed = JSON.parse(log.deskripsi || "{}");
+    const batchCode = parsed.batch_code;
+
+    if (batchCode && !sentBatchMap.has(batchCode)) {
+      const gagal = Number(parsed.gagal || 0);
+
+      sentBatchMap.set(
+        batchCode,
+        gagal > 0 ? "Email Terkirim Sebagian" : "Email Terkirim",
+      );
+    }
+  } catch {
+    // skip log yang bukan JSON
+  }
+}
 
   const mapped = batches
     .map((batch) => {
@@ -104,6 +133,8 @@ export async function getValidDocumentBatches(query: {
         periode: formatPeriode(batch.periode),
         total: validMahasiswa.length,
         created_at: batch.created_at,
+        status_kirim: sentBatchMap.get(String(batch.uuid)) || "Belum Diemail",
+        status_email: sentBatchMap.get(String(batch.uuid)) || "Belum Diemail",
       };
     })
     .filter((batch) => batch.total > 0);

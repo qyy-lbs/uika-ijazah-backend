@@ -5,6 +5,7 @@ import {
 } from "../repositories/batch.repository.js";
 
 import { mapDashboardStatus } from "../helpers/dashboard.helper.js";
+import prisma from "../prisma/prisma.js";
 
 const normalizeFilterStatus = (status?: string | null) => {
   const value = String(status || "")
@@ -151,9 +152,44 @@ export const getBatchService = async (
 
   const totalData = Number(totalRows[0]?.total || 0);
 
+  const emailLogs = await prisma.log_aktivitas.findMany({
+  where: {
+    aktivitas: "SEND_EMAIL_BATCH",
+  },
+  orderBy: {
+    created_at: "desc",
+  },
+});
+
+const sentEmailBatchMap = new Map<string, string>();
+
+for (const log of emailLogs) {
+  try {
+    const parsed = JSON.parse(log.deskripsi || "{}");
+    const batchCode = parsed.batch_code;
+
+    if (batchCode && !sentEmailBatchMap.has(batchCode)) {
+      const gagal = Number(parsed.gagal || 0);
+
+      sentEmailBatchMap.set(
+        batchCode,
+        gagal > 0 ? "Email Terkirim Sebagian" : "Email Terkirim",
+      );
+    }
+  } catch {
+    // abaikan log lama yang bukan JSON
+  }
+}
+
   return {
-    data: data.map((item) => ({
-      batch_code: item.batch_uuid ?? item.uuid ?? null,
+  data: data.map((item) => {
+    const batchCode = item.batch_uuid ?? item.uuid ?? null;
+    const statusEmail = batchCode
+      ? sentEmailBatchMap.get(String(batchCode)) || "Belum Diemail"
+      : "Belum Diemail";
+
+    return {
+      batch_code: batchCode,
 
       nomor_batch_upload: item.nomor_batch_upload,
       tahun_lulus: item.tahun_lulus,
@@ -161,13 +197,17 @@ export const getBatchService = async (
       fakultas: item.fakultas,
 
       total_mahasiswa: Number(item.total_mahasiswa),
-    })),
 
-    pagination: {
-      page,
-      limit,
-      total_data: totalData,
-      total_page: Math.ceil(totalData / limit),
-    },
-  };
+      status_email: statusEmail,
+      status_kirim: statusEmail,
+    };
+  }),
+
+  pagination: {
+    page,
+    limit,
+    total_data: totalData,
+    total_page: Math.ceil(totalData / limit),
+  },
+};
 };

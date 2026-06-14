@@ -11,6 +11,12 @@ import {
   getValidDocumentBatches,
 } from "../services/dokumen-valid.service.js";
 
+import {
+  sendBatchDocumentEmailService,
+  getStudentDownloadFileByToken,
+  getStaffDownloadFileByKodeQr,
+} from "../services/document-email.service.js";
+
 type MahasiswaCodeParams = {
   mahasiswaCode: string;
 };
@@ -236,6 +242,79 @@ export async function getValidBatchDetail(
         error instanceof Error
           ? error.message
           : "Gagal mengambil detail batch dokumen valid",
+    });
+  }
+}
+
+
+export async function sendBatchDocumentEmail(
+  req: Request<{ batchCode: string }>,
+  res: Response,
+) {
+  try {
+    const user = (req as any).user;
+
+    const data = await sendBatchDocumentEmailService({
+      batchCode: req.params.batchCode,
+      idUser: user?.id_user ?? null,
+      role: user?.role,
+    });
+
+    return res.json({
+      success: true,
+      message: "Email dokumen batch berhasil diproses",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Gagal mengirim email batch",
+    });
+  }
+}
+
+export async function downloadStudentDocument(
+  req: Request<{ token: string }>,
+  res: Response,
+) {
+  try {
+    const data = await getStudentDownloadFileByToken(req.params.token);
+
+    return res.download(data.absolutePath, data.fileName);
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Gagal download dokumen",
+    });
+  }
+}
+
+export async function downloadStaffDocument(
+  req: Request<{ kodeQr: string }>,
+  res: Response,
+) {
+  try {
+    const user = (req as any).user;
+
+    const data = await getStaffDownloadFileByKodeQr({
+      kodeQr: req.params.kodeQr,
+      role: user?.role,
+    });
+
+    return res.download(data.absolutePath, data.fileName);
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Gagal download dokumen",
     });
   }
 }

@@ -159,6 +159,10 @@ services:
         - DATABASE_URL=${DATABASE_URL}
     container_name: ijazah-service-document
     restart: always
+    depends_on:
+      - akademik-service
+      - template-service
+      - qr-service
     environment:
       - PORT=3009
       - DATABASE_URL=${DATABASE_URL}
@@ -173,9 +177,23 @@ services:
 
       # Public URL lewat gateway
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
+      - PUBLIC_GATEWAY_URL=http://103.158.196.32:8010
+      - FRONTEND_BASE_URL=http://103.158.196.32:5173
+
       - AKADEMIK_PUBLIC_BASE_URL=http://103.158.196.32:8010
       - TEMPLATE_PUBLIC_BASE_URL=http://template-service:3008
       - QR_PUBLIC_BASE_URL=http://qr-service:3010
+
+      # SMTP Email
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - MAIL_REPLY_TO=${MAIL_REPLY_TO}
+      - DOWNLOAD_LINK_EXPIRES_IN=${DOWNLOAD_LINK_EXPIRES_IN}
     volumes:
       - ./service/document-service/uploads:/app/uploads
 
@@ -202,6 +220,6 @@ services:
 
       # URL yang tertanam di dalam QR
       # Nanti kalau frontend sudah dideploy, ganti ke URL frontend yang benar
-      - VERIFY_BASE_URL=http://103.158.196.32:5173/verify
+      - VERIFY_BASE_URL=http://103.158.196.32:5173/#/verify
     volumes:
       - ./service/qr-service/uploads:/app/uploads
