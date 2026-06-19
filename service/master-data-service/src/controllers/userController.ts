@@ -26,12 +26,29 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (req: any, res: Response): Promise<void> => {
   try {
-    await userService.deleteUser(req.params.id as string);
-    res.status(200).json({ status: "success", message: "Akun berhasil dihapus!" });
+    const deletedBy =
+      Number(req.user?.id_user || req.user?.id || 0) || null;
+
+    await userService.deleteUser(req.params.id as string, deletedBy);
+
+    res.status(200).json({
+      status: "success",
+      message: "Akun berhasil dihapus!",
+    });
   } catch (error: any) {
-    res.status(404).json({ status: "error", message: error.message });
+    const message = error.message || "Gagal menghapus user.";
+
+    const statusCode =
+      message.toLowerCase().includes("tidak ditemukan")
+        ? 404
+        : 400;
+
+    res.status(statusCode).json({
+      status: "error",
+      message,
+    });
   }
 };
 
@@ -153,13 +170,42 @@ export const changePassword = async (req: any, res: any) => {
 
   } catch (error: any) {
     console.error("🚨 Error di changePassword:", error);
+    const lowerMessage = String(error.message || "").toLowerCase();
+
+const statusCode = lowerMessage.includes("salah")
+  ? 400
+  : lowerMessage.includes("dihapus")
+    ? 403
+    : 500;
     
-    // Deteksi jika error berasal dari salah password lama
-    const statusCode = error.message.includes("salah") ? 400 : 500;
     
     return res.status(statusCode).json({ 
       status: false, 
       message: error.message || "Terjadi kesalahan pada server saat mengubah sandi." 
+    });
+  }
+};
+
+export const restoreUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const restoredUser = await userService.restoreUser(req.params.id as string);
+
+    res.status(200).json({
+      status: "success",
+      message: "Akun berhasil direstore!",
+      data: restoredUser,
+    });
+  } catch (error: any) {
+    const message = error.message || "Gagal restore akun.";
+
+    const statusCode =
+      message.toLowerCase().includes("tidak ditemukan")
+        ? 404
+        : 400;
+
+    res.status(statusCode).json({
+      status: "error",
+      message,
     });
   }
 };

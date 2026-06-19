@@ -18,24 +18,43 @@ export async function createUser(data: any) {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   return userRepository.createNewUser({
-    email,
-    password: hashedPassword,
-    role,
-    id_unit: id_unit || null,
-    is_active: true,
-  });
+  email,
+  password: hashedPassword,
+  role,
+  id_unit: id_unit || null,
+});
+
+
 }
 
 export async function getAllUsers() {
   return userRepository.findAllUsers();
 }
 
-export async function deleteUser(id: string) {
+export async function deleteUser(id: string, deletedBy?: number | null) {
   const userId = Number(id);
-  const existingUser = await userRepository.findUserById(Number(id));
-  if (!existingUser) throw new Error("User tidak ditemukan.");
-  
-  return userRepository.removeUserById(Number(id));
+
+  if (Number.isNaN(userId)) {
+    throw new Error("ID user tidak valid.");
+  }
+
+  const existingUser = await userRepository.findUserById(userId);
+
+  if (!existingUser) {
+    throw new Error("User tidak ditemukan.");
+  }
+
+  if (existingUser.deleted_at) {
+    throw new Error("User sudah dihapus.");
+  }
+
+  const role = String(existingUser.role || "").toLowerCase().trim();
+
+  if (role === "admin") {
+    throw new Error("Akun admin tidak boleh dihapus.");
+  }
+
+  return userRepository.removeUserById(userId, deletedBy || null);
 }
 
 export async function editUser(id: string, data: any) {
@@ -45,6 +64,10 @@ export async function editUser(id: string, data: any) {
   if (!existingUser) {
     throw new Error("User tidak ditemukan");
   }
+
+  if (existingUser.deleted_at) {
+  throw new Error("User sudah dihapus dan tidak bisa diedit.");
+}
 
   const updateData: any = { email, role, id_unit };
 
@@ -69,6 +92,10 @@ export async function changePassword(userId: number, data: any) {
     throw new Error("User tidak ditemukan.");
   }
 
+  if (user.deleted_at) {
+  throw new Error("Akun sudah dihapus.");
+}
+
   // Pengecekan ekstra agar bcrypt tidak error "undefined"
   if (!user.password) {
     throw new Error("Sistem gagal membaca kata sandi lama dari database.");
@@ -88,4 +115,30 @@ export async function changePassword(userId: number, data: any) {
     where: { id_user: userId },
     data: { password: hashedPassword }
   });
+}
+
+export async function restoreUser(id: string) {
+  const userId = Number(id);
+
+  if (Number.isNaN(userId)) {
+    throw new Error("ID user tidak valid.");
+  }
+
+  const existingUser = await userRepository.findUserById(userId);
+
+  if (!existingUser) {
+    throw new Error("User tidak ditemukan.");
+  }
+
+  if (!existingUser.deleted_at) {
+    throw new Error("User belum dihapus, tidak perlu direstore.");
+  }
+
+  const role = String(existingUser.role || "").toLowerCase().trim();
+
+  if (role === "admin") {
+    throw new Error("Akun admin tidak perlu direstore.");
+  }
+
+  return userRepository.restoreUserById(userId);
 }

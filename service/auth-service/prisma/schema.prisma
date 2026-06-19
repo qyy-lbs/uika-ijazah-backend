@@ -194,6 +194,8 @@ model users {
   last_login    DateTime?       @db.Timestamp(6)
   created_at    DateTime?       @default(now()) @db.Timestamp(6)
   updated_at    DateTime?       @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_by Int?
   batch_upload  batch_upload[]
   log_aktivitas log_aktivitas[]
   template      template[]

@@ -102,7 +102,9 @@ export const getBatchDashboardRepository = async () => {
       tahun_lulus,
       periode
 
-    ORDER BY id_batch_upload DESC;
+   ORDER BY
+  NULLIF(substring(nomor_batch_upload from '[0-9]+'), '')::INT ASC NULLS LAST,
+  nomor_batch_upload ASC;
   `);
 };
 
@@ -322,8 +324,9 @@ export const getBatchRepository = async (
 
     HAVING COUNT(DISTINCT m.id_mahasiswa) > 0
 
-    ORDER BY
-      b.id_batch_upload DESC
+      ORDER BY
+      NULLIF(substring(b.nomor_batch_upload from '[0-9]+'), '')::INT ASC NULLS LAST,
+      b.nomor_batch_upload ASC
 
     LIMIT ${limit}
     OFFSET ${offset}
