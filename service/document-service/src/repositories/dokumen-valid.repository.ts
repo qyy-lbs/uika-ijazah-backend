@@ -4,6 +4,9 @@ export async function findBatchesWithValidDocuments() {
   return prisma.batch_upload.findMany({
     include: {
       mahasiswa: {
+        orderBy: {
+          nama_mahasiswa: "asc",
+        },
         include: {
           prodi: {
             include: {
@@ -22,7 +25,7 @@ export async function findBatchesWithValidDocuments() {
       },
     },
     orderBy: {
-      id_batch_upload: "desc",
+      nomor_batch_upload: "asc",
     },
   });
 }
@@ -34,6 +37,9 @@ export async function findBatchWithValidDocumentsByCode(batchCode: string) {
     },
     include: {
       mahasiswa: {
+        orderBy: {
+          nama_mahasiswa: "asc",
+        },
         include: {
           prodi: {
             include: {
@@ -64,6 +70,9 @@ export async function findBatchWithValidDocumentsById(batchId: number) {
     },
     include: {
       mahasiswa: {
+        orderBy: {
+          nama_mahasiswa: "asc",
+        },
         include: {
           prodi: {
             include: {

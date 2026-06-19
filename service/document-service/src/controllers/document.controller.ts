@@ -149,12 +149,17 @@ export async function getDocumentDetail(req: Request<IdParams>, res: Response) {
     return res.status(500).json({
       success: false,
       message:
-        error instanceof Error ? error.message : "Gagal mengambil detail dokumen",
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil detail dokumen",
     });
   }
 }
 
-export async function verifyDocument(req: Request<VerifyParams>, res: Response) {
+export async function verifyDocument(
+  req: Request<VerifyParams>,
+  res: Response,
+) {
   try {
     const { kodeQr } = req.params;
 
@@ -189,8 +194,13 @@ export async function getValidBatches(req: Request, res: Response) {
 
     const data = await getValidDocumentBatches({
       search: typeof req.query.search === "string" ? req.query.search : "",
-      fakultas: typeof req.query.fakultas === "string" ? req.query.fakultas : "",
+      fakultas:
+        typeof req.query.fakultas === "string" ? req.query.fakultas : "",
       tahun: typeof req.query.tahun === "string" ? req.query.tahun : "",
+      status_email:
+        typeof req.query.status_email === "string"
+          ? req.query.status_email
+          : "",
       page: Number.isFinite(page) && page > 0 ? page : 1,
       limit: Number.isFinite(limit) && limit > 0 ? limit : 10,
     });
@@ -200,6 +210,7 @@ export async function getValidBatches(req: Request, res: Response) {
       message: "Daftar batch dokumen valid berhasil diambil",
       data: data.data,
       pagination: data.pagination,
+      filter_options: data.filter_options,
     });
   } catch (error) {
     return res.status(500).json({
@@ -246,7 +257,6 @@ export async function getValidBatchDetail(
   }
 }
 
-
 export async function sendBatchDocumentEmail(
   req: Request<{ batchCode: string }>,
   res: Response,
@@ -269,9 +279,7 @@ export async function sendBatchDocumentEmail(
     return res.status(400).json({
       success: false,
       message:
-        error instanceof Error
-          ? error.message
-          : "Gagal mengirim email batch",
+        error instanceof Error ? error.message : "Gagal mengirim email batch",
     });
   }
 }
@@ -288,9 +296,7 @@ export async function downloadStudentDocument(
     return res.status(400).json({
       success: false,
       message:
-        error instanceof Error
-          ? error.message
-          : "Gagal download dokumen",
+        error instanceof Error ? error.message : "Gagal download dokumen",
     });
   }
 }
@@ -312,9 +318,7 @@ export async function downloadStaffDocument(
     return res.status(400).json({
       success: false,
       message:
-        error instanceof Error
-          ? error.message
-          : "Gagal download dokumen",
+        error instanceof Error ? error.message : "Gagal download dokumen",
     });
   }
 }

@@ -29,8 +29,7 @@ function getPublishedDocuments(mahasiswa: MahasiswaWithDokumen) {
 
   const ijazah = documents.find(
     (doc) =>
-      doc.jenis_dokumen?.toLowerCase() === "ijazah" &&
-      doc.is_verified === true,
+      doc.jenis_dokumen?.toLowerCase() === "ijazah" && doc.is_verified === true,
   );
 
   const transkrip = documents.find(
@@ -49,6 +48,71 @@ function hasValidPublishedDocuments(mahasiswa: MahasiswaWithDokumen) {
   const { ijazah, transkrip } = getPublishedDocuments(mahasiswa);
 
   return Boolean(ijazah && transkrip);
+}
+function normalizeSearchText(value: unknown) {
+  return String(value ?? "")
+    .toLowerCase()
+    .trim();
+}
+function sortByBatchNameAsc<
+  T extends {
+    batch?: string | null;
+    nomor_batch_upload?: string | null;
+  },
+>(data: T[]) {
+  return [...data].sort((a, b) => {
+    const nameA = String(a.batch || a.nomor_batch_upload || "");
+    const nameB = String(b.batch || b.nomor_batch_upload || "");
+
+    return nameA.localeCompare(nameB, "id", {
+      numeric: true,
+      sensitivity: "base",
+    });
+  });
+}
+function getMahasiswaSearchText(mahasiswa: MahasiswaWithDokumen) {
+  return [
+    mahasiswa.nama_mahasiswa,
+    mahasiswa.nim,
+    mahasiswa.prodi?.nama_prodi,
+    mahasiswa.prodi?.unit?.nama_unit,
+    mahasiswa.tahun_lulus,
+  ]
+    .map(normalizeSearchText)
+    .filter(Boolean)
+    .join(" ");
+}
+function normalizeStatusEmail(status: string | null | undefined) {
+  const raw = String(status || "").toLowerCase();
+
+  if (raw.includes("terkirim") && !raw.includes("belum")) {
+    return "Terkirim";
+  }
+
+  return "Belum Terkirim";
+}
+function isMahasiswaMatchSearch(
+  mahasiswa: MahasiswaWithDokumen,
+  search: string,
+) {
+  if (!search) return false;
+
+  return getMahasiswaSearchText(mahasiswa).includes(search);
+}
+
+function mapMahasiswaMatch(mahasiswa: MahasiswaWithDokumen) {
+  return {
+    id_mahasiswa: mahasiswa.id_mahasiswa,
+    mahasiswa_code: mahasiswa.uuid,
+    uuid: mahasiswa.uuid,
+    nama: mahasiswa.nama_mahasiswa,
+    nama_mahasiswa: mahasiswa.nama_mahasiswa,
+    nim: mahasiswa.nim,
+    prodi: mahasiswa.prodi?.nama_prodi ?? "-",
+    program_studi: mahasiswa.prodi?.nama_prodi ?? "-",
+    fakultas: mahasiswa.prodi?.unit?.nama_unit ?? "-",
+    tahun_lulus: mahasiswa.tahun_lulus ?? null,
+  };
 }
 
 function formatPeriode(periode: string | null | undefined) {
@@ -79,39 +143,47 @@ export async function getValidDocumentBatches(query: {
   search?: string;
   fakultas?: string;
   tahun?: string;
+  status_email?: string;
   page: number;
   limit: number;
 }) {
   const batches = await findBatchesWithValidDocuments();
+
   const emailLogs = await prisma.log_aktivitas.findMany({
-  where: {
-    aktivitas: "SEND_EMAIL_BATCH",
-  },
-  orderBy: {
-    created_at: "desc",
-  },
-});
+    where: {
+      aktivitas: "SEND_EMAIL_BATCH",
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+  });
 
-const sentBatchMap = new Map<string, string>();
+  const sentBatchMap = new Map<string, string>();
 
-for (const log of emailLogs) {
-  try {
-    const parsed = JSON.parse(log.deskripsi || "{}");
-    const batchCode = parsed.batch_code;
+  for (const log of emailLogs) {
+    try {
+      const parsed = JSON.parse(log.deskripsi || "{}");
+      const batchCode = parsed.batch_code;
 
-    if (batchCode && !sentBatchMap.has(batchCode)) {
-      const gagal = Number(parsed.gagal || 0);
+      if (batchCode && !sentBatchMap.has(batchCode)) {
+        const gagal = Number(parsed.gagal || 0);
 
-      sentBatchMap.set(
-        batchCode,
-        gagal > 0 ? "Email Terkirim Sebagian" : "Email Terkirim",
-      );
+        sentBatchMap.set(
+          batchCode,
+          gagal > 0 ? "Email Terkirim Sebagian" : "Email Terkirim",
+        );
+      }
+    } catch {
+      // skip log yang bukan JSON
     }
-  } catch {
-    // skip log yang bukan JSON
   }
-}
 
+  const searchKeyword = normalizeSearchText(query.search);
+  const fakultasKeyword = normalizeSearchText(query.fakultas);
+  const tahunKeyword = String(query.tahun ?? "").trim();
+  const statusEmailKeyword = query.status_email
+    ? normalizeSearchText(normalizeStatusEmail(query.status_email))
+    : "";
   const mapped = batches
     .map((batch) => {
       const validMahasiswa = batch.mahasiswa.filter(hasValidPublishedDocuments);
@@ -119,6 +191,17 @@ for (const log of emailLogs) {
 
       const fakultas = firstMahasiswa?.prodi?.unit?.nama_unit ?? "-";
       const tahun = batch.tahun_lulus ?? firstMahasiswa?.tahun_lulus ?? null;
+
+      const mahasiswaSearchText = validMahasiswa
+        .map(getMahasiswaSearchText)
+        .join(" ");
+
+      const mahasiswaMatch = searchKeyword
+        ? validMahasiswa
+            .filter((mhs) => isMahasiswaMatchSearch(mhs, searchKeyword))
+            .slice(0, 10)
+            .map(mapMahasiswaMatch)
+        : [];
 
       return {
         id: batch.id_batch_upload,
@@ -135,42 +218,92 @@ for (const log of emailLogs) {
         created_at: batch.created_at,
         status_kirim: sentBatchMap.get(String(batch.uuid)) || "Belum Diemail",
         status_email: sentBatchMap.get(String(batch.uuid)) || "Belum Diemail",
+
+        // Dipakai frontend untuk autocomplete mahasiswa
+        mahasiswa_match: mahasiswaMatch,
+
+        // Internal untuk search, tidak dikirim ke frontend
+        _mahasiswa_search: mahasiswaSearchText,
       };
     })
     .filter((batch) => batch.total > 0);
 
   const filtered = mapped.filter((item) => {
-    const search = query.search?.toLowerCase().trim() || "";
-    const fakultas = query.fakultas?.toLowerCase().trim() || "";
-    const tahun = query.tahun?.toString().trim() || "";
+    const batchSearchText = [
+      item.batch,
+      item.nomor_batch_upload,
+      item.fakultas,
+      item.nama_file,
+      item.tahun,
+      item.periode,
+      item._mahasiswa_search,
+    ]
+      .map(normalizeSearchText)
+      .filter(Boolean)
+      .join(" ");
 
     const matchSearch =
-      !search ||
-      item.batch?.toLowerCase().includes(search) ||
-      item.fakultas?.toLowerCase().includes(search) ||
-      item.nama_file?.toLowerCase().includes(search);
+      !searchKeyword || batchSearchText.includes(searchKeyword);
 
     const matchFakultas =
-      !fakultas || item.fakultas?.toLowerCase() === fakultas;
+      !fakultasKeyword ||
+      normalizeSearchText(item.fakultas) === fakultasKeyword;
 
-    const matchTahun = !tahun || String(item.tahun ?? "") === tahun;
+    const matchTahun =
+      !tahunKeyword || String(item.tahun ?? "") === tahunKeyword;
 
-    return matchSearch && matchFakultas && matchTahun;
+    const currentStatusEmail = normalizeSearchText(
+      normalizeStatusEmail(item.status_email),
+    );
+
+    const matchStatusEmail =
+      !statusEmailKeyword || currentStatusEmail === statusEmailKeyword;
+
+    return matchSearch && matchFakultas && matchTahun && matchStatusEmail;
   });
 
-  const totalData = filtered.length;
+  const fakultasOptions = Array.from(
+    new Set(
+      mapped
+        .map((item) => item.fakultas)
+        .filter((fakultas) => fakultas && fakultas !== "-"),
+    ),
+  ).sort((a, b) => a.localeCompare(b, "id"));
+  const tahunOptions = Array.from(
+    new Set(
+      mapped
+        .map((item) => item.tahun)
+        .filter(
+          (tahun) => tahun !== null && tahun !== undefined,
+        ),
+    ),
+  )
+    .map((tahun) => Number(tahun))
+    .filter((tahun) => !Number.isNaN(tahun))
+    .sort((a, b) => b - a);
+
+  const sortedFiltered = sortByBatchNameAsc(filtered);
+
+  const totalData = sortedFiltered.length;
   const totalPage = Math.ceil(totalData / query.limit) || 1;
 
   const startIndex = (query.page - 1) * query.limit;
   const endIndex = startIndex + query.limit;
 
+  const paginatedData = sortedFiltered
+    .slice(startIndex, endIndex)
+    .map(({ _mahasiswa_search, ...item }) => item);
+
   return {
-    data: filtered.slice(startIndex, endIndex),
+    data: paginatedData,
     pagination: {
       page: query.page,
       limit: query.limit,
       total_data: totalData,
       total_page: totalPage,
+    },
+    filter_options: {
+      fakultas: fakultasOptions, tahun: tahunOptions,
     },
   };
 }
