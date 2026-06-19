@@ -76,6 +76,32 @@ export const getDashboardSummaryService = async () => {
     permintaanVerifikasi: 0,
     dataReject: 0,
     dataRevoke: 0,
+
+    // Tambahan data minggu ini
+    terbitMingguIni: 0,
+    prosesMingguIni: 0,
+    rejectMingguIni: 0,
+    revokeMingguIni: 0,
+  };
+
+  // Awal minggu dihitung dari hari Senin jam 00:00
+  const now = new Date();
+
+  const startOfWeek = new Date(now);
+  const day = startOfWeek.getDay(); // Minggu = 0, Senin = 1
+  const diffToMonday = day === 0 ? 6 : day - 1;
+
+  startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const isThisWeek = (dateValue: any) => {
+    if (!dateValue) return false;
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) return false;
+
+    return date >= startOfWeek && date <= now;
   };
 
   rows.forEach((item) => {
@@ -84,14 +110,38 @@ export const getDashboardSummaryService = async () => {
       hasVerifiedDocument: Boolean(item.has_verified_document),
     });
 
+    const tanggalAktivitas = item.tanggal_proses;
+
     if (status === "terbit") {
       summary.totalIjazahTerbit++;
-    } else if (status === "rejected") {
+
+      if (isThisWeek(tanggalAktivitas)) {
+        summary.terbitMingguIni++;
+      }
+    } 
+    
+    else if (status === "rejected") {
       summary.dataReject++;
-    } else if (status === "revoked") {
+
+      if (isThisWeek(tanggalAktivitas)) {
+        summary.rejectMingguIni++;
+      }
+    } 
+    
+    else if (status === "revoked") {
       summary.dataRevoke++;
-    } else {
+
+      if (isThisWeek(tanggalAktivitas)) {
+        summary.revokeMingguIni++;
+      }
+    } 
+    
+    else {
       summary.permintaanVerifikasi++;
+
+      if (isThisWeek(tanggalAktivitas)) {
+        summary.prosesMingguIni++;
+      }
     }
   });
 
