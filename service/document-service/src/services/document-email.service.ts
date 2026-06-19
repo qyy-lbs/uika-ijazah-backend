@@ -98,18 +98,17 @@ function isAllowedStaffDownloader(role: string | null | undefined) {
   return ["admin", "operator", "rektor"].includes(String(role || "").toLowerCase());
 }
 
-export async function sendBatchDocumentEmailService(params: {
-  batchCode: string;
-  idUser?: number | null;
-  role?: string | null;
-}) {
-  if (!isAllowedEmailSender(params.role)) {
-    throw new Error("Role tidak diizinkan mengirim email batch");
-  }
+type BatchForEmail = NonNullable<
+  Awaited<ReturnType<typeof findBatchForEmail>>
+>;
 
-  const batch = await prisma.batch_upload.findFirst({
+type MahasiswaForEmail = BatchForEmail["mahasiswa"][number];
+type DokumenForEmail = MahasiswaForEmail["dokumen"][number];
+
+async function findBatchForEmail(batchCode: string) {
+  return prisma.batch_upload.findFirst({
     where: {
-      uuid: params.batchCode,
+      uuid: batchCode,
     },
     include: {
       mahasiswa: {
@@ -126,9 +125,65 @@ export async function sendBatchDocumentEmailService(params: {
       },
     },
   });
+}
+
+function normalizeJenisDokumen(jenis: string | null | undefined) {
+  return String(jenis || "").toLowerCase().trim();
+}
+
+function getPublishedDocumentsForEmail(mahasiswa: MahasiswaForEmail) {
+  const documents = Array.isArray(mahasiswa.dokumen)
+    ? mahasiswa.dokumen
+    : [];
+
+  const ijazah = documents.find(
+    (doc) => normalizeJenisDokumen(doc.jenis_dokumen) === "ijazah",
+  );
+
+  const transkrip = documents.find(
+    (doc) => normalizeJenisDokumen(doc.jenis_dokumen) === "transkrip",
+  );
+
+  return {
+    ijazah,
+    transkrip,
+  };
+}
+
+function hasValidPublishedDocumentsForEmail(mahasiswa: MahasiswaForEmail) {
+  const { ijazah, transkrip } = getPublishedDocumentsForEmail(mahasiswa);
+
+  return Boolean(ijazah && transkrip);
+}
+
+function isDocumentDownloadable(doc: DokumenForEmail) {
+  const punyaFile = Boolean(doc.file_pdf_final || doc.file_pdf);
+  const downloadCount = doc.download_count ?? 0;
+  const maxDownload = doc.max_download ?? 1;
+
+  return punyaFile && downloadCount < maxDownload;
+}
+export async function sendBatchDocumentEmailService(params: {
+  batchCode: string;
+  idUser?: number | null;
+  role?: string | null;
+}) {
+  if (!isAllowedEmailSender(params.role)) {
+    throw new Error("Role tidak diizinkan mengirim email batch");
+  }
+
+  const batch = await findBatchForEmail(params.batchCode);
 
   if (!batch) {
     throw new Error("Batch tidak ditemukan");
+  }
+
+  const validMahasiswa = batch.mahasiswa.filter(
+    hasValidPublishedDocumentsForEmail,
+  );
+
+  if (validMahasiswa.length === 0) {
+    throw new Error("Batch tidak memiliki mahasiswa dengan dokumen valid");
   }
 
   const batchName =
@@ -140,7 +195,7 @@ export async function sendBatchDocumentEmailService(params: {
   const detailBerhasil: string[] = [];
   const detailGagal: string[] = [];
 
-  for (const mahasiswa of batch.mahasiswa) {
+  for (const mahasiswa of validMahasiswa) {
     try {
       if (!mahasiswa.email) {
         gagal++;
@@ -148,18 +203,21 @@ export async function sendBatchDocumentEmailService(params: {
         continue;
       }
 
-      const dokumenValid = mahasiswa.dokumen.filter((doc) => {
-        const punyaFile = Boolean(doc.file_pdf_final || doc.file_pdf);
-        const downloadCount = doc.download_count ?? 0;
-        const maxDownload = doc.max_download ?? 1;
+      const { ijazah, transkrip } =
+        getPublishedDocumentsForEmail(mahasiswa);
 
-        return punyaFile && downloadCount < maxDownload;
-      });
+      const dokumenValid = [ijazah, transkrip].filter(
+        (doc): doc is DokumenForEmail => Boolean(doc),
+      );
 
-      if (dokumenValid.length === 0) {
+      const dokumenTidakSiap = dokumenValid.find(
+        (doc) => !isDocumentDownloadable(doc),
+      );
+
+      if (dokumenTidakSiap) {
         gagal++;
         detailGagal.push(
-          `${mahasiswa.nim} - dokumen belum tersedia atau sudah pernah didownload`,
+          `${mahasiswa.nim} - dokumen ${dokumenTidakSiap.jenis_dokumen} belum tersedia atau sudah pernah didownload`,
         );
         continue;
       }
@@ -205,6 +263,7 @@ export async function sendBatchDocumentEmailService(params: {
       deskripsi: JSON.stringify({
         batch_code: batch.uuid,
         nomor_batch_upload: batch.nomor_batch_upload,
+        total_mahasiswa_valid: validMahasiswa.length,
         berhasil,
         gagal,
         detail_berhasil: detailBerhasil,
@@ -216,7 +275,7 @@ export async function sendBatchDocumentEmailService(params: {
   return {
     batch_code: batch.uuid,
     nomor_batch_upload: batch.nomor_batch_upload,
-    total_mahasiswa: batch.mahasiswa.length,
+    total_mahasiswa: validMahasiswa.length,
     berhasil,
     gagal,
     detail_gagal: detailGagal,
