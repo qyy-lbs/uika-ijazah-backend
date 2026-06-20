@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-
+import path from "path";
 import unitRoutes from './routes/unitRoutes.js';
 import usersRoutes from './routes/userRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
-
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // --- DAFTAR RUTE ---
 app.use('/api/unit', unitRoutes);
 app.use('/api/user', usersRoutes);
