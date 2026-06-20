@@ -19,7 +19,7 @@ export function getDocumentOutputPath(params: {
     process.cwd(),
     "uploads",
     "documents",
-    params.jenis
+    params.jenis,
   );
 
   ensureDir(absoluteDir);
@@ -33,23 +33,32 @@ export function getDocumentOutputPath(params: {
   };
 }
 
+function isImageFile(src: string) {
+  return /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(src);
+}
+
 export function resolvePublicAssetUrl(src: string | null | undefined) {
   if (!src) return null;
 
-  if (src.startsWith("http://") || src.startsWith("https://")) {
-    return src;
+  const cleanSrc = src.trim();
+
+  if (!cleanSrc) return null;
+
+  if (cleanSrc.startsWith("http://") || cleanSrc.startsWith("https://")) {
+    return cleanSrc;
   }
 
-  const documentBaseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3009";
+  const documentBaseUrl =
+    process.env.PUBLIC_BASE_URL || "http://localhost:3009";
 
   const templateBaseUrl =
     process.env.TEMPLATE_PUBLIC_BASE_URL ||
     process.env.TEMPLATE_SERVICE_URL ||
     "http://localhost:3008";
-    
- if (src.startsWith("/uploads/templates")) {
-    return `${templateBaseUrl}${src}`;
-  }
+
+  const masterDataBaseUrl =
+    process.env.MASTER_DATA_PUBLIC_BASE_URL || "http://localhost:3004";
+
   const akademikBaseUrl =
     process.env.AKADEMIK_PUBLIC_BASE_URL ||
     process.env.AKADEMIK_SERVICE_URL ||
@@ -60,22 +69,37 @@ export function resolvePublicAssetUrl(src: string | null | undefined) {
     process.env.QR_SERVICE_URL ||
     "http://localhost:3010";
 
-  if (src.startsWith("/uploads/qr")) {
-    return `${qrBaseUrl}${src}`;
+  if (cleanSrc.startsWith("/uploads/templates")) {
+    return `${templateBaseUrl}${cleanSrc}`;
+  }
+
+  if (cleanSrc.startsWith("/uploads/qr")) {
+    return `${qrBaseUrl}${cleanSrc}`;
   }
 
   if (
-    src.startsWith("/uploads/mahasiswa") ||
-    src.startsWith("/uploads/unit") ||
-    src.startsWith("/uploads/prodi") ||
-    src.startsWith("/uploads/assets")
+    cleanSrc.startsWith("/uploads/unit") ||
+    cleanSrc.startsWith("/uploads/prodi") ||
+    cleanSrc.startsWith("/uploads/assets")
   ) {
-    return `${akademikBaseUrl}${src}`;
+    return `${masterDataBaseUrl}${cleanSrc}`;
   }
 
-  if (src.startsWith("/")) {
-    return `${documentBaseUrl}${src}`;
+  if (cleanSrc.startsWith("/uploads/mahasiswa")) {
+    return `${akademikBaseUrl}${cleanSrc}`;
   }
 
-  return `${documentBaseUrl}/${src}`;
+  if (cleanSrc.startsWith("/uploads/")) {
+    return `${masterDataBaseUrl}${cleanSrc}`;
+  }
+
+  if (cleanSrc.startsWith("/")) {
+    return `${documentBaseUrl}${cleanSrc}`;
+  }
+
+  if (isImageFile(cleanSrc)) {
+    return `${masterDataBaseUrl}/uploads/${cleanSrc}`;
+  }
+
+  return `${documentBaseUrl}/${cleanSrc}`;
 }
