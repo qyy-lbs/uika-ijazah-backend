@@ -180,6 +180,7 @@ services:
       - PUBLIC_GATEWAY_URL=http://103.158.196.32:8010
       - FRONTEND_BASE_URL=http://103.158.196.32:5173
 
+      - MASTER_DATA_PUBLIC_BASE_URL=http://master-data-service:3004
       - AKADEMIK_PUBLIC_BASE_URL=http://103.158.196.32:8010
       - TEMPLATE_PUBLIC_BASE_URL=http://template-service:3008
       - QR_PUBLIC_BASE_URL=http://qr-service:3010
