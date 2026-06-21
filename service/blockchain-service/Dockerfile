@@ -7,6 +7,7 @@ ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
 
 COPY package*.json ./
+COPY prisma.config.ts ./prisma.config.ts
 COPY prisma/ ./prisma/
 
 RUN npm install
@@ -28,6 +29,7 @@ ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
 
 COPY package*.json ./
+COPY prisma.config.ts ./prisma.config.ts
 COPY prisma/ ./prisma/
 
 RUN npm install --omit=dev
