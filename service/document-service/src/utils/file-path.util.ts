@@ -33,10 +33,32 @@ export function getDocumentOutputPath(params: {
   };
 }
 
+function getGoogleDriveFileId(url: string) {
+  const patterns = [
+    /\/file\/d\/([^/]+)/,
+    /[?&]id=([^&]+)/,
+    /\/open\?id=([^&]+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+}
+
+function getGoogleDriveImageUrl(url: string, size = 500) {
+  const fileId = getGoogleDriveFileId(url);
+
+  if (!fileId) return url;
+
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`;
+}
+
 function isImageFile(src: string) {
   return /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(src);
 }
-
 export function resolvePublicAssetUrl(
   src: string | null | undefined,
   field?: string,
@@ -46,7 +68,9 @@ export function resolvePublicAssetUrl(
   let cleanSrc = src.trim();
 
   if (!cleanSrc) return null;
-
+  if (cleanSrc.includes("drive.google.com")) {
+    return getGoogleDriveImageUrl(cleanSrc, 500);
+  }
   if (
     cleanSrc.startsWith("http://") ||
     cleanSrc.startsWith("https://") ||
