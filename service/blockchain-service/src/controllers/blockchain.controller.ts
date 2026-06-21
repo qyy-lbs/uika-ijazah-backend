@@ -17,9 +17,6 @@ export async function healthBlockchain(req: Request, res: Response) {
 export async function mineDocument(req: Request, res: Response) {
   try {
     const idDokumen = Number(req.body.id_dokumen);
-    const hashDokumen = req.body.hash_dokumen
-      ? String(req.body.hash_dokumen)
-      : undefined;
 
     if (!idDokumen || Number.isNaN(idDokumen)) {
       res.status(400).json({
@@ -28,6 +25,12 @@ export async function mineDocument(req: Request, res: Response) {
       });
       return;
     }
+
+    const hashDokumen =
+      typeof req.body.hash_dokumen === "string" &&
+      req.body.hash_dokumen.trim() !== ""
+        ? req.body.hash_dokumen.trim()
+        : undefined;
 
     const result = await mineDocumentBlock({
       id_dokumen: idDokumen,

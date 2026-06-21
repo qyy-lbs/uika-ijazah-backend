@@ -18,6 +18,7 @@ services:
       - template-service
       - document-service
       - qr-service
+      - blockchain-service
     environment:
       - PORT=3000
       - AUTH_SERVICE_URL=http://auth-service:3002
@@ -29,6 +30,7 @@ services:
       - TEMPLATE_SERVICE_URL=http://template-service:3008
       - DOCUMENT_SERVICE_URL=http://document-service:3009
       - QR_SERVICE_URL=http://qr-service:3010
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain-service:3011
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
@@ -163,6 +165,7 @@ services:
       - akademik-service
       - template-service
       - qr-service
+      - blockchain-service
     environment:
       - PORT=3009
       - DATABASE_URL=${DATABASE_URL}
@@ -174,6 +177,7 @@ services:
       - AKADEMIK_SERVICE_URL=http://akademik-service:3005
       - TEMPLATE_SERVICE_URL=http://template-service:3008
       - QR_SERVICE_URL=http://qr-service:3010
+      - BLOCKCHAIN_SERVICE_URL=http://blockchain-service:3011
 
       # Public URL lewat gateway
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
@@ -224,3 +228,22 @@ services:
       - VERIFY_BASE_URL=http://103.158.196.32:5173/#/verify
     volumes:
       - ./service/qr-service/uploads:/app/uploads
+
+
+  # -----------------------------------------------------------------
+  # 11. Blockchain SERVICE (Internal)
+  # -----------------------------------------------------------------
+  blockchain-service:
+    build:
+      context: ./service/blockchain-service
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=${DATABASE_URL}
+    container_name: ijazah-service-blockchain
+    restart: always
+    environment:
+      - PORT=3011
+      - DATABASE_URL=${DATABASE_URL}
+      - INTERNAL_SERVICE_KEY=ijazahTranskrip_internal_service_secret
+    expose:
+      - "3011"   

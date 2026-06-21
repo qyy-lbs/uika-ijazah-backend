@@ -156,6 +156,7 @@ export async function findDokumenByKodeQr(kode_qr: string) {
       kode_qr,
     },
     include: {
+         blockchain: true,
       mahasiswa: {
         select: {
           id_mahasiswa: true,
@@ -180,6 +181,36 @@ export async function findDokumenByKodeQr(kode_qr: string) {
           jenis_template: true,
         },
       },
+    },
+  });
+}
+
+export async function findFinalDokumenWithBlockchain(
+  id_mahasiswa: number,
+  jenis_dokumen: jenis_dokumen_enum,
+) {
+  return prisma.dokumen.findFirst({
+    where: {
+      id_mahasiswa,
+      jenis_dokumen,
+      is_verified: true,
+      blockchain: {
+        isNot: null,
+      },
+    },
+    include: {
+      template: {
+        select: {
+          id_template: true,
+          jenis_template: true,
+          file_template: true,
+          konfigurasi_layout: true,
+        },
+      },
+      blockchain: true,
+    },
+    orderBy: {
+      updated_at: "desc",
     },
   });
 }

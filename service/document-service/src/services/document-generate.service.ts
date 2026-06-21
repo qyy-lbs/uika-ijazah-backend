@@ -1,13 +1,15 @@
 import type { jenis_dokumen_enum } from "@prisma/client";
 import { getAkademikProfileByMahasiswaCode } from "../clients/akademik.client.js";
 import { getTemplateForDocument } from "../clients/template.client.js";
-import { upsertDokumenByMahasiswaAndJenis } from "../repositories/dokumen.repository.js";
+import { upsertDokumenByMahasiswaAndJenis,findFinalDokumenWithBlockchain } from "../repositories/dokumen.repository.js";
 import { generateNomorDokumen } from "../utils/document-number.util.js";
 import { getDocumentOutputPath } from "../utils/file-path.util.js";
 import { renderDocumentHtml } from "./document-html-renderer.service.js";
 import { renderHtmlToPdf } from "./pdf-renderer.service.js";
 import { getDocumentPageConfig } from "../utils/document-page-config.util.js";
 import { generateQrForDocument } from "../clients/qr.client.js";
+import { mineDocumentToBlockchain } from "../clients/blockchain.client.js";
+import { createFileSha256 } from "../utils/file-hash.util.js";
 
 function getPublicBaseUrl() {
   return process.env.PUBLIC_BASE_URL || "http://localhost:3009";
@@ -21,12 +23,68 @@ function getStringValue(value: unknown) {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
 
+function getTemplateElementCount(layout: unknown) {
+  if (
+    typeof layout === "object" &&
+    layout !== null &&
+    Array.isArray((layout as { elements?: unknown[] }).elements)
+  ) {
+    return (layout as { elements: unknown[] }).elements.length;
+  }
+
+  return 0;
+}
+
+function buildExistingDocumentResponse(
+  existing: Awaited<ReturnType<typeof findFinalDokumenWithBlockchain>>,
+) {
+  if (!existing) {
+    return null;
+  }
+
+  const relativePath = existing.file_pdf_final || existing.file_pdf || null;
+
+  const { template, blockchain, ...dokumen } = existing;
+
+  return {
+    dokumen,
+    template: template
+      ? {
+          id_template: template.id_template,
+          jenis_template: template.jenis_template,
+          file_template: template.file_template,
+          total_elements: getTemplateElementCount(template.konfigurasi_layout),
+        }
+      : null,
+    file: {
+      relative_path: relativePath,
+      public_url: relativePath ? `${getPublicBaseUrl()}${relativePath}` : null,
+    },
+    blockchain: {
+      message: "Dokumen sudah final dan tercatat di blockchain",
+      block: blockchain,
+    },
+    reused: true,
+  };
+}
+
 async function generateSingleDocument(params: {
   jenis: "ijazah" | "transkrip";
   id_mahasiswa: number;
   nim: string;
   profile: unknown;
 }) {
+
+    const existingFinalDocument = await findFinalDokumenWithBlockchain(
+    params.id_mahasiswa,
+    params.jenis as jenis_dokumen_enum,
+  );
+
+  const existingResponse = buildExistingDocumentResponse(existingFinalDocument);
+
+  if (existingResponse) {
+    return existingResponse;
+  }
   const template = await getTemplateForDocument(params.jenis);
 
   const output = getDocumentOutputPath({
@@ -103,6 +161,13 @@ async function generateSingleDocument(params: {
     is_verified: true,
   });
 
+  const hashDokumen = await createFileSha256(output.absolutePath);
+
+const blockchain = await mineDocumentToBlockchain({
+  id_dokumen: dokumen.id_dokumen,
+  hash_dokumen: hashDokumen,
+});
+
   return {
     dokumen,
     template: {
@@ -115,6 +180,8 @@ async function generateSingleDocument(params: {
       relative_path: output.relativePath,
       public_url: publicUrl,
     },
+      blockchain,
+  reused: false,
   };
 }
 
@@ -133,20 +200,21 @@ export async function generateDocumentsByMahasiswaCode(mahasiswaCode: string) {
     throw new Error("NIM tidak ditemukan dari akademik-service");
   }
 
-  const [ijazah, transkrip] = await Promise.all([
-    generateSingleDocument({
-      jenis: "ijazah",
-      id_mahasiswa: idMahasiswa,
-      nim,
-      profile,
-    }),
-    generateSingleDocument({
-      jenis: "transkrip",
-      id_mahasiswa: idMahasiswa,
-      nim,
-      profile,
-    }),
-  ]);
+const ijazah = await generateSingleDocument({
+  jenis: "ijazah",
+  id_mahasiswa: idMahasiswa,
+  nim,
+  profile,
+});
+
+const transkrip = await generateSingleDocument({
+  jenis: "transkrip",
+  id_mahasiswa: idMahasiswa,
+  nim,
+  profile,
+});
+
+
 
   return {
     mahasiswa: {
@@ -156,11 +224,12 @@ export async function generateDocumentsByMahasiswaCode(mahasiswaCode: string) {
       nama: profile.mahasiswa?.nama,
       nama_mahasiswa: profile.mahasiswa?.nama_mahasiswa,
     },
-    generated: {
-      ijazah,
-      transkrip,
-    },
-  };
+       generated: {
+    ijazah,
+    transkrip,
+  },
+};
+  
 }
 
 /**

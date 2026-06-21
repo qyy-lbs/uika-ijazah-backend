@@ -105,10 +105,34 @@ export const getProdiByUnit = async (req: Request, res: Response): Promise<void>
 
 export const editProdi = async (req: Request, res: Response): Promise<void> => {
   try {
-    const updatedProdi = await unitService.editProdi(req.params.id as string, req.body);
-    res.status(200).json({ message: 'Prodi berhasil diupdate', data: updatedProdi });
+    const payload = {
+      ...(req.body || {}),
+      files: req.files,
+    };
+
+    console.log("[editProdi] body:", req.body);
+    console.log("[editProdi] files:", req.files);
+
+    const updatedProdi = await unitService.editProdi(
+      req.params.id as string,
+      payload,
+    );
+
+    res.status(200).json({
+      message: "Prodi berhasil diupdate",
+      data: updatedProdi,
+    });
+
+    return;
   } catch (error: any) {
-    const statusCode = error.message === 'Prodi tidak ditemukan' ? 404 : 500;
-    res.status(statusCode).json({ message: error.message || 'Gagal mengupdate prodi' });
+    console.error("Error edit prodi:", error);
+
+    const statusCode = error.message === "Prodi tidak ditemukan" ? 404 : 500;
+
+    res.status(statusCode).json({
+      message: error.message || "Gagal mengupdate prodi",
+    });
+
+    return;
   }
 };

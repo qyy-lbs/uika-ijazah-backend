@@ -68,7 +68,9 @@ export async function mineDocumentBlock(input: {
   id_dokumen: number;
   hash_dokumen?: string;
 }) {
-  const existingBlock = await findBlockByDocumentId(input.id_dokumen);
+  const id_dokumen = input.id_dokumen;
+
+  const existingBlock = await findBlockByDocumentId(id_dokumen);
 
   if (existingBlock) {
     return {
@@ -77,7 +79,7 @@ export async function mineDocumentBlock(input: {
     };
   }
 
-  const dokumen = await findDocumentById(input.id_dokumen);
+  const dokumen = await findDocumentById(id_dokumen);
 
   if (!dokumen) {
     throw new Error("Dokumen tidak ditemukan");
@@ -89,22 +91,21 @@ export async function mineDocumentBlock(input: {
   const previousHash = latestBlock?.hash_block || "GENESIS";
   const createdAt = new Date();
 
-  const documentHash = await createDocumentHash(dokumen, input.hash_dokumen);
-
-  const blockHash = createBlockHash({
+const hashDokumen = input.hash_dokumen || (await createDocumentHash(dokumen));
+  const hashBlock = createBlockHash({
     index_block: indexBlock,
-    id_dokumen: input.id_dokumen,
-    hash_dokumen: documentHash,
+    id_dokumen,
+    hash_dokumen: hashDokumen,
     previous_hash: previousHash,
     created_at: createdAt.toISOString(),
   });
 
   const block = await createBlock({
-    id_dokumen: input.id_dokumen,
-    hash_dokumen: documentHash,
+    id_dokumen,
+    hash_dokumen: hashDokumen,
     index_block: indexBlock,
+    hash_block: hashBlock,
     previous_hash: previousHash,
-    hash_block: blockHash,
     created_at: createdAt,
   });
 

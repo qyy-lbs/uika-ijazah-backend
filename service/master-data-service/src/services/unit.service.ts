@@ -10,15 +10,47 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 const processFiles = (files: any) => {
-  const fileNames: any = {};
-  if (files && Array.isArray(files)) {
-    files.forEach((file: any) => {
-      const uniqueFilename = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-      const filePath = path.join(UPLOAD_DIR, uniqueFilename);
-      fs.writeFileSync(filePath, file.buffer);
-      fileNames[file.fieldname] = uniqueFilename;
+  const fileNames: Record<string, string> = {};
+
+  if (!files) {
+    return fileNames;
+  }
+
+  const fileList: any[] = [];
+
+  // Jika dari upload.any()
+  if (Array.isArray(files)) {
+    fileList.push(...files);
+  }
+
+  // Jika dari upload.fields()
+  else if (typeof files === "object") {
+    Object.values(files).forEach((value: any) => {
+      if (Array.isArray(value)) {
+        fileList.push(...value);
+      }
     });
   }
+
+  fileList.forEach((file: any) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    const allowedExt = [".png", ".jpg", ".jpeg", ".webp"];
+
+    if (!allowedExt.includes(ext)) {
+      throw new Error(
+        `File ${file.originalname} tidak valid. Paraf/TTD/Stempel harus berupa gambar.`,
+      );
+    }
+
+    const uniqueFilename = `${Date.now()}-${file.originalname.replace(/\s+/g, "_")}`;
+    const filePath = path.join(UPLOAD_DIR, uniqueFilename);
+
+    fs.writeFileSync(filePath, file.buffer);
+
+    fileNames[file.fieldname] = uniqueFilename;
+  });
+
   return fileNames;
 };
 // ==============================================================
@@ -34,6 +66,8 @@ export async function createUnit(data: any) {
   } = data;
 
   const uploadedFiles = processFiles(files);
+  console.log("[editProdi] raw files:", files);
+console.log("[editProdi] uploadedFiles:", uploadedFiles);
   
   // Amankan jenis unit ke lowercase
   const exactJenisUnit = jenis_unit ? jenis_unit.toLowerCase() : 'fakultas';

@@ -320,6 +320,55 @@ app.use(
     },
   }),
 );
+
+// ==========================================================
+// PROXY BLOCKCHAIN SERVICE
+// ==========================================================
+
+// PUBLIC BLOCKCHAIN HEALTH CHECK
+app.use(
+  createProxyMiddleware({
+    pathFilter: "/api/blockchain/health",
+    target: process.env.BLOCKCHAIN_SERVICE_URL || "http://localhost:3011",
+    changeOrigin: true,
+    on: {
+      proxyRes: (proxyRes, req) => {
+        console.log(
+          `[Blockchain-Health] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`,
+        );
+      },
+    },
+  }),
+);
+
+// JANGAN BUKA ROUTE INTERNAL KE PUBLIK
+app.use("/api/blockchain/internal", (_req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: "Route tidak ditemukan",
+  });
+});
+
+// PROTECTED BLOCKCHAIN ROUTES
+app.use("/api/blockchain", verifyGatewayToken);
+
+app.use(
+  createProxyMiddleware({
+    pathFilter: "/api/blockchain",
+    target: process.env.BLOCKCHAIN_SERVICE_URL || "http://localhost:3011",
+    changeOrigin: true,
+    on: {
+      proxyReq: fixRequestBody,
+      proxyRes: (proxyRes, req) => {
+        console.log(
+          `[Blockchain-Route] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`,
+        );
+      },
+    },
+  }),
+);
+
+
 // ==========================================================
 // --- START SERVER ---
 // ==========================================================
@@ -346,5 +395,8 @@ app.listen(Number(PORT), "0.0.0.0", () => {
   );
   console.log(
     `📋 Template Target: ${process.env.TEMPLATE_SERVICE_URL || "http://localhost:3008"}`,
+  );
+  console.log(
+    `⛓️  Blockchain Target: ${process.env.BLOCKCHAIN_SERVICE_URL || "http://localhost:3011"}`,
   );
 });
