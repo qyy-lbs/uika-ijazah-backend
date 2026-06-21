@@ -82,10 +82,19 @@ export async function editUser(id: string, data: any) {
 export async function changePassword(userId: number, data: any) {
   const { oldPassword, newPassword } = data;
 
-  // 🔥 KUNCI PERBAIKAN: Kita pakai Prisma langsung di sini, jangan pakai userRepository 
-  // karena userRepository biasanya menyembunyikan kolom password demi keamanan.
+  if (!oldPassword || !newPassword) {
+    throw new Error("Kata sandi lama dan kata sandi baru wajib diisi.");
+  }
+
+  if (
+    String(oldPassword).trim() === "" ||
+    String(newPassword).trim() === ""
+  ) {
+    throw new Error("Kata sandi lama dan kata sandi baru tidak boleh kosong.");
+  }
+
   const user: any = await prisma.users.findUnique({
-    where: { id_user: userId }
+    where: { id_user: userId },
   });
 
   if (!user) {
@@ -93,27 +102,39 @@ export async function changePassword(userId: number, data: any) {
   }
 
   if (user.deleted_at) {
-  throw new Error("Akun sudah dihapus.");
-}
+    throw new Error("Akun sudah dihapus.");
+  }
 
-  // Pengecekan ekstra agar bcrypt tidak error "undefined"
   if (!user.password) {
     throw new Error("Sistem gagal membaca kata sandi lama dari database.");
   }
 
-  // Bandingkan password lama
+  // 1. Cek password lama benar atau tidak
   const isMatch = await bcrypt.compare(oldPassword, user.password);
+
   if (!isMatch) {
     throw new Error("Kata sandi saat ini salah! Silakan coba lagi.");
   }
 
-  // Hash password baru
+  // 2. Cek password baru tidak boleh sama dengan password lama
+  const isSameAsOldPassword = await bcrypt.compare(
+    newPassword,
+    user.password,
+  );
+
+  if (isSameAsOldPassword) {
+    throw new Error("Kata sandi baru tidak boleh sama dengan kata sandi lama.");
+  }
+
+  // 3. Hash password baru
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  // Update ke database
+  // 4. Update ke database
   return prisma.users.update({
     where: { id_user: userId },
-    data: { password: hashedPassword }
+    data: {
+      password: hashedPassword,
+    },
   });
 }
 

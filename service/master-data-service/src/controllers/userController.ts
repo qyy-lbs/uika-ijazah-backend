@@ -88,11 +88,9 @@ export const getCurrentUser = async (req: any, res: any) => {
 
     const unitData: any = (user as any).unit || (user as any).units;
 
-   // 🔥 LOGIKA MAPPING DISESUAIKAN (Tanpa label Admin/Operator)
     let namaTampil = "-";
     let nidnTampil = "-";
 
-    // 1. CEK ROLE PEJABAT (Hanya jika ada unitData)
     if (unitData) {
       if (user.role === "rektor") {
         namaTampil = unitData.rektor || "-";
@@ -170,18 +168,26 @@ export const changePassword = async (req: any, res: any) => {
 
   } catch (error: any) {
     console.error("🚨 Error di changePassword:", error);
+
     const lowerMessage = String(error.message || "").toLowerCase();
 
-const statusCode = lowerMessage.includes("salah")
-  ? 400
-  : lowerMessage.includes("dihapus")
-    ? 403
-    : 500;
-    
-    
-    return res.status(statusCode).json({ 
-      status: false, 
-      message: error.message || "Terjadi kesalahan pada server saat mengubah sandi." 
+    const statusCode =
+      lowerMessage.includes("salah") ||
+      lowerMessage.includes("wajib") ||
+      lowerMessage.includes("kosong") ||
+      lowerMessage.includes("tidak boleh sama")
+        ? 400
+        : lowerMessage.includes("dihapus")
+          ? 403
+          : lowerMessage.includes("tidak ditemukan")
+            ? 404
+            : 500;
+
+    return res.status(statusCode).json({
+      status: false,
+      message:
+        error.message ||
+        "Terjadi kesalahan pada server saat mengubah sandi.",
     });
   }
 };
