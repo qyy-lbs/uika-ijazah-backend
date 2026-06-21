@@ -101,17 +101,35 @@ function isMahasiswaMatchSearch(
 }
 
 function mapMahasiswaMatch(mahasiswa: MahasiswaWithDokumen) {
+  const { ijazah, transkrip } = getPublishedDocuments(mahasiswa);
+
+  const mappedIjazah = mapDocument(ijazah);
+  const mappedTranskrip = mapDocument(transkrip);
+
   return {
     id_mahasiswa: mahasiswa.id_mahasiswa,
     mahasiswa_code: mahasiswa.uuid,
     uuid: mahasiswa.uuid,
+
     nama: mahasiswa.nama_mahasiswa,
     nama_mahasiswa: mahasiswa.nama_mahasiswa,
     nim: mahasiswa.nim,
+
     prodi: mahasiswa.prodi?.nama_prodi ?? "-",
     program_studi: mahasiswa.prodi?.nama_prodi ?? "-",
     fakultas: mahasiswa.prodi?.unit?.nama_unit ?? "-",
+
+    tahun: mahasiswa.tahun_lulus ?? "-",
     tahun_lulus: mahasiswa.tahun_lulus ?? null,
+
+    status: "Terbit",
+
+    ijazah: mappedIjazah,
+    transkrip: mappedTranskrip,
+    dokumen: {
+      ijazah: mappedIjazah,
+      transkrip: mappedTranskrip,
+    },
   };
 }
 
