@@ -40,6 +40,36 @@ function getTextJustify(element: TemplateElement) {
   return "center";
 }
 
+function getTextColor(element: TemplateElement, fallback = "#111827") {
+  return typeof element.color === "string" && element.color.trim()
+    ? element.color
+    : fallback;
+}
+
+function getImageScale(element: TemplateElement) {
+  const scale = Number(element.imageScale ?? 1);
+
+  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+}
+
+function getObjectFit(element: TemplateElement, fallback = "contain") {
+  if (
+    element.objectFit === "contain" ||
+    element.objectFit === "cover" ||
+    element.objectFit === "fill"
+  ) {
+    return element.objectFit;
+  }
+
+  return fallback;
+}
+
+function getObjectPosition(element: TemplateElement, fallback = "center") {
+  return typeof element.objectPosition === "string" &&
+    element.objectPosition.trim()
+    ? element.objectPosition
+    : fallback;
+}
 function getFontFamily(element: TemplateElement) {
   return typeof element.fontFamily === "string" && element.fontFamily.trim()
     ? element.fontFamily
@@ -73,23 +103,17 @@ function renderTextElement(
   scaleY: number,
   defaultFontSize: number,
 ) {
-  let value = valueToString(
-  getValueByPath(profile, element.field)
-);
+  let value = valueToString(getValueByPath(profile, element.field));
 
-if (element.label === "Gelar") {
-  const gelar = valueToString(
-    getValueByPath(profile, "mahasiswa.gelar")
-  );
+  if (element.label === "Gelar") {
+    const gelar = valueToString(getValueByPath(profile, "mahasiswa.gelar"));
 
-  const gelarEn = valueToString(
-    getValueByPath(profile, "mahasiswa.gelar_en")
-  );
+    const gelarEn = valueToString(
+      getValueByPath(profile, "mahasiswa.gelar_en"),
+    );
 
-  value = [gelar, gelarEn]
-    .filter(Boolean)
-    .join(" / ");
-}
+    value = [gelar, gelarEn].filter(Boolean).join(" / ");
+  }
 
   console.log("RENDER TEXT:", {
     label: element.label,
@@ -104,12 +128,9 @@ if (element.label === "Gelar") {
 
   let finalValue = value || "";
 
-  if (
-  element.label === "NIDN Rektor" ||
-  element.label === "NIDN Dekan")
-     {
-      finalValue = `NIDN. ${finalValue}`;
-      }
+  if (element.label === "NIDN Rektor" || element.label === "NIDN Dekan") {
+    finalValue = `NIDN. ${finalValue}`;
+  }
 
   const safeValue = escapeHtml(finalValue);
 
@@ -127,6 +148,7 @@ if (element.label === "Gelar") {
   const textDecoration = getTextDecoration(element);
   const align = getTextAlign(element);
   const justify = getTextJustify(element);
+  const color = getTextColor(element);
 
   return `
     <div
@@ -143,6 +165,7 @@ if (element.label === "Gelar") {
         text-align:${align};
         font-style:${fontStyle};  
         justify-content:${justify};
+        color:${color};
       "
     >
       ${safeValue}
@@ -158,7 +181,9 @@ function renderImageElement(
 ) {
   const rawValue = valueToString(getValueByPath(profile, element.field));
   const imageUrl = resolvePublicAssetUrl(rawValue);
-
+  const imageScale = getImageScale(element);
+  const objectFit = getObjectFit(element);
+  const objectPosition = getObjectPosition(element);
   const left = (element.x ?? 0) * scaleX;
   const top = (element.y ?? 0) * scaleY;
   const width = (element.width ?? 80) * scaleX;
@@ -188,6 +213,9 @@ function renderImageElement(
         width:${width}px;
         height:${height}px;
         object-fit:contain;
+        object-position:${objectPosition};
+      transform:scale(${imageScale});
+      transform-origin:center;
       "
     />
   `;
@@ -216,26 +244,43 @@ function renderSignatureElement(
   const fontFamily = getFontFamily(element);
   const fontWeight = getFontWeight(element, "600");
   const align = getTextAlign(element);
-
+  const fontStyle = getFontStyle(element);
+  const textDecoration = getTextDecoration(element);
+  const color = getTextColor(element);
+  const imageScale = getImageScale(element);
+  const objectFit = getObjectFit(element);
+  const objectPosition = getObjectPosition(element);
   return `
     <div
       class="element signature-element"
       style="
-        left:${left}px;
-        top:${top}px;
-        width:${width}px;
-        height:${height}px;
-        font-size:${fontSize}px;
-        font-family:${fontFamily};
-        font-weight:${fontWeight};
-        text-align:${align};
-      "
+  left:${left}px;
+  top:${top}px;
+  width:${width}px;
+  height:${height}px;
+  font-size:${fontSize}px;
+  font-family:${fontFamily};
+  font-weight:${fontWeight};
+  font-style:${fontStyle};
+  text-decoration:${textDecoration};
+  text-align:${align};
+  color:${color};
+"
     >
       <div class="signature-role">${escapeHtml(roleLabel)}</div>
 
       ${
         imageUrl
-          ? `<img class="signature-image" src="${imageUrl}" />`
+          ? `<img
+      class="signature-image"
+      src="${imageUrl}"
+      style="
+        object-fit:${objectFit};
+        object-position:${objectPosition};
+        transform:scale(${imageScale});
+        transform-origin:center;
+      "
+    />`
           : `<div class="signature-placeholder"></div>`
       }
     </div>
@@ -246,7 +291,7 @@ function renderQrElement(
   element: TemplateElement,
   profile: unknown,
   scaleX: number,
-  scaleY: number
+  scaleY: number,
 ) {
   const rawValue = valueToString(getValueByPath(profile, element.field));
   const qrUrl = resolvePublicAssetUrl(rawValue);
@@ -255,6 +300,9 @@ function renderQrElement(
   const top = (element.y ?? 0) * scaleY;
   const width = (element.width ?? 72) * scaleX;
   const height = (element.height ?? 72) * scaleY;
+  const imageScale = getImageScale(element);
+  const objectFit = getObjectFit(element);
+  const objectPosition = getObjectPosition(element);
 
   if (!qrUrl) {
     return `
@@ -281,7 +329,10 @@ function renderQrElement(
         top:${top}px;
         width:${width}px;
         height:${height}px;
-        object-fit:contain;
+        object-fit:${objectFit};
+        object-position:${objectPosition};
+        transform:scale(${imageScale});
+        transform-origin:center;
         display:block;
       "
     />
@@ -320,6 +371,9 @@ function renderTranskripTable(
   const fontSize = getFontSize(element, 7);
   const fontFamily = getFontFamily(element);
   const fontWeight = getFontWeight(element, "500");
+  const fontStyle = getFontStyle(element);
+  const textDecoration = getTextDecoration(element);
+  const color = getTextColor(element);
 
   const totalSks = profile?.akademik?.total_sks ?? "";
   const ipk = profile?.akademik?.ipk ?? "";
@@ -441,6 +495,9 @@ function renderTranskripTable(
         font-size:${fontSize}px;
         font-family:${fontFamily};
         font-weight:${fontWeight};
+        font-style:${fontStyle};
+text-decoration:${textDecoration};
+color:${color};
       "
     >
       <div class="nilai-grid">
@@ -501,10 +558,8 @@ function renderElement(
   }
 
   if (element.type === "qr") {
-      return renderQrElement(element, profile, scaleX, scaleY);
-
+    return renderQrElement(element, profile, scaleX, scaleY);
   }
-  
 
   if (element.type === "table") {
     return renderTranskripTable(element, profile, scaleX, scaleY);
