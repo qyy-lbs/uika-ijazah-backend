@@ -2,8 +2,12 @@ import * as XLSX from "xlsx";
 import type { MahasiswaRow, RowError } from "../types";
 import { parseDate } from "../utils/helpers";
 
-const REQUIRED_COLUMNS: (keyof MahasiswaRow)[] = ["nim", "nama_mahasiswa"];
-
+const REQUIRED_COLUMNS: (keyof MahasiswaRow)[] = [
+  "nim",
+  "nama_mahasiswa",
+  "nama_prodi",
+  "tahun_lulus",
+];
 const COLUMN_MAP: Record<string, keyof MahasiswaRow> = {
   nim: "nim",
   nik: "nik",
@@ -20,8 +24,6 @@ const COLUMN_MAP: Record<string, keyof MahasiswaRow> = {
   telepon: "telepon",
   email: "email",
   foto: "foto",
-  ipk: "ipk",
-  predikat: "predikat",
   judul_skripsi: "judul_skripsi",
   tahun_masuk: "tahun_masuk",
   tahun_lulus: "tahun_lulus",
@@ -161,18 +163,30 @@ export function parseExcelFile(filePath: string): ExcelParseResult {
       );
     }
 
-    if (row.ipk !== null && row.ipk !== undefined) {
-      const ipkNum = Number(row.ipk);
+    if (
+      row.tahun_lulus !== null &&
+      row.tahun_lulus !== undefined &&
+      String(row.tahun_lulus).trim() !== ""
+    ) {
+      const tahunLulusNum = Number(row.tahun_lulus);
 
-      if (Number.isNaN(ipkNum) || ipkNum < 0 || ipkNum > 4) {
+      if (
+        Number.isNaN(tahunLulusNum) ||
+        !Number.isInteger(tahunLulusNum) ||
+        tahunLulusNum < 2000 ||
+        tahunLulusNum > 2100
+      ) {
         rowErrors.push(
           buildRowError({
             row: rowNum,
             sourceRow: row,
-            field: "ipk",
-            message: "IPK harus berupa angka antara 0.00 sampai 4.00.",
+            field: "tahun_lulus",
+            message:
+              "Tahun lulus harus berupa tahun yang valid antara 2000 sampai 2100.",
           }),
         );
+      } else {
+        row.tahun_lulus = tahunLulusNum;
       }
     }
 
@@ -215,6 +229,7 @@ export function parseExcelFile(filePath: string): ExcelParseResult {
     if (rowErrors.length > 0) {
       errors.push(...rowErrors);
     } else {
+      (row as MahasiswaRow & { _rowNumber?: number })._rowNumber = rowNum;
       valid.push(row as MahasiswaRow);
     }
   });

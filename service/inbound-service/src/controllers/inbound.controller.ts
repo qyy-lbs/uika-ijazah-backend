@@ -33,6 +33,37 @@ type RejectedUploadResult = {
   batches?: unknown[];
   mahasiswa?: unknown;
 };
+function normalizePeriodeQuery(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    normalized === "" ||
+    normalized === "semua" ||
+    normalized === "semua periode"
+  ) {
+    return undefined;
+  }
+
+  if (
+    normalized === "semester ganjil" ||
+    normalized === "semester_ganjil" ||
+    normalized === "ganjil"
+  ) {
+    return "semester_ganjil";
+  }
+
+  if (
+    normalized === "semester genap" ||
+    normalized === "semester_genap" ||
+    normalized === "genap"
+  ) {
+    return "semester_genap";
+  }
+
+  return normalized;
+}
 // ─────────────────────────────────────────────
 // POST /api/inbound/upload
 // Upload file Excel + proses data mahasiswa
@@ -101,15 +132,33 @@ export async function uploadFile(
         fs.unlinkSync(filePath);
       }
 
-      sendError(
-        res,
-        "Format file Excel tidak sesuai.",
-        {
-          kolom_tidak_ada: formatCheck.missingColumns,
-          kolom_tidak_dikenal: formatCheck.unknownColumns,
+      res.status(422).json({
+        success: false,
+        message: "Format file Excel tidak sesuai.",
+        ditolak: true,
+
+        total_data_excel: formatCheck.totalRows,
+        total_valid: 0,
+        total_gagal: formatCheck.totalRows,
+        total_batch: 0,
+
+        kolom_tidak_ada: formatCheck.missingColumns,
+        kolom_tidak_dikenal: formatCheck.unknownColumns,
+        unknown_columns: formatCheck.unknownColumns,
+
+        errors: [],
+        batches: [],
+        mahasiswa: {
+          data: [],
+          pagination: {
+            page: safePage,
+            limit: safeLimit,
+            total: 0,
+            total_pages: 0,
+          },
         },
-        422,
-      );
+      });
+
       return;
     }
 
@@ -125,51 +174,50 @@ export async function uploadFile(
     });
 
     if (result.ditolak) {
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
 
-  const rejectedResult = result as RejectedUploadResult;
+      const rejectedResult = result as RejectedUploadResult;
 
-  const resultErrors: ImportErrorResponse[] = Array.isArray(
-    rejectedResult.errors,
-  )
-    ? rejectedResult.errors
-    : [];
+      const resultErrors: ImportErrorResponse[] = Array.isArray(
+        rejectedResult.errors,
+      )
+        ? rejectedResult.errors
+        : [];
 
-  res.status(422).json({
-    success: false,
-    message:
-      rejectedResult.alasan ||
-      "File Excel ditolak karena format atau isi data tidak valid.",
-    ditolak: true,
+      res.status(422).json({
+        success: false,
+        message:
+          rejectedResult.alasan ||
+          "File Excel ditolak karena format atau isi data tidak valid.",
+        ditolak: true,
 
-    fakultas_utama: rejectedResult.fakultas_utama ?? null,
+        fakultas_utama: rejectedResult.fakultas_utama ?? null,
 
-    total_data_excel: rejectedResult.total_data_excel ?? 0,
-    total_valid: rejectedResult.total_valid ?? 0,
-    total_gagal: rejectedResult.total_gagal ?? resultErrors.length,
-    total_batch: rejectedResult.total_batch ?? 0,
+        total_data_excel: rejectedResult.total_data_excel ?? 0,
+        total_valid: rejectedResult.total_valid ?? 0,
+        total_gagal: rejectedResult.total_gagal ?? resultErrors.length,
+        total_batch: rejectedResult.total_batch ?? 0,
 
-    errors: resultErrors,
+        errors: resultErrors,
 
-    unknown_columns: rejectedResult.unknown_columns ?? [],
+        unknown_columns: rejectedResult.unknown_columns ?? [],
 
-    batches: rejectedResult.batches ?? [],
-    mahasiswa:
-      rejectedResult.mahasiswa ?? {
-        data: [],
-        pagination: {
-          page: safePage,
-          limit: safeLimit,
-          total: 0,
-          total_pages: 0,
+        batches: rejectedResult.batches ?? [],
+        mahasiswa: rejectedResult.mahasiswa ?? {
+          data: [],
+          pagination: {
+            page: safePage,
+            limit: safeLimit,
+            total: 0,
+            total_pages: 0,
+          },
         },
-      },
-  });
+      });
 
-  return;
-}
+      return;
+    }
 
     const statusCode = (result.total_gagal ?? 0) > 0 ? 207 : 201;
 
@@ -211,15 +259,24 @@ export async function validasiFormat(
     fs.unlinkSync(filePath);
 
     if (!result.valid) {
-      sendError(
-        res,
-        "Format file tidak valid.",
-        {
-          kolom_tidak_ada: result.missingColumns,
-          total_baris: result.totalRows,
-        },
-        422,
-      );
+      res.status(422).json({
+        success: false,
+        message: "Format file tidak valid.",
+        ditolak: true,
+
+        total_data_excel: result.totalRows,
+        total_baris: result.totalRows,
+        total_valid: 0,
+        total_gagal: result.totalRows,
+        total_batch: 0,
+
+        kolom_tidak_ada: result.missingColumns,
+        kolom_tidak_dikenal: result.unknownColumns,
+        unknown_columns: result.unknownColumns,
+
+        errors: [],
+      });
+
       return;
     }
 
@@ -276,9 +333,12 @@ export async function riwayatUpload(
       ? parseInt(req.query.tahun_lulus as string)
       : undefined;
     const periodeRaw = req.query.periode;
-    const periode = Array.isArray(periodeRaw)
+
+    const periodeValue = Array.isArray(periodeRaw)
       ? (periodeRaw[0] as string)
       : (periodeRaw as string | undefined);
+
+    const periode = normalizePeriodeQuery(periodeValue);
 
     // Operator biasa hanya bisa lihat miliknya sendiri, admin bisa lihat semua
     const role = req.user!.role;
@@ -320,7 +380,10 @@ export function downloadTemplate(_req: AuthRequest, res: Response): void {
     sendError(res, "Gagal generate template Excel.", undefined, 500);
   }
 }
-export async function mahasiswaByBatches(req: AuthRequest, res: Response): Promise<void> {
+export async function mahasiswaByBatches(
+  req: AuthRequest,
+  res: Response,
+): Promise<void> {
   try {
     const batchIdsRaw = req.query.batch_ids as string | undefined;
 

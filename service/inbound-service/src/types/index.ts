@@ -28,8 +28,6 @@ export interface MahasiswaRow {
   telepon?: string;
   email?: string;
   foto?: string; // URL atau base64
-  ipk?: number;
-  predikat?: string;
   judul_skripsi?: string;
   tahun_masuk?: number;
   tahun_lulus?: number;

@@ -165,6 +165,46 @@ async function getUploadedMahasiswaPaginated(params: {
   };
 }
 
+function validateTahunLulusSesuaiPilihan(
+  rows: MahasiswaRow[],
+  tahunLulusPilihan: number,
+): {
+  valid: boolean;
+  mismatchErrors: ImportError[];
+} {
+  const mismatchErrors: ImportError[] = [];
+
+  for (const [index, row] of rows.entries()) {
+    const rowNum =
+      (row as MahasiswaRow & { _rowNumber?: number })._rowNumber ?? index + 2;
+
+    const tahunLulusExcel = Number(row.tahun_lulus);
+
+    if (
+      Number.isNaN(tahunLulusExcel) ||
+      !Number.isInteger(tahunLulusExcel) ||
+      tahunLulusExcel !== tahunLulusPilihan
+    ) {
+      mismatchErrors.push(
+        buildImportError({
+          row: rowNum,
+          nim: row.nim ? String(row.nim).trim() : null,
+          nama_mahasiswa: row.nama_mahasiswa
+            ? String(row.nama_mahasiswa).trim()
+            : null,
+          field: "tahun_lulus",
+          message: `Tahun lulus di Excel '${row.tahun_lulus ?? "-"}' tidak sesuai dengan tahun lulus yang dipilih '${tahunLulusPilihan}'. Seluruh data dalam file Excel harus memiliki tahun_lulus yang sama dengan tahun lulus yang dipilih.`,
+        }),
+      );
+    }
+  }
+
+  return {
+    valid: mismatchErrors.length === 0,
+    mismatchErrors,
+  };
+}
+
 // ─────────────────────────────────────────────
 // 1. UPLOAD FILE EXCEL & PROSES DATA
 // ─────────────────────────────────────────────
@@ -202,7 +242,40 @@ export async function processUpload(params: {
       },
     };
   }
+  const totalDataExcel = valid.length + errors.length;
 
+const tahunLulusValidation = validateTahunLulusSesuaiPilihan(
+  valid,
+  tahunLulus,
+);
+
+if (!tahunLulusValidation.valid) {
+  const allErrors: ImportError[] = [
+    ...errors,
+    ...tahunLulusValidation.mismatchErrors,
+  ];
+
+  return {
+    ditolak: true,
+    alasan:
+      "File Excel ditolak karena terdapat tahun_lulus yang tidak sesuai dengan tahun lulus yang dipilih.",
+    total_data_excel: totalDataExcel,
+    total_valid: 0,
+    total_gagal: totalDataExcel,
+    total_batch: 0,
+    errors: allErrors.sort((a, b) => a.row - b.row),
+    batches: [],
+    mahasiswa: {
+      data: [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        total_pages: 0,
+      },
+    },
+  };
+}
   const periodeEnum =
     periode === "semester ganjil"
       ? ("semester_ganjil" as const)
@@ -265,7 +338,8 @@ export async function processUpload(params: {
 
   const firstResolvedRow = uniqueRows[0] as ResolvedMahasiswaRow | undefined;
   const namaFakultasUpload = firstResolvedRow?._resolved_nama_fakultas ?? null;
-  const nextBatchNumber = await getNextBatchNumberByFakultas(namaFakultasUpload);
+  const nextBatchNumber =
+    await getNextBatchNumberByFakultas(namaFakultasUpload);
 
   for (const [index, chunk] of chunks.entries()) {
     const batchNumber = nextBatchNumber + index;
@@ -595,8 +669,19 @@ async function validateProdi(rows: MahasiswaRow[]): Promise<{
   for (const [index, row] of rows.entries()) {
     const rowNum = index + 2;
 
-    if (!row.nama_prodi) {
-      validatedRows.push(row as ResolvedMahasiswaRow);
+    if (!row.nama_prodi || !String(row.nama_prodi).trim()) {
+      prodiErrors.push(
+        buildImportError({
+          row: rowNum,
+          nim: row.nim ? String(row.nim).trim() : null,
+          nama_mahasiswa: row.nama_mahasiswa
+            ? String(row.nama_mahasiswa).trim()
+            : null,
+          field: "nama_prodi",
+          message: "Kolom 'nama_prodi' wajib diisi.",
+        }),
+      );
+
       continue;
     }
 
@@ -714,7 +799,9 @@ function validateSatuFakultasDalamFile(rows: ResolvedMahasiswaRow[]): {
     };
   }
 
-  const sortedGroups = [...groups].sort((a, b) => b.rows.length - a.rows.length);
+  const sortedGroups = [...groups].sort(
+    (a, b) => b.rows.length - a.rows.length,
+  );
   const fakultasUtama = sortedGroups[0]?.nama_fakultas ?? null;
 
   for (const group of groups) {
@@ -863,9 +950,6 @@ async function insertMahasiswaBatch(
           email: row.email ? String(row.email).trim() : null,
           foto: row.foto ? String(row.foto).trim() : null,
 
-          ipk: row.ipk != null ? Number(row.ipk) : null,
-          predikat: row.predikat ? String(row.predikat).trim() : null,
-
           judul_skripsi: row.judul_skripsi
             ? String(row.judul_skripsi).trim()
             : null,
@@ -915,7 +999,9 @@ async function insertMahasiswaBatch(
         buildImportError({
           row: rowNum,
           nim,
-          nama_mahasiswa: row.nama_mahasiswa ? String(row.nama_mahasiswa).trim() : null,
+          nama_mahasiswa: row.nama_mahasiswa
+            ? String(row.nama_mahasiswa).trim()
+            : null,
           field,
           message: pesanError,
         }),
@@ -1065,8 +1151,6 @@ export function generateTemplateExcel(): Buffer {
     "telepon",
     "email",
     "foto",
-    "ipk",
-    "predikat",
     "judul_skripsi",
     "tahun_masuk",
     "tahun_lulus",
@@ -1079,25 +1163,23 @@ export function generateTemplateExcel(): Buffer {
     "2021001001",
     "3201010101010001",
     "DN/2024/0001",
-    "",
+    "1234 4343 8775",
     "Budi Santoso",
     "Jakarta",
     "2000-01-15",
-    "S1",
+    "Strata 1",
     "Bachelor",
-    "S.Kom.",
-    "S.Kom.",
+    "Sarjana Teknik (S.T)",
+    "Bachelor of Engineering",
     "Laki-laki",
     "08123456789",
     "budi@email.com",
     "https://example.com/foto/budi.jpg",
-    "3.75",
-    "Sangat Memuaskan",
     "Analisis Sistem Informasi Berbasis AI",
-    "2021",
-    "2025",
+    "2022",
+    "2026",
     "Lulus",
-    "2025-02-10",
+    "2026-02-10",
     "Teknik Informatika",
   ];
 
@@ -1113,21 +1195,20 @@ export function generateTemplateExcel(): Buffer {
   const petunjukData = [
     ["PETUNJUK PENGISIAN"],
     [""],
-    ["1. Kolom nim dan nama_mahasiswa wajib diisi."],
+    ["1. Kolom nim, nama_mahasiswa, nama_prodi, tahun_lulus wajib diisi."],
     ["2. Format tanggal: YYYY-MM-DD atau DD/MM/YYYY."],
-    ["3. IPK diisi dengan angka desimal, contoh: 3.75"],
-    ["4. nama_prodi diisi sesuai nama prodi yang terdaftar di sistem."],
-    ["5. Jenis kelamin: Laki-laki / Perempuan"],
-    ["6. Jangan tambah atau ubah nama kolom di baris pertama."],
-    ["7. Kolom yang tidak ada di template akan menyebabkan upload ditolak."],
+    ["3. nama_prodi diisi sesuai nama prodi yang terdaftar di sistem."],
+    ["4. Jenis kelamin: Laki-laki / Perempuan"],
+    ["5. Jangan tambah atau ubah nama kolom di baris pertama."],
+    ["6. Kolom yang tidak ada di template akan menyebabkan upload ditolak."],
     [
-      "8. NIM, NIK, PISN, atau Nomor Seri Ijazah yang duplikat dalam file maupun di database tidak akan diimport.",
+      "7. NIM, NIK, PISN, atau Nomor Seri Ijazah yang duplikat dalam file maupun di database tidak akan diimport.",
     ],
     [
-      "9. Kolom foto diisi dengan URL atau base64 dari gambar profil mahasiswa.",
+      "8. Kolom foto diisi dengan URL atau base64 dari gambar profil mahasiswa.",
     ],
     [
-      "10. Dalam 1 file Excel hanya boleh berisi mahasiswa dari 1 fakultas. Jika terdapat lebih dari 1 fakultas, seluruh file akan ditolak.",
+      "9. Dalam 1 file Excel hanya boleh berisi mahasiswa dari 1 fakultas. Jika terdapat lebih dari 1 fakultas, seluruh file akan ditolak.",
     ],
   ];
 
@@ -1218,8 +1299,6 @@ export function validateExcelFormat(filePath: string): {
     "telepon",
     "email",
     "foto",
-    "ipk",
-    "predikat",
     "judul_skripsi",
     "tahun_masuk",
     "tahun_lulus",
@@ -1232,7 +1311,9 @@ export function validateExcelFormat(filePath: string): {
     header.toLowerCase().trim().replace(/\s+/g, "_"),
   );
 
-  const missingColumns = ["nim", "nama_mahasiswa"].filter(
+  const REQUIRED_COLUMNS = ["nim", "nama_mahasiswa", "nama_prodi", "tahun_lulus"];
+
+  const missingColumns = REQUIRED_COLUMNS.filter(
     (column) => !headers.includes(column),
   );
 
@@ -1287,33 +1368,33 @@ export async function getMahasiswaByBatchIds(params: {
   }
 
   if (search && search.trim() !== "") {
-  const keyword = search.trim();
+    const keyword = search.trim();
 
-  where.OR = [
-    {
-      nama_mahasiswa: {
-        contains: keyword,
-        mode: "insensitive",
+    where.OR = [
+      {
+        nama_mahasiswa: {
+          contains: keyword,
+          mode: "insensitive",
+        },
       },
-    },
-    {
-      nim: {
-        contains: keyword,
-        mode: "insensitive",
+      {
+        nim: {
+          contains: keyword,
+          mode: "insensitive",
+        },
       },
-    },
-    {
-      prodi: {
-        is: {
-          nama_prodi: {
-            contains: keyword,
-            mode: "insensitive",
+      {
+        prodi: {
+          is: {
+            nama_prodi: {
+              contains: keyword,
+              mode: "insensitive",
+            },
           },
         },
       },
-    },
-  ];
-}
+    ];
+  }
   const [mahasiswaData, total] = await Promise.all([
     prisma.mahasiswa.findMany({
       where,

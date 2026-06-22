@@ -22,7 +22,7 @@ router.get("/template", authenticate, downloadTemplate);
 /**
  * @route   POST /api/inbound/validasi-format
  * @desc    Validasi format file Excel (cek kolom wajib) tanpa menyimpan ke DB
- * @access  Private (admin, operator)
+ * @access  Private (operator)
  * @body    form-data: file (Excel)
  */
 router.post(
@@ -36,7 +36,7 @@ router.post(
 /**
  * @route   POST /api/inbound/upload
  * @desc    Upload file Excel + parsing + simpan data mahasiswa ke DB
- * @access  Private (admin, operator)
+ * @access  Private (operator)
  * @body    form-data: file (Excel), periode, tahun_lulus, id_template (opsional)
  */
 router.post(
@@ -50,7 +50,7 @@ router.post(
 /**
  * @route   GET /api/inbound/riwayat
  * @desc    Riwayat semua batch upload dengan pagination
- * @access  Private (admin: semua, operator: miliknya saja)
+ * @access  Private (operator)
  * @query   page, limit, tahun_lulus, periode
  */
 router.get(
@@ -63,7 +63,7 @@ router.get(
 /**
  * @route   GET /api/inbound/status/:id
  * @desc    Detail status satu batch upload (termasuk list mahasiswa & log error)
- * @access  Private (admin, operator)
+ * @access  Private ( operator)
  * @param   id - id_batch_upload
  */
 router.get(
