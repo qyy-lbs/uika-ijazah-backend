@@ -3,7 +3,6 @@ import path from "path";
 import {
   createBlock,
   findBlockByDocumentId,
-  findBlockByIndex,
   findDocumentById,
   findLatestBlock,
   getFullChain,
@@ -91,8 +90,8 @@ export async function mineDocumentBlock(input: {
   const previousHash = latestBlock?.hash_block || "GENESIS";
   const createdAt = new Date();
 
-const hashDokumen = input.hash_dokumen || (await createDocumentHash(dokumen));
-  const hashBlock = createBlockHash({
+    const hashDokumen = input.hash_dokumen || (await createDocumentHash(dokumen));
+    const hashBlock = createBlockHash({
     index_block: indexBlock,
     id_dokumen,
     hash_dokumen: hashDokumen,
@@ -123,51 +122,68 @@ export async function verifyDocumentBlock(id_dokumen: number) {
       valid: false,
       message: "Dokumen belum tercatat di blockchain",
       block: null,
+      full_chain: null,
     };
   }
 
-  if (!block.index_block || !block.hash_block || !block.hash_dokumen || !block.previous_hash) {
+  if (
+    block.index_block == null ||
+    block.id_dokumen == null ||
+    !block.hash_block ||
+    !block.hash_dokumen ||
+    !block.previous_hash
+  ) {
     return {
       valid: false,
       message: "Data block tidak lengkap",
       block,
+      full_chain: null,
     };
   }
 
-  const previousBlock =
-    block.index_block > 1 ? await findBlockByIndex(block.index_block - 1) : null;
-
-  const expectedPreviousHash =
-    block.index_block === 1 ? "GENESIS" : previousBlock?.hash_block;
-
-  if (block.previous_hash !== expectedPreviousHash) {
-    return {
-      valid: false,
-      message: "Previous hash tidak cocok",
-      block,
-    };
-  }
+  /**
+   * Setiap verify dokumen wajib mengecek full chain.
+   * Jadi kalau index 5 rusak,
+   * dokumen di index 25 juga ikut tidak valid.
+   */
+  const fullChainStatus = await verifyFullChain();
 
   const recalculatedHash = createBlockHash({
     index_block: block.index_block,
+
+    // Pakai parameter id_dokumen agar TypeScript tidak error nullable.
     id_dokumen,
+
     hash_dokumen: block.hash_dokumen,
     previous_hash: block.previous_hash,
     created_at: block.created_at?.toISOString() || "",
   });
 
-  if (recalculatedHash !== block.hash_block) {
+  const isCurrentBlockHashValid = recalculatedHash === block.hash_block;
+
+  if (!isCurrentBlockHashValid) {
     return {
       valid: false,
-      message: "Hash block tidak cocok",
+      message: "Hash block dokumen tidak cocok",
       block,
+      full_chain: fullChainStatus,
+    };
+  }
+
+  if (!fullChainStatus.valid) {
+    return {
+      valid: false,
+      message: `Rantai blockchain tidak valid: ${fullChainStatus.message}`,
+      block,
+      full_chain: fullChainStatus,
     };
   }
 
   return {
     valid: true,
-    message: "Dokumen valid dan rantai blockchain cocok",
+    message: "Dokumen valid dan seluruh rantai blockchain cocok",
     block,
+    full_chain: fullChainStatus,
   };
 }
 
@@ -178,8 +194,8 @@ export async function verifyFullChain() {
     const current = chain[i];
 
     if (
-      !current.index_block ||
-      !current.id_dokumen ||
+      current.index_block == null ||
+      current.id_dokumen == null ||
       !current.hash_dokumen ||
       !current.hash_block ||
       !current.previous_hash
@@ -188,6 +204,18 @@ export async function verifyFullChain() {
         valid: false,
         message: `Block index ${current.index_block} tidak lengkap`,
         broken_at: current,
+        total_block: chain.length,
+      };
+    }
+
+    const expectedIndex = i + 1;
+
+    if (current.index_block !== expectedIndex) {
+      return {
+        valid: false,
+        message: `Index block tidak berurutan. Seharusnya ${expectedIndex}, tetapi ditemukan ${current.index_block}`,
+        broken_at: current,
+        total_block: chain.length,
       };
     }
 
@@ -198,6 +226,7 @@ export async function verifyFullChain() {
         valid: false,
         message: `Previous hash rusak di block index ${current.index_block}`,
         broken_at: current,
+        total_block: chain.length,
       };
     }
 
@@ -214,6 +243,7 @@ export async function verifyFullChain() {
         valid: false,
         message: `Hash block rusak di block index ${current.index_block}`,
         broken_at: current,
+        total_block: chain.length,
       };
     }
   }
@@ -222,6 +252,7 @@ export async function verifyFullChain() {
     valid: true,
     message: "Semua rantai blockchain valid",
     total_block: chain.length,
+    broken_at: null,
   };
 }
 
