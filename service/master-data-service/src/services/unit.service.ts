@@ -107,15 +107,51 @@ export async function getAllUnits() {
   return unitRepository.findAllUnitsDB();
 }
 
-export async function deleteUnit(id: string) {
+export async function deleteUnit(id: string, deletedBy?: number | null) {
   const unitId = Number(id);
+
+  if (Number.isNaN(unitId)) {
+    throw new Error("ID unit tidak valid");
+  }
+
   const existingUnit = await unitRepository.findUnitByIdDB(unitId);
-  
+
   if (!existingUnit) {
     throw new Error("Unit tidak ditemukan");
   }
 
-  return unitRepository.deleteUnitByIdDB(unitId);
+  if (existingUnit.deleted_at) {
+    throw new Error("Unit sudah dihapus");
+  }
+
+  const deletedUnit = await unitRepository.deleteUnitByIdDB(
+    unitId,
+    deletedBy || null,
+  );
+
+  await unitRepository.clearRefreshTokenByUnitDB(unitId);
+
+  return deletedUnit;
+}
+
+export async function restoreUnit(id: string) {
+  const unitId = Number(id);
+
+  if (Number.isNaN(unitId)) {
+    throw new Error("ID unit tidak valid");
+  }
+
+  const existingUnit = await unitRepository.findUnitByIdDB(unitId);
+
+  if (!existingUnit) {
+    throw new Error("Unit tidak ditemukan");
+  }
+
+  if (!existingUnit.deleted_at) {
+    throw new Error("Unit belum dihapus, tidak perlu direstore");
+  }
+
+  return unitRepository.restoreUnitByIdDB(unitId);
 }
 
 export async function editUnit(id: string, data: any) {
@@ -131,6 +167,12 @@ export async function editUnit(id: string, data: any) {
   if (!existingUnit) {
     throw new Error("Unit tidak ditemukan");
   }
+  if (existingUnit.deleted_at) {
+  throw new Error("Unit sudah dihapus dan tidak bisa diedit");
+}
+  if (existingUnit.deleted_at) {
+  throw new Error("Unit sudah dihapus dan tidak bisa diedit");
+}
 
   const uploadedFiles = processFiles(files);
   const exactJenisUnit = jenis_unit ? jenis_unit.toLowerCase() : existingUnit.jenis_unit;
@@ -168,6 +210,13 @@ export async function createProdi(data: any) {
   if (!existingUnit) {
     throw new Error("Unit tidak ditemukan");
   }
+  if (existingUnit.deleted_at) {
+  throw new Error("Unit sudah dihapus, tidak bisa menambahkan prodi");
+}
+
+  if (existingUnit.deleted_at) {
+  throw new Error("Unit sudah dihapus, tidak bisa menambahkan prodi");
+}
 
   const uploadedFiles = processFiles(files);
 
@@ -190,7 +239,23 @@ export async function createProdi(data: any) {
 }
 
 export async function getProdiByUnit(id_unit: string) {
-  return unitRepository.findProdiByUnitIdDB(Number(id_unit));
+  const unitId = Number(id_unit);
+
+  if (Number.isNaN(unitId)) {
+    throw new Error("ID unit tidak valid");
+  }
+
+  const existingUnit = await unitRepository.findUnitByIdDB(unitId);
+
+  if (!existingUnit) {
+    throw new Error("Unit tidak ditemukan");
+  }
+
+  if (existingUnit.deleted_at) {
+    throw new Error("Unit sudah dihapus");
+  }
+
+  return unitRepository.findProdiByUnitIdDB(unitId);
 }
 
 export async function editProdi(id: string, data: any) {
@@ -212,4 +277,44 @@ export async function editProdi(id: string, data: any) {
     file_paraf_kaprodi: uploadedFiles['file_paraf_kaprodi'] || existingProdi.file_paraf_kaprodi,
     no_sk_akreditasi
   });
+}
+
+export async function deleteProdi(id: string, deletedBy?: number | null) {
+  const prodiId = Number(id);
+
+  if (Number.isNaN(prodiId)) {
+    throw new Error("ID prodi tidak valid");
+  }
+
+  const existingProdi = await unitRepository.findProdiByIdDB(prodiId);
+
+  if (!existingProdi) {
+    throw new Error("Prodi tidak ditemukan");
+  }
+
+  if (existingProdi.deleted_at) {
+    throw new Error("Prodi sudah dihapus");
+  }
+
+  return unitRepository.deleteProdiByIdDB(prodiId, deletedBy || null);
+}
+
+export async function restoreProdi(id: string) {
+  const prodiId = Number(id);
+
+  if (Number.isNaN(prodiId)) {
+    throw new Error("ID prodi tidak valid");
+  }
+
+  const existingProdi = await unitRepository.findProdiByIdDB(prodiId);
+
+  if (!existingProdi) {
+    throw new Error("Prodi tidak ditemukan");
+  }
+
+  if (!existingProdi.deleted_at) {
+    throw new Error("Prodi belum dihapus, tidak perlu direstore");
+  }
+
+  return unitRepository.restoreProdiByIdDB(prodiId);
 }

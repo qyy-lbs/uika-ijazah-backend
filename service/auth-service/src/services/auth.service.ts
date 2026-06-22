@@ -15,9 +15,17 @@ export async function loginUser(data: any) {
     throw new Error('NOT_FOUND:Akun tidak ditemukan!');
   }
 
-  if (!user.is_active) {
-    throw new Error('FORBIDDEN:Akun Anda sedang dinonaktifkan. Hubungi Admin.');
-  }
+  if (user.deleted_at) {
+  throw new Error("FORBIDDEN:Akun Anda sudah dihapus. Hubungi Admin.");
+}
+
+if (user.unit?.deleted_at) {
+  throw new Error("FORBIDDEN:Unit akun Anda sudah dihapus. Hubungi Admin.");
+}
+
+ if (user.is_active === false) {
+  throw new Error("FORBIDDEN:Akun Anda sedang dinonaktifkan. Hubungi Admin.");
+}
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
@@ -91,6 +99,14 @@ export async function refreshAccessToken(refreshTokenStr: string) {
   if (!user) {
     throw new Error('UNAUTHORIZED:User tidak ditemukan.');
   }
+
+  if (user.deleted_at) {
+  throw new Error("FORBIDDEN:Akun sudah dihapus.");
+}
+
+if (user.unit?.deleted_at) {
+  throw new Error("FORBIDDEN:Unit akun sudah dihapus.");
+}
 
   if (!user.is_active) {
     throw new Error('FORBIDDEN:Akun telah dinonaktifkan.');

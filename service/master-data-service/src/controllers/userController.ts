@@ -85,11 +85,24 @@ export const getCurrentUser = async (req: any, res: any) => {
         message: "User tidak ditemukan di database." 
       });
     }
+    if (user.deleted_at) {
+  return res.status(403).json({
+    status: false,
+    message: "Akun sudah dihapus.",
+  });
+}
 
     const unitData: any = (user as any).unit || (user as any).units;
 
     let namaTampil = "-";
     let nidnTampil = "-";
+
+    if (unitData?.deleted_at) {
+  return res.status(403).json({
+    status: false,
+    message: "Unit akun sudah dihapus.",
+  });
+}
 
     if (unitData) {
       if (user.role === "rektor") {
@@ -188,7 +201,7 @@ export const changePassword = async (req: any, res: any) => {
       message:
         error.message ||
         "Terjadi kesalahan pada server saat mengubah sandi.",
-    });
+    }); 
   }
 };
 

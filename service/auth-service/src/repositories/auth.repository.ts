@@ -3,8 +3,26 @@ import { getPrisma } from "../prisma/prisma.js";
 const prisma = getPrisma();
 
 export async function findUserByEmail(email: string) {
-  return prisma.users.findUnique({ 
-    where: { email } 
+  return prisma.users.findUnique({
+    where: { email },
+    select: {
+      id_user: true,
+      email: true,
+      password: true,
+      role: true,
+      id_unit: true,
+      is_active: true,
+      deleted_at: true,
+      refresh_token: true,
+
+      unit: {
+        select: {
+          id_unit: true,
+          nama_unit: true,
+          deleted_at: true,
+        },
+      },
+    },
   });
 }
 
@@ -17,7 +35,16 @@ export async function findUserByIdForAuth(id_user: number) {
       role: true,
       id_unit: true,
       is_active: true,
+      deleted_at: true,
       refresh_token: true,
+
+      unit: {
+        select: {
+          id_unit: true,
+          nama_unit: true,
+          deleted_at: true,
+        },
+      },
     },
   });
 }

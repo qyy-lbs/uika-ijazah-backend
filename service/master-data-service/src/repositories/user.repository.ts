@@ -80,14 +80,27 @@ const rolePriority: Record<string, number> = {
 };
 
 export async function findAllUsers() {
-  const users = await prisma.users.findMany({
-    where: {
-      deleted_at: null,
-    },
-    include: {
-      unit: true,
-    },
-  });
+ const users = await prisma.users.findMany({
+  where: {
+    deleted_at: null,
+
+    OR: [
+      {
+        id_unit: null,
+      },
+      {
+        unit: {
+          is: {
+            deleted_at: null,
+          },
+        },
+      },
+    ],
+  },
+  include: {
+    unit: true,
+  },
+});
 
   return (
     users
@@ -149,6 +162,7 @@ export async function removeUserById(id_user: number, deletedBy?: number | null)
     data: {
       deleted_at: new Date(),
       deleted_by: deletedBy || null,
+      refresh_token: null,
       updated_at: new Date(),
     },
     select: {
@@ -158,6 +172,7 @@ export async function removeUserById(id_user: number, deletedBy?: number | null)
       id_unit: true,
       deleted_at: true,
       deleted_by: true,
+      refresh_token: true,
       updated_at: true,
     },
   });

@@ -177,6 +177,8 @@ model unit {
   file_stempel_fakultas    String?
   created_at               DateTime?       @default(now()) @db.Timestamp(6)
   updated_at               DateTime?       @default(now()) @db.Timestamp(6)
+  deleted_at               DateTime? @db.Timestamp(6)
+  deleted_by               Int?
   prodi                    prodi[]
   unit                     unit?           @relation("unitTounit", fields: [parent_id], references: [id_unit], onDelete: NoAction, onUpdate: NoAction)
   other_unit               unit[]          @relation("unitTounit")
@@ -233,6 +235,8 @@ model prodi {
   no_sk_akreditasi   String?     @db.VarChar(50)
   created_at         DateTime?   @default(now()) @db.Timestamp(6)
   updated_at         DateTime?   @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  deleted_by Int?
   akademik           akademik[]
   mahasiswa          mahasiswa[]
   unit               unit?       @relation(fields: [id_unit], references: [id_unit], onDelete: Cascade, onUpdate: NoAction)

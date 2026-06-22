@@ -4,9 +4,11 @@ const prisma = getPrisma();
 
 // ==================== UNIT REPOSITORY ====================
 export async function findUniversitasDB() {
-  // Mencari unit pertama yang jenisnya adalah 'Universitas'
   return prisma.unit.findFirst({
-    where: { jenis_unit: 'universitas' }
+    where: {
+      jenis_unit: "universitas",
+      deleted_at: null,
+    },
   });
 }
 
@@ -16,19 +18,53 @@ export async function createUnitDB(data: any) {
 
 export async function findAllUnitsDB() {
   return prisma.unit.findMany({
-    include: { prodi: true }
+    where: {
+      deleted_at: null,
+    },
+    include: {
+      prodi: {
+        where: {
+          deleted_at: null,
+        },
+        orderBy: {
+          nama_prodi: "asc",
+        },
+      },
+    },
+    orderBy: [
+      { jenis_unit: "asc" },
+      { nama_unit: "asc" },
+    ],
   });
 }
-
 export async function findUnitByIdDB(id_unit: number) {
   return prisma.unit.findUnique({
     where: { id_unit }
   });
 }
 
-export async function deleteUnitByIdDB(id_unit: number) {
-  return prisma.unit.delete({
-    where: { id_unit }
+export async function deleteUnitByIdDB(
+  id_unit: number,
+  deletedBy?: number | null,
+) {
+  return prisma.unit.update({
+    where: { id_unit },
+    data: {
+      deleted_at: new Date(),
+      deleted_by: deletedBy || null,
+      updated_at: new Date(),
+    },
+  });
+}
+
+export async function restoreUnitByIdDB(id_unit: number) {
+  return prisma.unit.update({
+    where: { id_unit },
+    data: {
+      deleted_at: null,
+      deleted_by: null,
+      updated_at: new Date(),
+    },
   });
 }
 
@@ -36,6 +72,19 @@ export async function updateUnitByIdDB(id_unit: number, data: any) {
   return prisma.unit.update({
     where: { id_unit },
     data
+  });
+}
+
+export async function clearRefreshTokenByUnitDB(id_unit: number) {
+  return prisma.users.updateMany({
+    where: {
+      id_unit,
+      deleted_at: null,
+    },
+    data: {
+      refresh_token: null,
+      updated_at: new Date(),
+    },
   });
 }
 
@@ -54,11 +103,15 @@ export async function createProdiDB(data: any) {
 
 export async function findProdiByUnitIdDB(id_unit: number) {
   return prisma.prodi.findMany({
-    where: { id_unit },
-    orderBy: { nama_prodi: 'asc' }
+    where: {
+      id_unit,
+      deleted_at: null,
+    },
+    orderBy: {
+      nama_prodi: "asc",
+    },
   });
 }
-
 export async function findProdiByIdDB(id_prodi: number) {
   return prisma.prodi.findUnique({
     where: { id_prodi }
@@ -74,3 +127,30 @@ export async function updateProdiByIdDB(id_prodi: number, data: any) {
     }
   });
 }
+
+export async function deleteProdiByIdDB(
+  id_prodi: number,
+  deletedBy?: number | null,
+) {
+  return prisma.prodi.update({
+    where: { id_prodi },
+    data: {
+      deleted_at: new Date(),
+      deleted_by: deletedBy || null,
+      updated_at: new Date(),
+    },
+  });
+}
+
+export async function restoreProdiByIdDB(id_prodi: number) {
+  return prisma.prodi.update({
+    where: { id_prodi },
+    data: {
+      deleted_at: null,
+      deleted_by: null,
+      updated_at: new Date(),
+    },
+  });
+}
+
+

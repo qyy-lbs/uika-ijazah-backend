@@ -35,13 +35,49 @@ export const getAllUnits = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const deleteUnits = async (req: Request, res: Response): Promise<void> => {
+export const deleteUnits = async (req: any, res: Response): Promise<void> => {
   try {
-    await unitService.deleteUnit(req.params.id as string);
-    res.status(200).json({ message: 'Unit berhasil dihapus' });
+    const deletedBy =
+      Number(req.user?.id_user || req.user?.id || 0) || null;
+
+    await unitService.deleteUnit(req.params.id as string, deletedBy);
+
+    res.status(200).json({
+      message: "Unit berhasil dihapus",
+    });
   } catch (error: any) {
-    const statusCode = error.message === 'Unit tidak ditemukan' ? 404 : 500;
-    res.status(statusCode).json({ message: error.message || 'Gagal menghapus unit' });
+    const message = error.message || "Gagal menghapus unit";
+
+    const statusCode =
+      message.toLowerCase().includes("tidak ditemukan")
+        ? 404
+        : 400;
+
+    res.status(statusCode).json({
+      message,
+    });
+  }
+};
+
+export const restoreUnit = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const restoredUnit = await unitService.restoreUnit(req.params.id as string);
+
+    res.status(200).json({
+      message: "Unit berhasil direstore",
+      data: restoredUnit,
+    });
+  } catch (error: any) {
+    const message = error.message || "Gagal restore unit";
+
+    const statusCode =
+      message.includes("tidak ditemukan")
+        ? 404
+        : 400;
+
+    res.status(statusCode).json({
+      message,
+    });
   }
 };
 
@@ -55,10 +91,22 @@ export const editUnit = async (req: Request, res: Response): Promise<void> => {
 
     const updatedUnit = await unitService.editUnit(req.params.id as string, payload);
     res.status(200).json({ message: 'Unit berhasil diupdate', data: updatedUnit });
-  } catch (error: any) {
-    // ... error handling
-  
-  }
+} catch (error: any) {
+  console.error("Error edit unit:", error);
+
+  const message = error.message || "Gagal mengupdate unit";
+
+  const statusCode =
+    message.includes("tidak ditemukan")
+      ? 404
+      : 400;
+
+  res.status(statusCode).json({
+    message,
+  });
+
+  return;
+}
 };
 
 // ==================== PRODI ====================
@@ -134,5 +182,53 @@ export const editProdi = async (req: Request, res: Response): Promise<void> => {
     });
 
     return;
+  }
+};
+
+
+export const deleteProdi = async (req: any, res: Response): Promise<void> => {
+  try {
+    const deletedBy =
+      Number(req.user?.id_user || req.user?.id || 0) || null;
+
+    await unitService.deleteProdi(req.params.id as string, deletedBy);
+
+    res.status(200).json({
+      message: "Prodi berhasil dihapus",
+    });
+  } catch (error: any) {
+    const message = error.message || "Gagal menghapus prodi";
+
+    const statusCode =
+      message.toLowerCase().includes("tidak ditemukan")
+        ? 404
+        : 400;
+
+    res.status(statusCode).json({
+      message,
+    });
+  }
+};
+
+
+export const restoreProdi = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const restoredProdi = await unitService.restoreProdi(req.params.id as string);
+
+    res.status(200).json({
+      message: "Prodi berhasil direstore",
+      data: restoredProdi,
+    });
+  } catch (error: any) {
+    const message = error.message || "Gagal restore prodi";
+
+    const statusCode =
+      message.toLowerCase().includes("tidak ditemukan")
+        ? 404
+        : 400;
+
+    res.status(statusCode).json({
+      message,
+    });
   }
 };
