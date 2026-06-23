@@ -77,6 +77,10 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
 
+    volumes:
+      - ./service/master-data-service/uploads:/app/uploads
+
+
   # -----------------------------------------------------------------
   # 5. AKADEMIK SERVICE (Internal)
   # -----------------------------------------------------------------
