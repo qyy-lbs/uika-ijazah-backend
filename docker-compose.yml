@@ -7,7 +7,7 @@ services:
     container_name: ijazah-api-gateway
     restart: always
     ports:
-      - "8010:3000"
+      - "127.0.0.1:8011:3000"
     depends_on:
       - auth-service
       - inbound-service
@@ -186,8 +186,7 @@ services:
       # Public URL lewat gateway
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
       - PUBLIC_GATEWAY_URL=http://103.158.196.32:8010
-      - FRONTEND_BASE_URL=http://103.158.196.32:5173
-
+      - FRONTEND_BASE_URL=http://103.158.196.32:8010
       - MASTER_DATA_PUBLIC_BASE_URL=http://master-data-service:3004
       - AKADEMIK_PUBLIC_BASE_URL=http://103.158.196.32:8010
       - TEMPLATE_PUBLIC_BASE_URL=http://template-service:3008
@@ -229,7 +228,7 @@ services:
 
       # URL yang tertanam di dalam QR
       # Nanti kalau frontend sudah dideploy, ganti ke URL frontend yang benar
-      - VERIFY_BASE_URL=http://103.158.196.32:5173/#/verify
+      - VERIFY_BASE_URL=http://103.158.196.32:8010/#/verify
     volumes:
       - ./service/qr-service/uploads:/app/uploads
 
