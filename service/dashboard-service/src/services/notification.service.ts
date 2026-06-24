@@ -54,6 +54,13 @@ function formatTime(value?: Date | string | null) {
   }).format(date);
 }
 
+function cleanNotificationMessage(message?: string | null) {
+  return String(message || "")
+    .replace(/\s*pada\s+level\s+\d+/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function mapNotification(item: any) {
   const aktivitas = String(item.aktivitas || "").toUpperCase();
   const isReject = aktivitas === "REJECT_BATCH";
@@ -71,9 +78,10 @@ function mapNotification(item: any) {
       : isRevoke
         ? "Data direvoke"
         : "Aktivitas terbaru",
-    message:
-      item.deskripsi ||
-      `${actorRole}${actorUnit ? ` ${actorUnit}` : ""} melakukan ${aktivitas}`,
+    message: cleanNotificationMessage(
+  item.deskripsi ||
+    `${actorRole}${actorUnit ? ` ${actorUnit}` : ""} melakukan ${aktivitas}`,
+),
     actor_role: actorRole,
     actor_unit: actorUnit,
     created_at: item.created_at,
