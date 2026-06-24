@@ -199,7 +199,7 @@ export async function editUnit(id: string, data: any) {
 
 // ==================== PRODI SERVICE ====================
 
-export async function createProdi(data: any) {
+export async function   Prodi(data: any) {
   const { id_unit, nama_prodi, nama_prodi_en, kaprodi, nidn_kaprodi, no_sk_akreditasi, files } = data;
 
   if (!id_unit || !nama_prodi) {
