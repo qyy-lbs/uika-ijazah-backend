@@ -12,6 +12,7 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://103.158.196.32:8010",
     "http://103.158.196.32:5173", // kalau frontend dideploy di server
     "http://103.158.196.32:3000",
   ],
@@ -253,6 +254,23 @@ app.use(
 app.use(
   createProxyMiddleware({
     pathFilter: "/api/document/public/download",
+    target: process.env.DOCUMENT_SERVICE_URL || "http://localhost:3009",
+    changeOrigin: true,
+    on: {
+      proxyReq: fixRequestBody,
+      proxyRes: (proxyRes, req) => {
+        console.log(
+          `[Document-Student-Download] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`,
+        );
+      },
+    },
+  }),
+);
+
+// PUBLIC STUDENT DOCUMENT DOWNLOAD
+app.use(
+  createProxyMiddleware({
+    pathFilter: "/api/document/student/download",
     target: process.env.DOCUMENT_SERVICE_URL || "http://localhost:3009",
     changeOrigin: true,
     on: {
