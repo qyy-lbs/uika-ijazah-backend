@@ -170,9 +170,7 @@ export async function editUnit(id: string, data: any) {
   if (existingUnit.deleted_at) {
   throw new Error("Unit sudah dihapus dan tidak bisa diedit");
 }
-  if (existingUnit.deleted_at) {
-  throw new Error("Unit sudah dihapus dan tidak bisa diedit");
-}
+
 
   const uploadedFiles = processFiles(files);
   const exactJenisUnit = jenis_unit ? jenis_unit.toLowerCase() : existingUnit.jenis_unit;
@@ -199,7 +197,7 @@ export async function editUnit(id: string, data: any) {
 
 // ==================== PRODI SERVICE ====================
 
-export async function   Prodi(data: any) {
+export async function  createProdi(data: any) {
   const { id_unit, nama_prodi, nama_prodi_en, kaprodi, nidn_kaprodi, no_sk_akreditasi, files } = data;
 
   if (!id_unit || !nama_prodi) {
@@ -214,9 +212,6 @@ export async function   Prodi(data: any) {
   throw new Error("Unit sudah dihapus, tidak bisa menambahkan prodi");
 }
 
-  if (existingUnit.deleted_at) {
-  throw new Error("Unit sudah dihapus, tidak bisa menambahkan prodi");
-}
 
   const uploadedFiles = processFiles(files);
 
