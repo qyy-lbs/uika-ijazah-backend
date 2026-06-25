@@ -227,7 +227,6 @@ services:
       - PUBLIC_BASE_URL=http://103.158.196.32:8010
 
       # URL yang tertanam di dalam QR
-      # Nanti kalau frontend sudah dideploy, ganti ke URL frontend yang benar
       - VERIFY_BASE_URL=http://103.158.196.32/sit-d/#/verify
     volumes:
       - ./service/qr-service/uploads:/app/uploads

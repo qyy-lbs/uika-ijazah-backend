@@ -184,6 +184,7 @@ export async function verifyDocumentByKodeQr(kodeQr: string) {
     kode_qr: dokumen.kode_qr,
     jenis_dokumen: dokumen.jenis_dokumen,
     nomor_dokumen: dokumen.nomor_dokumen,
+    nomor_seri_ijazah: dokumen.mahasiswa?.nomor_seri_ijazah || null,
     tanggal_terbit: dokumen.tanggal_terbit,
     is_verified: dokumen.is_verified,
     url_akses: dokumen.url_akses,
@@ -195,6 +196,7 @@ export async function verifyDocumentByKodeQr(kodeQr: string) {
     mahasiswa: {
       id_mahasiswa: dokumen.mahasiswa?.id_mahasiswa,
       nim: dokumen.mahasiswa?.nim,
+      nomor_seri_ijazah: dokumen.mahasiswa?.nomor_seri_ijazah || null,
       nama_mahasiswa: dokumen.mahasiswa?.nama_mahasiswa,
       nik: dokumen.mahasiswa?.nik,
       tempat_lahir: dokumen.mahasiswa?.tempat_lahir,

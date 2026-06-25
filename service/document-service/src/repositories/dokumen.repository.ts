@@ -162,6 +162,7 @@ export async function findDokumenByKodeQr(kode_qr: string) {
           id_mahasiswa: true,
           uuid: true,
           nim: true,
+          nomor_seri_ijazah: true,
           nama_mahasiswa: true,
           nik: true,
           tempat_lahir: true,
