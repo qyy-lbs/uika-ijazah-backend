@@ -4,6 +4,32 @@ import jwt, { type SignOptions, type Secret } from "jsonwebtoken";
 import prisma from "../prisma/prisma.js";
 import { sendStudentDocumentEmail } from "./mail.service.js";
 
+const VIEWER_ROLES = [
+  "admin",
+  "admin_sistem",
+  "operator",
+  "operator_data",
+  "rektor",
+];
+
+const DOWNLOADER_ROLES = [
+  "admin",
+  "admin_sistem",
+  "operator",
+  "operator_data",
+];
+
+function normalizeRole(role?: string) {
+  return String(role || "").toLowerCase().trim();
+}
+
+function isAllowedViewer(role?: string) {
+  return VIEWER_ROLES.includes(normalizeRole(role));
+}
+
+function isAllowedDownloader(role?: string) {
+  return DOWNLOADER_ROLES.includes(normalizeRole(role));
+}
 type StudentDownloadTokenPayload = {
   purpose: "student-download";
   id_dokumen: number;
@@ -343,10 +369,44 @@ export async function getStudentDownloadFileByToken(token: string) {
 
 export async function getStaffDownloadFileByKodeQr(params: {
   kodeQr: string;
-  role?: string | null;
+  role?: string;
 }) {
-  if (!isAllowedStaffDownloader(params.role)) {
+  if (!isAllowedDownloader(params.role)) {
     throw new Error("Role tidak diizinkan download dokumen");
+  }
+
+  const dokumen = await prisma.dokumen.findFirst({
+    where: {
+      kode_qr: params.kodeQr,
+      is_verified: true,
+    },
+    include: {
+      mahasiswa: true,
+    },
+  });
+
+  if (!dokumen) {
+    throw new Error("Dokumen tidak ditemukan");
+  }
+
+  const absolutePath = resolveDocumentFile(
+    dokumen.file_pdf_final || dokumen.file_pdf,
+  );
+
+  return {
+    absolutePath,
+    fileName: getDownloadFileName({
+      jenis: dokumen.jenis_dokumen,
+      nim: dokumen.mahasiswa?.nim || "mahasiswa",
+    }),
+  };
+}
+export async function getStaffPreviewFileByKodeQr(params: {
+  kodeQr: string;
+  role?: string;
+}) {
+  if (!isAllowedViewer(params.role)) {
+    throw new Error("Role tidak diizinkan melihat dokumen");
   }
 
   const dokumen = await prisma.dokumen.findFirst({

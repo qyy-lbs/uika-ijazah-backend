@@ -29,8 +29,8 @@ app.use(helmet()); // Mengamankan header server
 app.use(cors()); // Mengizinkan Frontend mengakses API ini
 app.use(express.json()); // Mengizinkan server membaca data JSON dari Frontend
 
-// Menyambungkan Routes
-// (Taktik jitu: Terapkan limiter langsung di rute auth jika diinginkan)
+app.use('/api/auth/login', loginLimiter);
+
 app.use('/api/auth', authRoutes);
 
 // KUNCI UTAMA: Kita export 'app' untuk dipanggil oleh server.ts

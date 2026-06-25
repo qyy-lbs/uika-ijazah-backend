@@ -11,6 +11,7 @@ import {
   sendBatchDocumentEmail,
   downloadStudentDocument,
   downloadStaffDocument,
+  previewStaffDocument,
 } from "../controllers/document.controller.js";
 import { verifyInternalService, verifyToken } from "../middlewares/internal.middleware.js";
 
@@ -45,6 +46,12 @@ router.post(
 router.get(
   "/public/download/:token",
   downloadStudentDocument,
+);
+
+router.get(
+  "/preview/:kodeQr",
+  verifyToken,
+  previewStaffDocument,
 );
 
 router.get(

@@ -15,7 +15,19 @@ import {
   sendBatchDocumentEmailService,
   getStudentDownloadFileByToken,
   getStaffDownloadFileByKodeQr,
+  getStaffPreviewFileByKodeQr,
 } from "../services/document-email.service.js";
+
+function sendPdfInline(res: Response, absolutePath: string, fileName: string) {
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `inline; filename="${encodeURIComponent(fileName)}"`,
+  );
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  return res.sendFile(absolutePath);
+}
 
 type MahasiswaCodeParams = {
   mahasiswaCode: string;
@@ -315,10 +327,31 @@ export async function downloadStaffDocument(
 
     return res.download(data.absolutePath, data.fileName);
   } catch (error) {
-    return res.status(400).json({
+    return res.status(403).json({
       success: false,
       message:
         error instanceof Error ? error.message : "Gagal download dokumen",
+    });
+  }
+}
+export async function previewStaffDocument(
+  req: Request<{ kodeQr: string }>,
+  res: Response,
+) {
+  try {
+    const user = (req as any).user;
+
+    const data = await getStaffPreviewFileByKodeQr({
+      kodeQr: req.params.kodeQr,
+      role: user?.role,
+    });
+
+    return sendPdfInline(res, data.absolutePath, data.fileName);
+  } catch (error) {
+    return res.status(403).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Gagal membuka dokumen",
     });
   }
 }
