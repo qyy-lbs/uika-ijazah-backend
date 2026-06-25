@@ -48,7 +48,7 @@ export async function loginUser(data: any) {
       id_unit: user.id_unit,
     },
     jwtSecret,
-    { expiresIn: "30s" },
+    { expiresIn: "1h" },
   );
 
   const refreshToken = jwt.sign({ id_user: user.id_user }, refreshSecret, {
