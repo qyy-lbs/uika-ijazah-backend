@@ -16,6 +16,7 @@ import {
   getStudentDownloadFileByToken,
   getStaffDownloadFileByKodeQr,
   getStaffPreviewFileByKodeQr,
+  markStudentDocumentDownloaded,
 } from "../services/document-email.service.js";
 
 function sendPdfInline(res: Response, absolutePath: string, fileName: string) {
@@ -303,7 +304,30 @@ export async function downloadStudentDocument(
   try {
     const data = await getStudentDownloadFileByToken(req.params.token);
 
-    return res.download(data.absolutePath, data.fileName);
+    return res.download(data.absolutePath, data.fileName, async (error) => {
+      if (error) {
+        console.error("Gagal mengirim file download mahasiswa:", error);
+
+        if (!res.headersSent) {
+          return res.status(500).json({
+            success: false,
+            message: "Gagal mengirim file dokumen",
+          });
+        }
+
+        return;
+      }
+
+      try {
+        await markStudentDocumentDownloaded({
+          idDokumen: data.idDokumen,
+          downloadCount: data.downloadCount,
+          maxDownload: data.maxDownload,
+        });
+      } catch (updateError) {
+        console.error("Gagal update download_count:", updateError);
+      }
+    });
   } catch (error) {
     return res.status(400).json({
       success: false,

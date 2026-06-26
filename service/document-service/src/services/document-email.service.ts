@@ -12,15 +12,12 @@ const VIEWER_ROLES = [
   "rektor",
 ];
 
-const DOWNLOADER_ROLES = [
-  "admin",
-  "admin_sistem",
-  "operator",
-  "operator_data",
-];
+const DOWNLOADER_ROLES = ["admin", "admin_sistem", "operator", "operator_data"];
 
 function normalizeRole(role?: string) {
-  return String(role || "").toLowerCase().trim();
+  return String(role || "")
+    .toLowerCase()
+    .trim();
 }
 
 function isAllowedViewer(role?: string) {
@@ -52,22 +49,15 @@ function getPublicGatewayUrl() {
 }
 
 function createStudentDownloadToken(payload: StudentDownloadTokenPayload) {
-  const expiresIn = (
-    process.env.DOWNLOAD_LINK_EXPIRES_IN || "3d"
-  ) as SignOptions["expiresIn"];
+  const expiresIn = (process.env.DOWNLOAD_LINK_EXPIRES_IN ||
+    "3d") as SignOptions["expiresIn"];
 
   const options: SignOptions = {
     expiresIn,
   };
 
-  return jwt.sign(
-    payload,
-    getJwtSecret() as Secret,
-    options,
-  );
+  return jwt.sign(payload, getJwtSecret() as Secret, options);
 }
-
-
 
 function getFrontendBaseUrl() {
   return (process.env.FRONTEND_BASE_URL || "http://localhost:5173").replace(
@@ -77,7 +67,7 @@ function getFrontendBaseUrl() {
 }
 
 function buildStudentDownloadUrl(token: string) {
-return `${getFrontendBaseUrl()}/#/download/${encodeURIComponent(token)}`;
+  return `${getFrontendBaseUrl()}/#/download/${encodeURIComponent(token)}`;
 }
 
 function resolveDocumentFile(filePath: string | null | undefined) {
@@ -95,7 +85,10 @@ function resolveDocumentFile(filePath: string | null | undefined) {
     throw new Error("Path dokumen tidak valid");
   }
 
-  const absolutePath = path.resolve(process.cwd(), cleanPath.replace(/^\//, ""));
+  const absolutePath = path.resolve(
+    process.cwd(),
+    cleanPath.replace(/^\//, ""),
+  );
   const rootPath = path.resolve(process.cwd(), "uploads", "documents");
 
   if (!absolutePath.startsWith(rootPath)) {
@@ -109,24 +102,23 @@ function resolveDocumentFile(filePath: string | null | undefined) {
   return absolutePath;
 }
 
-function getDownloadFileName(params: {
-  jenis: string;
-  nim: string;
-}) {
+function getDownloadFileName(params: { jenis: string; nim: string }) {
   return `${params.jenis}-${params.nim}.pdf`;
 }
 
 function isAllowedEmailSender(role: string | null | undefined) {
-  return ["admin", "operator", "rektor"].includes(String(role || "").toLowerCase());
+  return ["admin", "operator", "rektor"].includes(
+    String(role || "").toLowerCase(),
+  );
 }
 
 function isAllowedStaffDownloader(role: string | null | undefined) {
-  return ["admin", "operator", "rektor"].includes(String(role || "").toLowerCase());
+  return ["admin", "operator", "rektor"].includes(
+    String(role || "").toLowerCase(),
+  );
 }
 
-type BatchForEmail = NonNullable<
-  Awaited<ReturnType<typeof findBatchForEmail>>
->;
+type BatchForEmail = NonNullable<Awaited<ReturnType<typeof findBatchForEmail>>>;
 
 type MahasiswaForEmail = BatchForEmail["mahasiswa"][number];
 type DokumenForEmail = MahasiswaForEmail["dokumen"][number];
@@ -154,13 +146,13 @@ async function findBatchForEmail(batchCode: string) {
 }
 
 function normalizeJenisDokumen(jenis: string | null | undefined) {
-  return String(jenis || "").toLowerCase().trim();
+  return String(jenis || "")
+    .toLowerCase()
+    .trim();
 }
 
 function getPublishedDocumentsForEmail(mahasiswa: MahasiswaForEmail) {
-  const documents = Array.isArray(mahasiswa.dokumen)
-    ? mahasiswa.dokumen
-    : [];
+  const documents = Array.isArray(mahasiswa.dokumen) ? mahasiswa.dokumen : [];
 
   const ijazah = documents.find(
     (doc) => normalizeJenisDokumen(doc.jenis_dokumen) === "ijazah",
@@ -229,8 +221,7 @@ export async function sendBatchDocumentEmailService(params: {
         continue;
       }
 
-      const { ijazah, transkrip } =
-        getPublishedDocumentsForEmail(mahasiswa);
+      const { ijazah, transkrip } = getPublishedDocumentsForEmail(mahasiswa);
 
       const dokumenValid = [ijazah, transkrip].filter(
         (doc): doc is DokumenForEmail => Boolean(doc),
@@ -347,18 +338,10 @@ export async function getStudentDownloadFileByToken(token: string) {
     dokumen.file_pdf_final || dokumen.file_pdf,
   );
 
-  await prisma.dokumen.update({
-    where: {
-      id_dokumen: dokumen.id_dokumen,
-    },
-    data: {
-      download_count: downloadCount + 1,
-      max_download: maxDownload,
-      updated_at: new Date(),
-    },
-  });
-
   return {
+    idDokumen: dokumen.id_dokumen,
+    downloadCount,
+    maxDownload,
     absolutePath,
     fileName: getDownloadFileName({
       jenis: dokumen.jenis_dokumen,
@@ -434,4 +417,20 @@ export async function getStaffPreviewFileByKodeQr(params: {
       nim: dokumen.mahasiswa?.nim || "mahasiswa",
     }),
   };
+}
+export async function markStudentDocumentDownloaded(params: {
+  idDokumen: number;
+  downloadCount: number;
+  maxDownload: number;
+}) {
+  await prisma.dokumen.update({
+    where: {
+      id_dokumen: params.idDokumen,
+    },
+    data: {
+      download_count: params.downloadCount + 1,
+      max_download: params.maxDownload,
+      updated_at: new Date(),
+    },
+  });
 }
