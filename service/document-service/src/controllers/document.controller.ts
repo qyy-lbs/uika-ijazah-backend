@@ -296,6 +296,24 @@ export async function sendBatchDocumentEmail(
     });
   }
 }
+const getFrontendBaseUrl = () => {
+  return (process.env.FRONTEND_BASE_URL || "http://103.158.196.32/sit-d").replace(
+    /\/$/,
+    "",
+  );
+};
+
+const redirectStudentDownloadError = (
+  res: Response,
+  token: string,
+  message: string,
+) => {
+  const redirectUrl = `${getFrontendBaseUrl()}/#/download/${encodeURIComponent(
+    token,
+  )}?message=${encodeURIComponent(message)}`;
+
+  return res.redirect(302, redirectUrl);
+};
 
 export async function downloadStudentDocument(
   req: Request<{ token: string }>,
@@ -309,10 +327,11 @@ export async function downloadStudentDocument(
         console.error("Gagal mengirim file download mahasiswa:", error);
 
         if (!res.headersSent) {
-          return res.status(500).json({
-            success: false,
-            message: "Gagal mengirim file dokumen",
-          });
+          return redirectStudentDownloadError(
+            res,
+            req.params.token,
+            "Gagal mengirim file dokumen",
+          );
         }
 
         return;
@@ -329,11 +348,10 @@ export async function downloadStudentDocument(
       }
     });
   } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message:
-        error instanceof Error ? error.message : "Gagal download dokumen",
-    });
+    const message =
+      error instanceof Error ? error.message : "Gagal download dokumen";
+
+    return redirectStudentDownloadError(res, req.params.token, message);
   }
 }
 
