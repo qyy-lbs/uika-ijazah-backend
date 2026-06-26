@@ -349,6 +349,10 @@ export async function downloadStaffDocument(
       role: user?.role,
     });
 
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+
     return res.download(data.absolutePath, data.fileName);
   } catch (error) {
     return res.status(403).json({
@@ -374,8 +378,7 @@ export async function previewStaffDocument(
   } catch (error) {
     return res.status(403).json({
       success: false,
-      message:
-        error instanceof Error ? error.message : "Gagal membuka dokumen",
+      message: error instanceof Error ? error.message : "Gagal membuka dokumen",
     });
   }
 }
