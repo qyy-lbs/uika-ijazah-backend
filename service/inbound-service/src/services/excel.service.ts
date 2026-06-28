@@ -4,9 +4,26 @@ import { parseDate } from "../utils/helpers";
 
 const REQUIRED_COLUMNS: (keyof MahasiswaRow)[] = [
   "nim",
+  "nik",
+  "nomor_seri_ijazah",
+  "pisn",
   "nama_mahasiswa",
-  "nama_prodi",
+  "tempat_lahir",
+  "tanggal_lahir",
+  "program",
+  "program_en",
+  "gelar",
+  "gelar_en",
+  "jenis_kelamin",
+  "telepon",
+  "email",
+  "foto",
+  "judul_skripsi",
+  "tahun_masuk",
   "tahun_lulus",
+  "status_kelulusan",
+  "tanggal_kelulusan",
+  "nama_prodi",
 ];
 const COLUMN_MAP: Record<string, keyof MahasiswaRow> = {
   nim: "nim",

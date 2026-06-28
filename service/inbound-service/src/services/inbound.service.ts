@@ -244,38 +244,38 @@ export async function processUpload(params: {
   }
   const totalDataExcel = valid.length + errors.length;
 
-const tahunLulusValidation = validateTahunLulusSesuaiPilihan(
-  valid,
-  tahunLulus,
-);
+  const tahunLulusValidation = validateTahunLulusSesuaiPilihan(
+    valid,
+    tahunLulus,
+  );
 
-if (!tahunLulusValidation.valid) {
-  const allErrors: ImportError[] = [
-    ...errors,
-    ...tahunLulusValidation.mismatchErrors,
-  ];
+  if (!tahunLulusValidation.valid) {
+    const allErrors: ImportError[] = [
+      ...errors,
+      ...tahunLulusValidation.mismatchErrors,
+    ];
 
-  return {
-    ditolak: true,
-    alasan:
-      "File Excel ditolak karena terdapat tahun_lulus yang tidak sesuai dengan tahun lulus yang dipilih.",
-    total_data_excel: totalDataExcel,
-    total_valid: 0,
-    total_gagal: totalDataExcel,
-    total_batch: 0,
-    errors: allErrors.sort((a, b) => a.row - b.row),
-    batches: [],
-    mahasiswa: {
-      data: [],
-      pagination: {
-        page,
-        limit,
-        total: 0,
-        total_pages: 0,
+    return {
+      ditolak: true,
+      alasan:
+        "File Excel ditolak karena terdapat tahun_lulus yang tidak sesuai dengan tahun lulus yang dipilih.",
+      total_data_excel: totalDataExcel,
+      total_valid: 0,
+      total_gagal: totalDataExcel,
+      total_batch: 0,
+      errors: allErrors.sort((a, b) => a.row - b.row),
+      batches: [],
+      mahasiswa: {
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          total_pages: 0,
+        },
       },
-    },
-  };
-}
+    };
+  }
   const periodeEnum =
     periode === "semester ganjil"
       ? ("semester_ganjil" as const)
@@ -1195,7 +1195,7 @@ export function generateTemplateExcel(): Buffer {
   const petunjukData = [
     ["PETUNJUK PENGISIAN"],
     [""],
-    ["1. Kolom nim, nama_mahasiswa, nama_prodi, tahun_lulus wajib diisi."],
+    ["1. Semua kolom pada template wajib diisi. Baris mahasiswa yang memiliki kolom kosong akan ditolak.",],
     ["2. Format tanggal: YYYY-MM-DD atau DD/MM/YYYY."],
     ["3. nama_prodi diisi sesuai nama prodi yang terdaftar di sistem."],
     ["4. Jenis kelamin: Laki-laki / Perempuan"],
@@ -1209,6 +1209,9 @@ export function generateTemplateExcel(): Buffer {
     ],
     [
       "9. Dalam 1 file Excel hanya boleh berisi mahasiswa dari 1 fakultas. Jika terdapat lebih dari 1 fakultas, seluruh file akan ditolak.",
+    ],
+    [
+      "9. Dalam 1 file Excel hanya boleh berisi tahun lulus yang sama.",
     ],
   ];
 
@@ -1311,7 +1314,29 @@ export function validateExcelFormat(filePath: string): {
     header.toLowerCase().trim().replace(/\s+/g, "_"),
   );
 
-  const REQUIRED_COLUMNS = ["nim", "nama_mahasiswa", "nama_prodi", "tahun_lulus"];
+  const REQUIRED_COLUMNS = [
+    "nim",
+    "nik",
+    "nomor_seri_ijazah",
+    "pisn",
+    "nama_mahasiswa",
+    "tempat_lahir",
+    "tanggal_lahir",
+    "program",
+    "program_en",
+    "gelar",
+    "gelar_en",
+    "jenis_kelamin",
+    "telepon",
+    "email",
+    "foto",
+    "judul_skripsi",
+    "tahun_masuk",
+    "tahun_lulus",
+    "status_kelulusan",
+    "tanggal_kelulusan",
+    "nama_prodi",
+  ];
 
   const missingColumns = REQUIRED_COLUMNS.filter(
     (column) => !headers.includes(column),
