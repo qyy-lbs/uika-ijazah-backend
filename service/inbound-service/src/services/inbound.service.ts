@@ -1205,13 +1205,16 @@ export function generateTemplateExcel(): Buffer {
       "7. NIM, NIK, PISN, atau Nomor Seri Ijazah yang duplikat dalam file maupun di database tidak akan diimport.",
     ],
     [
-      "8. Kolom foto diisi dengan URL atau base64 dari gambar profil mahasiswa.",
+      "8. Kolom foto diisi dengan URL dari gambar profil mahasiswa.",
     ],
     [
-      "9. Dalam 1 file Excel hanya boleh berisi mahasiswa dari 1 fakultas. Jika terdapat lebih dari 1 fakultas, seluruh file akan ditolak.",
+      "9. Ukuran Foto sebaiknya tidak lebih dari 1MB dan 724 x 965 px. Jika ukuran foto terlalu besar, proses upload akan gagal.",
     ],
     [
-      "9. Dalam 1 file Excel hanya boleh berisi tahun lulus yang sama.",
+      "10. Dalam 1 file Excel hanya boleh berisi mahasiswa dari 1 fakultas. Jika terdapat lebih dari 1 fakultas, seluruh file akan ditolak.",
+    ],
+    [
+      "11. Dalam 1 file Excel hanya boleh berisi tahun lulus yang sama.",
     ],
   ];
 
